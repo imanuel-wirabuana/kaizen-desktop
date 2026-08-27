@@ -1,32 +1,32 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { DragDropProvider } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { arrayMove } from '@dnd-kit/helpers'
+import { RestrictToVerticalAxis } from '@dnd-kit/abstract/modifiers'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger
+} from '@/components/ui/context-menu'
 import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar
 } from '@/components/ui/sidebar'
 import {
-  MoreHorizontalIcon,
   FolderIcon,
   PencilIcon,
   ShareIcon,
   Trash2Icon,
   CheckIcon,
   PinIcon,
-  PinOffIcon
+  PinOffIcon,
+  GripVerticalIcon
 } from 'lucide-react'
 import { EditBoardDrawer } from './edit-board-drawer'
 import { DeleteBoardDrawer } from './delete-board-drawer'
@@ -38,14 +38,13 @@ export function NavBoards({ boards }: { boards?: Board[] } = {}) {
   const hookUnpinnedBoards = useUnpinnedBoards()
   const unpinnedBoards = boards ?? hookUnpinnedBoards
   const [items, setItems] = useState(unpinnedBoards)
+  const itemsRef = useRef(items)
+  itemsRef.current = items
 
   // Sync external changes into local sortable state
-  if (
-    unpinnedBoards.length !== items.length ||
-    unpinnedBoards.some((b, i) => b.id !== items[i]?.id || b.title !== items[i]?.title)
-  ) {
+  useEffect(() => {
     setItems(unpinnedBoards)
-  }
+  }, [unpinnedBoards])
 
   const { isMobile } = useSidebar()
   const { currentView, navigate } = useNavigationStore()
@@ -99,6 +98,7 @@ export function NavBoards({ boards }: { boards?: Board[] } = {}) {
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel>Boards</SidebarGroupLabel>
         <DragDropProvider
+          modifiers={[RestrictToVerticalAxis]}
           onDragOver={(event) => {
             const { source, target } = event.operation
             if (!source || !target) return
@@ -109,7 +109,7 @@ export function NavBoards({ boards }: { boards?: Board[] } = {}) {
             }
           }}
           onDragEnd={() => {
-            useBoardsStore.getState().reorderBoards(items)
+            useBoardsStore.getState().reorderBoards(itemsRef.current)
           }}
         >
           <SidebarMenu className="space-y-1">{items.map(renderBoardItem)}</SidebarMenu>
@@ -153,7 +153,7 @@ function SortableBoardItem({
   onTogglePin,
   onEdit,
   onShare,
-  onDelete,
+  onDelete
 }: {
   item: Board
   index: number
@@ -167,81 +167,78 @@ function SortableBoardItem({
   onShare: (e: React.MouseEvent) => void
   onDelete: () => void
 }) {
-  const { ref, isDragSource } = useSortable({ id: item.id!, index })
+  const { ref, handleRef, isDragSource } = useSortable({ id: item.id!, index })
 
   return (
-    <SidebarMenuItem ref={ref} className={isDragSource ? 'opacity-50' : ''}>
-      <SidebarMenuButton
-        className="cursor-pointer"
-        isActive={isCurrentPage}
-        onClick={onNavigate}
+    <ContextMenu>
+      <ContextMenuTrigger
+        render={<SidebarMenuItem ref={ref} className={isDragSource ? 'opacity-50' : ''} />}
       >
-        <span>{item.icon || '📋'}</span>
-        <span className="truncate">{item.title}</span>
-      </SidebarMenuButton>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={<SidebarMenuAction showOnHover className="aria-expanded:bg-muted" />}
+        <SidebarMenuButton
+          className="cursor-pointer flex justify-between"
+          isActive={isCurrentPage}
+          onClick={onNavigate}
         >
-          <MoreHorizontalIcon />
-          <span className="sr-only">More options for {item.title}</span>
-        </DropdownMenuTrigger>
-
-        <DropdownMenuContent
-          className="w-48"
-          side={isMobile ? 'bottom' : 'right'}
-          align={isMobile ? 'end' : 'start'}
-        >
-          <DropdownMenuItem onClick={onNavigate}>
-            <FolderIcon className="text-muted-foreground" />
-            <span>View Board</span>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onClick={onTogglePin}>
-            {pinned ? (
-              <>
-                <PinOffIcon className="text-muted-foreground" />
-                <span>Unpin Board</span>
-              </>
-            ) : (
-              <>
-                <PinIcon className="text-muted-foreground" />
-                <span>Pin Board</span>
-              </>
-            )}
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onClick={onEdit}>
-            <PencilIcon className="text-muted-foreground" />
-            <span>Edit Board</span>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onClick={onShare}>
-            {copiedBoardId === item.id ? (
-              <>
-                <CheckIcon className="text-emerald-500" />
-                <span className="text-emerald-500">Link Copied!</span>
-              </>
-            ) : (
-              <>
-                <ShareIcon className="text-muted-foreground" />
-                <span>Share Link</span>
-              </>
-            )}
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator />
-
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={onDelete}
+          <div className="flex items-center gap-2 truncate">
+            <span>{item.icon}</span>
+            <span className="truncate">{item.title}</span>
+          </div>
+          <span
+            ref={handleRef}
+            className="cursor-grab touch-none active:cursor-grabbing"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Trash2Icon className="text-destructive" />
-            <span>Delete Board</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </SidebarMenuItem>
+            <GripVerticalIcon />
+          </span>
+        </SidebarMenuButton>
+      </ContextMenuTrigger>
+
+      <ContextMenuContent>
+        <ContextMenuItem onClick={onNavigate}>
+          <FolderIcon className="text-muted-foreground" />
+          <span>View Board</span>
+        </ContextMenuItem>
+
+        <ContextMenuItem onClick={onTogglePin}>
+          {pinned ? (
+            <>
+              <PinOffIcon className="text-muted-foreground" />
+              <span>Unpin Board</span>
+            </>
+          ) : (
+            <>
+              <PinIcon className="text-muted-foreground" />
+              <span>Pin Board</span>
+            </>
+          )}
+        </ContextMenuItem>
+
+        <ContextMenuItem onClick={onEdit}>
+          <PencilIcon className="text-muted-foreground" />
+          <span>Edit Board</span>
+        </ContextMenuItem>
+
+        <ContextMenuItem onClick={onShare}>
+          {copiedBoardId === item.id ? (
+            <>
+              <CheckIcon className="text-emerald-500" />
+              <span className="text-emerald-500">Link Copied!</span>
+            </>
+          ) : (
+            <>
+              <ShareIcon className="text-muted-foreground" />
+              <span>Share Link</span>
+            </>
+          )}
+        </ContextMenuItem>
+
+        <ContextMenuSeparator />
+
+        <ContextMenuItem variant="destructive" onClick={onDelete}>
+          <Trash2Icon />
+          <span>Delete Board</span>
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }

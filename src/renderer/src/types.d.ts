@@ -10,4 +10,3 @@ type Board = {
   owner?: string | null
   order?: number
 }
-

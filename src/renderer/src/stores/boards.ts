@@ -61,6 +61,9 @@ export const useBoardsStore = create<BoardsState>()(
 
     // ── Optimistic create ──────────────────────────────────────
     addBoard: async (draft) => {
+      const maxOrder = Math.max(0, ...get().boards.map((b) => b.order ?? 0))
+      const order = maxOrder + 1
+
       const tempId = -Date.now() // negative temp id, never collides with DB ids
       const optimistic: Board = {
         id: tempId,
@@ -70,6 +73,7 @@ export const useBoardsStore = create<BoardsState>()(
         pinned: draft.pinned ?? false,
         background: draft.background ?? null,
         owner: draft.owner ?? null,
+        order,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
@@ -77,7 +81,7 @@ export const useBoardsStore = create<BoardsState>()(
       // Apply optimistically
       set((s) => ({ boards: [optimistic, ...s.boards] }))
 
-      const result = await boardsService.createBoard(draft)
+      const result = await boardsService.createBoard({ ...draft, order })
 
       if (!result) {
         // Rollback
@@ -145,27 +149,24 @@ export const useBoardsStore = create<BoardsState>()(
     reorderBoards: async (reordered: Board[]) => {
       const prev = get().boards
 
-      // Build full new list: replace items that appear in `reordered`, keep the rest
-      const reorderedIds = new Set(reordered.map((b) => b.id))
-      const untouched = prev.filter((b) => !reorderedIds.has(b.id))
+      // Build full new list with updated order index
       const withOrder = reordered.map((b, i) => ({ ...b, order: i }))
-      set({ boards: [...withOrder, ...untouched] })
+      const orderMap = new Map(withOrder.map((b) => [b.id, b.order]))
 
-      // Persist order to DB
+      // Apply locally
+      set((s) => ({
+        boards: s.boards.map((b) => (orderMap.has(b.id) ? { ...b, order: orderMap.get(b.id) } : b))
+      }))
+
+      // Persist all changed orders to DB
       const updates = withOrder
         .filter((b) => b.id !== undefined && b.id > 0)
         .map((b) => boardsService.updateBoard(b.id!, { order: b.order }))
 
       const results = await Promise.all(updates)
       if (results.some((r) => r === null)) {
-        // Partial failure — refetch to reconcile
-        const owner = get().owner
-        if (owner) {
-          const fresh = await boardsService.getBoards(owner)
-          set({ boards: fresh })
-        } else {
-          set({ boards: prev })
-        }
+        // Partial failure — rollback to previous state
+        set({ boards: prev })
       }
     }
   }))

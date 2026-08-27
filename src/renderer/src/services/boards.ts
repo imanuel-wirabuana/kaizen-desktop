@@ -18,11 +18,7 @@ export async function getBoards(owner?: string): Promise<Board[]> {
 }
 
 // 2. Fetch paginated boards (optionally filtered by owner)
-export async function getPaginatedBoards(
-  from = 0,
-  to = 9,
-  owner?: string
-): Promise<Board[]> {
+export async function getPaginatedBoards(from = 0, to = 9, owner?: string): Promise<Board[]> {
   let query = supabase
     .from('boards')
     .select('*')
@@ -73,11 +69,7 @@ export async function searchBoards(filters?: {
 
 // 4. Fetch single board by ID
 export async function getBoardById(id: number | string): Promise<Board | null> {
-  const { data, error } = await supabase
-    .from('boards')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const { data, error } = await supabase.from('boards').select('*').eq('id', id).single()
 
   if (error) {
     console.error('Error fetching board by ID:', error)
@@ -90,10 +82,7 @@ export async function getBoardById(id: number | string): Promise<Board | null> {
 export async function createBoard(
   board: Partial<Omit<Board, 'id' | 'created_at' | 'updated_at'>>
 ): Promise<Board | null> {
-  const { data, error } = await supabase
-    .from('boards')
-    .insert([board])
-    .select()
+  const { data, error } = await supabase.from('boards').insert([board]).select()
 
   if (error) {
     console.error('Error creating board:', error)
@@ -106,10 +95,7 @@ export async function createBoard(
 export async function createMultipleBoards(
   boards: Partial<Omit<Board, 'id' | 'created_at' | 'updated_at'>>[]
 ): Promise<Board[]> {
-  const { data, error } = await supabase
-    .from('boards')
-    .insert(boards)
-    .select()
+  const { data, error } = await supabase.from('boards').insert(boards).select()
 
   if (error) {
     console.error('Error creating multiple boards:', error)
@@ -128,11 +114,7 @@ export async function updateBoard(
     updated_at: new Date().toISOString()
   }
 
-  const { data, error } = await supabase
-    .from('boards')
-    .update(payload)
-    .eq('id', id)
-    .select()
+  const { data, error } = await supabase.from('boards').update(payload).eq('id', id).select()
 
   if (error) {
     console.error('Error updating board:', error)
@@ -143,10 +125,7 @@ export async function updateBoard(
 
 // 8. Delete board by ID
 export async function deleteBoard(id: number | string): Promise<boolean> {
-  const { error } = await supabase
-    .from('boards')
-    .delete()
-    .eq('id', id)
+  const { error } = await supabase.from('boards').delete().eq('id', id)
 
   if (error) {
     console.error('Error deleting board:', error)
@@ -156,18 +135,13 @@ export async function deleteBoard(id: number | string): Promise<boolean> {
 }
 
 // 9. Upsert board
-export async function upsertBoard(
-  board: Partial<Board>
-): Promise<Board | null> {
+export async function upsertBoard(board: Partial<Board>): Promise<Board | null> {
   const payload = {
     ...board,
     updated_at: new Date().toISOString()
   }
 
-  const { data, error } = await supabase
-    .from('boards')
-    .upsert(payload)
-    .select()
+  const { data, error } = await supabase.from('boards').upsert(payload).select()
 
   if (error) {
     console.error('Error upserting board:', error)
@@ -177,22 +151,16 @@ export async function upsertBoard(
 }
 
 // 10. Realtime Subscription
-export function subscribeBoards(
-  onPayload?: (payload: unknown) => void
-): RealtimeChannel {
+export function subscribeBoards(onPayload?: (payload: unknown) => void): RealtimeChannel {
   const channelName = `boards-changes-${Math.random().toString(36).substring(2, 9)}`
   const boardsChannel = supabase
     .channel(channelName)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'boards' },
-      (payload) => {
-        console.log('Change received!', payload)
-        if (onPayload) {
-          onPayload(payload)
-        }
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, (payload) => {
+      console.log('Change received!', payload)
+      if (onPayload) {
+        onPayload(payload)
       }
-    )
+    })
     .subscribe()
 
   return boardsChannel
