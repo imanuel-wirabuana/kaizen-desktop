@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
+import { useShallow } from 'zustand/shallow'
 import { useUser } from '@clerk/clerk-react'
 import {
   useBoardsStore,
   selectBoards,
   selectPinnedBoards,
-  selectUnpinnedBoards,
+  selectUnpinnedBoards
 } from '@/stores/boards'
 
 /** Initializes the boards store for the current user. Mount once near the app root. */
@@ -30,11 +31,11 @@ export function useBoards(): Board[] {
 }
 
 export function usePinnedBoards(): Board[] {
-  return useBoardsStore(selectPinnedBoards)
+  return useBoardsStore(useShallow(selectPinnedBoards))
 }
 
 export function useUnpinnedBoards(): Board[] {
-  return useBoardsStore(selectUnpinnedBoards)
+  return useBoardsStore(useShallow(selectUnpinnedBoards))
 }
 
 // Alias for convenience

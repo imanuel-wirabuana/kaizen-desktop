@@ -7,7 +7,7 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerTrigger,
+  DrawerTrigger
 } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +23,7 @@ const BG_OPTIONS = [
   { label: 'Sunset', value: 'from-amber-500/10 to-rose-500/10' },
   { label: 'Ocean', value: 'from-blue-500/10 to-cyan-500/10' },
   { label: 'Emerald', value: 'from-emerald-500/10 to-teal-500/10' },
-  { label: 'Purple', value: 'from-purple-500/10 to-pink-500/10' },
+  { label: 'Purple', value: 'from-purple-500/10 to-pink-500/10' }
 ]
 
 export function CreateBoardDrawer() {
@@ -54,7 +54,7 @@ export function CreateBoardDrawer() {
         icon,
         pinned: false,
         background: background || undefined,
-        owner: user?.id || undefined,
+        owner: user?.id || undefined
       })
 
       if (!newBoard) {
@@ -97,9 +97,7 @@ export function CreateBoardDrawer() {
         <form onSubmit={handleSubmit}>
           <DrawerHeader>
             <DrawerTitle>Create New Board</DrawerTitle>
-            <DrawerDescription>
-              Add a new Kanban board to organize your tasks.
-            </DrawerDescription>
+            <DrawerDescription>Add a new Kanban board to organize your tasks.</DrawerDescription>
           </DrawerHeader>
 
           <div className="space-y-4 p-4">
@@ -111,9 +109,7 @@ export function CreateBoardDrawer() {
 
             {/* Icon Picker */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                Board Icon
-              </label>
+              <label className="text-xs font-medium text-muted-foreground">Board Icon</label>
               <div className="flex flex-wrap gap-2">
                 {EMOJI_OPTIONS.map((emoji) => (
                   <button
@@ -134,10 +130,7 @@ export function CreateBoardDrawer() {
 
             {/* Title Input */}
             <div className="space-y-1.5">
-              <label
-                htmlFor="board-title"
-                className="text-xs font-medium text-muted-foreground"
-              >
+              <label htmlFor="board-title" className="text-xs font-medium text-muted-foreground">
                 Board Title *
               </label>
               <Input
@@ -152,10 +145,7 @@ export function CreateBoardDrawer() {
 
             {/* Description Input */}
             <div className="space-y-1.5">
-              <label
-                htmlFor="board-desc"
-                className="text-xs font-medium text-muted-foreground"
-              >
+              <label htmlFor="board-desc" className="text-xs font-medium text-muted-foreground">
                 Description (Optional)
               </label>
               <Input

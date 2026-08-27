@@ -72,7 +72,7 @@ export const useBoardsStore = create<BoardsState>()(
         background: draft.background ?? null,
         owner: draft.owner ?? null,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
 
       // Apply optimistically
@@ -88,7 +88,7 @@ export const useBoardsStore = create<BoardsState>()(
 
       // Replace temp with real
       set((s) => ({
-        boards: s.boards.map((b) => (b.id === tempId ? result : b)),
+        boards: s.boards.map((b) => (b.id === tempId ? result : b))
       }))
       return result
     },
@@ -102,7 +102,7 @@ export const useBoardsStore = create<BoardsState>()(
       set((s) => ({
         boards: s.boards.map((b) =>
           b.id === id ? { ...b, ...updates, updated_at: new Date().toISOString() } : b
-        ),
+        )
       }))
 
       const result = await boardsService.updateBoard(id, updates)
@@ -110,14 +110,14 @@ export const useBoardsStore = create<BoardsState>()(
       if (!result) {
         // Rollback
         set((s) => ({
-          boards: s.boards.map((b) => (b.id === id ? prev : b)),
+          boards: s.boards.map((b) => (b.id === id ? prev : b))
         }))
         return null
       }
 
       // Reconcile with server truth
       set((s) => ({
-        boards: s.boards.map((b) => (b.id === id ? result : b)),
+        boards: s.boards.map((b) => (b.id === id ? result : b))
       }))
       return result
     },
@@ -140,7 +140,7 @@ export const useBoardsStore = create<BoardsState>()(
       }
 
       return true
-    },
+    }
   }))
 )
 

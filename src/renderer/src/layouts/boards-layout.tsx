@@ -3,11 +3,7 @@ import { DynamicBreadcrumb } from '@/components/dynamic-breadcrumb'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { useBoardsInit } from '@/hooks/use-boards'
 import { Separator } from '@/components/ui/separator'
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar'
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { SearchCommand } from '@/components/search-command'
 import { SignedIn, UserButton } from '@clerk/clerk-react'
 
@@ -21,10 +17,7 @@ export function BoardsLayout({ children }: { children: React.ReactNode }) {
         <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b bg-background/80 px-3 backdrop-blur-sm">
           <div className="flex items-center gap-1.5">
             <SidebarTrigger className="-ml-1 size-7" />
-            <Separator
-              orientation="vertical"
-              className="mr-1 data-[orientation=vertical]:h-4"
-            />
+            <Separator orientation="vertical" className="mr-1 data-[orientation=vertical]:h-4" />
             <DynamicBreadcrumb />
           </div>
 

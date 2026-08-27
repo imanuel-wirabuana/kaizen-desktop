@@ -6,7 +6,7 @@ import {
   DrawerDescription,
   DrawerFooter,
   DrawerHeader,
-  DrawerTitle,
+  DrawerTitle
 } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,7 +19,7 @@ const BG_OPTIONS = [
   { label: 'Sunset', value: 'from-amber-500/10 to-rose-500/10' },
   { label: 'Ocean', value: 'from-blue-500/10 to-cyan-500/10' },
   { label: 'Emerald', value: 'from-emerald-500/10 to-teal-500/10' },
-  { label: 'Purple', value: 'from-purple-500/10 to-pink-500/10' },
+  { label: 'Purple', value: 'from-purple-500/10 to-pink-500/10' }
 ]
 
 type EditBoardDrawerProps = {
@@ -29,12 +29,7 @@ type EditBoardDrawerProps = {
   onSuccess?: (updatedBoard: Board) => void
 }
 
-export function EditBoardDrawer({
-  board,
-  open,
-  onOpenChange,
-  onSuccess,
-}: EditBoardDrawerProps) {
+export function EditBoardDrawer({ board, open, onOpenChange, onSuccess }: EditBoardDrawerProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [icon, setIcon] = useState('📋')
@@ -71,7 +66,7 @@ export function EditBoardDrawer({
         description: description.trim() || undefined,
         icon,
         background: background || undefined,
-        pinned,
+        pinned
       })
 
       if (!updated) {
@@ -98,9 +93,7 @@ export function EditBoardDrawer({
         <form onSubmit={handleSubmit}>
           <DrawerHeader>
             <DrawerTitle>Edit Board</DrawerTitle>
-            <DrawerDescription>
-              Update your board details and settings.
-            </DrawerDescription>
+            <DrawerDescription>Update your board details and settings.</DrawerDescription>
           </DrawerHeader>
 
           <div className="space-y-4 p-4">
@@ -112,9 +105,7 @@ export function EditBoardDrawer({
 
             {/* Icon Picker */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                Board Icon
-              </label>
+              <label className="text-xs font-medium text-muted-foreground">Board Icon</label>
               <div className="flex flex-wrap gap-2">
                 {EMOJI_OPTIONS.map((emoji) => (
                   <button
@@ -135,10 +126,7 @@ export function EditBoardDrawer({
 
             {/* Title Input */}
             <div className="space-y-1.5">
-              <label
-                htmlFor="edit-title"
-                className="text-xs font-medium text-muted-foreground"
-              >
+              <label htmlFor="edit-title" className="text-xs font-medium text-muted-foreground">
                 Board Title *
               </label>
               <Input
@@ -152,10 +140,7 @@ export function EditBoardDrawer({
 
             {/* Description Input */}
             <div className="space-y-1.5">
-              <label
-                htmlFor="edit-desc"
-                className="text-xs font-medium text-muted-foreground"
-              >
+              <label htmlFor="edit-desc" className="text-xs font-medium text-muted-foreground">
                 Description (Optional)
               </label>
               <Input

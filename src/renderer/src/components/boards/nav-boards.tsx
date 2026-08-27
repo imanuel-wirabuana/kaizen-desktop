@@ -4,7 +4,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import {
   SidebarGroup,
@@ -13,7 +13,7 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
+  useSidebar
 } from '@/components/ui/sidebar'
 import {
   MoreHorizontalIcon,
@@ -23,7 +23,7 @@ import {
   Trash2Icon,
   CheckIcon,
   PinIcon,
-  PinOffIcon,
+  PinOffIcon
 } from 'lucide-react'
 import { EditBoardDrawer } from './edit-board-drawer'
 import { DeleteBoardDrawer } from './delete-board-drawer'
@@ -61,8 +61,7 @@ export function NavBoards({ boards }: { boards?: Board[] } = {}) {
 
   const renderBoardItem = (item: Board) => {
     const isCurrentPage =
-      currentView.name === 'board-detail' &&
-      String(currentView.boardId) === String(item.id)
+      currentView.name === 'board-detail' && String(currentView.boardId) === String(item.id)
 
     return (
       <SidebarMenuItem key={item.id}>
@@ -81,12 +80,7 @@ export function NavBoards({ boards }: { boards?: Board[] } = {}) {
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <SidebarMenuAction
-                showOnHover
-                className="aria-expanded:bg-muted"
-              />
-            }
+            render={<SidebarMenuAction showOnHover className="aria-expanded:bg-muted" />}
           >
             <MoreHorizontalIcon />
             <span className="sr-only">More options for {item.title}</span>
@@ -108,9 +102,7 @@ export function NavBoards({ boards }: { boards?: Board[] } = {}) {
               <span>View Board</span>
             </DropdownMenuItem>
 
-            <DropdownMenuItem
-              onClick={(e) => handleTogglePin(e, item)}
-            >
+            <DropdownMenuItem onClick={(e) => handleTogglePin(e, item)}>
               {item.pinned ? (
                 <>
                   <PinOffIcon className="text-muted-foreground" />
@@ -124,16 +116,12 @@ export function NavBoards({ boards }: { boards?: Board[] } = {}) {
               )}
             </DropdownMenuItem>
 
-            <DropdownMenuItem
-              onClick={() => setActiveBoardForEdit(item)}
-            >
+            <DropdownMenuItem onClick={() => setActiveBoardForEdit(item)}>
               <PencilIcon className="text-muted-foreground" />
               <span>Edit Board</span>
             </DropdownMenuItem>
 
-            <DropdownMenuItem
-              onClick={(e) => handleShare(e, item.id)}
-            >
+            <DropdownMenuItem onClick={(e) => handleShare(e, item.id)}>
               {copiedBoardId === item.id ? (
                 <>
                   <CheckIcon className="text-emerald-500" />
@@ -166,9 +154,7 @@ export function NavBoards({ boards }: { boards?: Board[] } = {}) {
     <>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel>Boards</SidebarGroupLabel>
-        <SidebarMenu className="space-y-1">
-          {unpinnedBoards.map(renderBoardItem)}
-        </SidebarMenu>
+        <SidebarMenu className="space-y-1">{unpinnedBoards.map(renderBoardItem)}</SidebarMenu>
       </SidebarGroup>
 
       {/* Edit Drawer from Sidebar */}

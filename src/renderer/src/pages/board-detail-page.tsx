@@ -32,9 +32,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     setLoading(true)
 
     // Try store first (optimistic), fall back to service
-    const fromStore = useBoardsStore.getState().boards.find(
-      (b) => String(b.id) === String(boardId)
-    )
+    const fromStore = useBoardsStore.getState().boards.find((b) => String(b.id) === String(boardId))
     if (fromStore) {
       setBoard(fromStore)
       setLoading(false)

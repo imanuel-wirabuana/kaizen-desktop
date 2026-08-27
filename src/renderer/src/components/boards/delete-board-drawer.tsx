@@ -6,7 +6,7 @@ import {
   DrawerDescription,
   DrawerFooter,
   DrawerHeader,
-  DrawerTitle,
+  DrawerTitle
 } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Loader2, AlertTriangle } from 'lucide-react'
@@ -23,7 +23,7 @@ export function DeleteBoardDrawer({
   board,
   open,
   onOpenChange,
-  onSuccess,
+  onSuccess
 }: DeleteBoardDrawerProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -64,10 +64,8 @@ export function DeleteBoardDrawer({
           </div>
           <DrawerDescription>
             Are you sure you want to delete{' '}
-            <span className="font-semibold text-foreground">
-              {board?.title || 'this board'}
-            </span>
-            ? This action cannot be undone.
+            <span className="font-semibold text-foreground">{board?.title || 'this board'}</span>?
+            This action cannot be undone.
           </DrawerDescription>
         </DrawerHeader>
 
@@ -85,12 +83,7 @@ export function DeleteBoardDrawer({
               </Button>
             }
           />
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
+          <Button type="button" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
             {isDeleting ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
