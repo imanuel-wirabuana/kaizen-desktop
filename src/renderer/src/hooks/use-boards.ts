@@ -1,51 +1,40 @@
-import { useEffect, useState, useMemo } from 'react'
-import { getBoards, subscribeBoards } from '@/services/boards'
-import { supabase } from '@/lib/supabase'
+import { useEffect } from 'react'
 import { useUser } from '@clerk/clerk-react'
+import {
+  useBoardsStore,
+  selectBoards,
+  selectPinnedBoards,
+  selectUnpinnedBoards,
+} from '@/stores/boards'
 
-export function useBoards(explicitOwner?: string): Board[] {
+/** Initializes the boards store for the current user. Mount once near the app root. */
+export function useBoardsInit() {
   const { user, isLoaded, isSignedIn } = useUser()
-  const [boards, setBoards] = useState<Board[]>([])
-
-  const owner = explicitOwner !== undefined ? explicitOwner : (isSignedIn && user?.id ? user.id : undefined)
+  const init = useBoardsStore((s) => s.init)
+  const cleanup = useBoardsStore((s) => s.cleanup)
 
   useEffect(() => {
     if (!isLoaded) return
-
+    const owner = isSignedIn && user?.id ? user.id : undefined
     if (!owner) {
-      setBoards([])
+      cleanup()
       return
     }
-
-    const fetchInitialBoards = async () => {
-      const data = await getBoards(owner)
-      if (data) {
-        setBoards(data)
-      }
-    }
-
-    fetchInitialBoards()
-
-    const channel = subscribeBoards(() => {
-      fetchInitialBoards()
-    })
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [owner, isLoaded])
-
-  return boards
+    init(owner)
+    return () => cleanup()
+  }, [isLoaded, isSignedIn, user?.id, init, cleanup])
 }
 
-export function usePinnedBoards(explicitOwner?: string): Board[] {
-  const boards = useBoards(explicitOwner)
-  return useMemo(() => boards.filter((b) => Boolean(b.pinned)), [boards])
+export function useBoards(): Board[] {
+  return useBoardsStore(selectBoards)
 }
 
-export function useUnpinnedBoards(explicitOwner?: string): Board[] {
-  const boards = useBoards(explicitOwner)
-  return useMemo(() => boards.filter((b) => !b.pinned), [boards])
+export function usePinnedBoards(): Board[] {
+  return useBoardsStore(selectPinnedBoards)
+}
+
+export function useUnpinnedBoards(): Board[] {
+  return useBoardsStore(selectUnpinnedBoards)
 }
 
 // Alias for convenience

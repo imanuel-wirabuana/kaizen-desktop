@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2 } from 'lucide-react'
-import { updateBoard } from '@/services/boards'
+import { useBoardsStore } from '@/stores/boards'
 
 const EMOJI_OPTIONS = ['📋', '🚀', '📊', '⚡', '📌', '🎯', '💡', '🎨']
 const BG_OPTIONS = [
@@ -66,7 +66,7 @@ export function EditBoardDrawer({
     setError(null)
 
     try {
-      const updated = await updateBoard(board.id, {
+      const updated = await useBoardsStore.getState().updateBoard(board.id, {
         title: title.trim(),
         description: description.trim() || undefined,
         icon,

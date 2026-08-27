@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SidebarMenuButton } from '@/components/ui/sidebar'
 import { Plus, Loader2 } from 'lucide-react'
-import { createBoard } from '@/services/boards'
+import { useBoardsStore } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { useUser } from '@clerk/clerk-react'
 
@@ -48,7 +48,7 @@ export function CreateBoardDrawer() {
     setError(null)
 
     try {
-      const newBoard = await createBoard({
+      const newBoard = await useBoardsStore.getState().addBoard({
         title: title.trim(),
         description: description.trim() || undefined,
         icon,

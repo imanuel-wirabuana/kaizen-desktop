@@ -27,7 +27,7 @@ import {
 } from 'lucide-react'
 import { EditBoardDrawer } from './edit-board-drawer'
 import { DeleteBoardDrawer } from './delete-board-drawer'
-import { updateBoard } from '@/services/boards'
+import { useBoardsStore } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { useUnpinnedBoards } from '@/hooks/use-boards'
 
@@ -46,7 +46,7 @@ export function NavBoards({ boards }: { boards?: Board[] } = {}) {
     e.preventDefault()
     e.stopPropagation()
     if (item.id === undefined) return
-    await updateBoard(item.id, { pinned: !item.pinned })
+    await useBoardsStore.getState().updateBoard(item.id, { pinned: !item.pinned })
   }
 
   const handleShare = (e: React.MouseEvent, boardId?: number | string) => {

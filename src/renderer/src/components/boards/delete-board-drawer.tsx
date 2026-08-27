@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Loader2, AlertTriangle } from 'lucide-react'
-import { deleteBoard } from '@/services/boards'
+import { useBoardsStore } from '@/stores/boards'
 
 type DeleteBoardDrawerProps = {
   board: Board | null
@@ -35,7 +35,7 @@ export function DeleteBoardDrawer({
     setError(null)
 
     try {
-      const ok = await deleteBoard(board.id)
+      const ok = await useBoardsStore.getState().removeBoard(board.id)
       if (!ok) {
         setError('Failed to delete board. Please try again.')
         setIsDeleting(false)

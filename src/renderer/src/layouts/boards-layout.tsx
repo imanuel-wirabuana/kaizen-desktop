@@ -1,6 +1,7 @@
 import { AppSidebar } from '@/components/app-sidebar'
 import { DynamicBreadcrumb } from '@/components/dynamic-breadcrumb'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { useBoardsInit } from '@/hooks/use-boards'
 import { Separator } from '@/components/ui/separator'
 import {
   SidebarInset,
@@ -11,6 +12,8 @@ import { SearchCommand } from '@/components/search-command'
 import { SignedIn, UserButton } from '@clerk/clerk-react'
 
 export function BoardsLayout({ children }: { children: React.ReactNode }) {
+  useBoardsInit()
+
   return (
     <SidebarProvider className="h-svh overflow-hidden">
       <AppSidebar />

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useBreadcrumbs } from '@/stores/dynamic-breadcrumb'
-import { getBoardById } from '@/services/boards'
+import { useBoardsStore } from '@/stores/boards'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EditBoardDrawer } from '@/components/boards/edit-board-drawer'
@@ -31,15 +31,36 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     let isCancelled = false
     setLoading(true)
 
-    getBoardById(boardId).then((data) => {
-      if (!isCancelled) {
-        setBoard(data)
-        setLoading(false)
+    // Try store first (optimistic), fall back to service
+    const fromStore = useBoardsStore.getState().boards.find(
+      (b) => String(b.id) === String(boardId)
+    )
+    if (fromStore) {
+      setBoard(fromStore)
+      setLoading(false)
+    } else {
+      import('@/services/boards').then(({ getBoardById }) =>
+        getBoardById(boardId).then((data) => {
+          if (!isCancelled) {
+            setBoard(data)
+            setLoading(false)
+          }
+        })
+      )
+    }
+
+    // Stay in sync with store (optimistic updates from sidebar, etc.)
+    const unsub = useBoardsStore.subscribe(
+      (s) => s.boards,
+      (boards) => {
+        const updated = boards.find((b) => String(b.id) === String(boardId))
+        if (updated) setBoard(updated)
       }
-    })
+    )
 
     return () => {
       isCancelled = true
+      unsub()
     }
   }, [boardId])
 
