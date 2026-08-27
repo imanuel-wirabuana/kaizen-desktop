@@ -18,8 +18,7 @@ type BoardsState = {
   ) => Promise<Board | null>
   updateBoard: (id: number | string, updates: Partial<Board>) => Promise<Board | null>
   removeBoard: (id: number | string) => Promise<boolean>
-
-  // Derived (computed inline — no extra selectors needed)
+  reorderBoards: (reordered: Board[]) => Promise<void>
 }
 
 let realtimeCleanup: (() => void) | null = null
@@ -140,12 +139,42 @@ export const useBoardsStore = create<BoardsState>()(
       }
 
       return true
+    },
+
+    // ── Optimistic reorder ─────────────────────────────────────
+    reorderBoards: async (reordered: Board[]) => {
+      const prev = get().boards
+
+      // Build full new list: replace items that appear in `reordered`, keep the rest
+      const reorderedIds = new Set(reordered.map((b) => b.id))
+      const untouched = prev.filter((b) => !reorderedIds.has(b.id))
+      const withOrder = reordered.map((b, i) => ({ ...b, order: i }))
+      set({ boards: [...withOrder, ...untouched] })
+
+      // Persist order to DB
+      const updates = withOrder
+        .filter((b) => b.id !== undefined && b.id > 0)
+        .map((b) => boardsService.updateBoard(b.id!, { order: b.order }))
+
+      const results = await Promise.all(updates)
+      if (results.some((r) => r === null)) {
+        // Partial failure — refetch to reconcile
+        const owner = get().owner
+        if (owner) {
+          const fresh = await boardsService.getBoards(owner)
+          set({ boards: fresh })
+        } else {
+          set({ boards: prev })
+        }
+      }
     }
   }))
 )
 
 // ── Derived selectors (stable references) ──────────────────────
 export const selectBoards = (s: BoardsState) => s.boards
-export const selectPinnedBoards = (s: BoardsState) => s.boards.filter((b) => Boolean(b.pinned))
-export const selectUnpinnedBoards = (s: BoardsState) => s.boards.filter((b) => !b.pinned)
+export const selectPinnedBoards = (s: BoardsState) =>
+  s.boards.filter((b) => Boolean(b.pinned)).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+export const selectUnpinnedBoards = (s: BoardsState) =>
+  s.boards.filter((b) => !b.pinned).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 export const selectLoading = (s: BoardsState) => s.loading

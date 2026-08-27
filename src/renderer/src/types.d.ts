@@ -8,5 +8,6 @@ type Board = {
   updated_at?: string | null
   background?: string | null
   owner?: string | null
+  order?: number
 }
 

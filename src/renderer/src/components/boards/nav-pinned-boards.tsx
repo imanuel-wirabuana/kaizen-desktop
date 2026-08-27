@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { DragDropProvider } from '@dnd-kit/react'
+import { useSortable } from '@dnd-kit/react/sortable'
+import { arrayMove } from '@dnd-kit/helpers'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +37,15 @@ import { usePinnedBoards } from '@/hooks/use-boards'
 export function NavPinnedBoards({ boards }: { boards?: Board[] } = {}) {
   const hookPinnedBoards = usePinnedBoards()
   const pinnedBoards = boards ?? hookPinnedBoards
+  const [items, setItems] = useState(pinnedBoards)
+
+  // Sync external changes into local sortable state
+  if (
+    pinnedBoards.length !== items.length ||
+    pinnedBoards.some((b, i) => b.id !== items[i]?.id || b.title !== items[i]?.title)
+  ) {
+    setItems(pinnedBoards)
+  }
 
   const { isMobile } = useSidebar()
   const { currentView, navigate } = useNavigationStore()
@@ -67,88 +79,43 @@ export function NavPinnedBoards({ boards }: { boards?: Board[] } = {}) {
     <>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel className="flex items-center gap-1.5">Pinned</SidebarGroupLabel>
-        <SidebarMenu className="space-y-1">
-          {pinnedBoards.map((item) => {
-            const isCurrentPage =
-              currentView.name === 'board-detail' && String(currentView.boardId) === String(item.id)
-            return (
-              <SidebarMenuItem key={item.id}>
-                <SidebarMenuButton
-                  className="cursor-pointer"
-                  isActive={isCurrentPage}
-                  onClick={() => {
-                    if (item.id !== undefined) {
-                      navigate({ name: 'board-detail', boardId: item.id })
-                    }
-                  }}
-                >
-                  <span>{item.icon || '📋'}</span>
-                  <span className="truncate">{item.title}</span>
-                </SidebarMenuButton>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={<SidebarMenuAction showOnHover className="aria-expanded:bg-muted" />}
-                  >
-                    <MoreHorizontalIcon />
-                    <span className="sr-only">More options for {item.title}</span>
-                  </DropdownMenuTrigger>
-
-                  <DropdownMenuContent
-                    className="w-48"
-                    side={isMobile ? 'bottom' : 'right'}
-                    align={isMobile ? 'end' : 'start'}
-                  >
-                    <DropdownMenuItem
-                      onClick={() => {
-                        if (item.id !== undefined) {
-                          navigate({ name: 'board-detail', boardId: item.id })
-                        }
-                      }}
-                    >
-                      <FolderIcon className="text-muted-foreground" />
-                      <span>View Board</span>
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem onClick={(e) => handleUnpin(e, item)}>
-                      <PinOffIcon className="text-muted-foreground" />
-                      <span>Unpin Board</span>
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem onClick={() => setActiveBoardForEdit(item)}>
-                      <PencilIcon className="text-muted-foreground" />
-                      <span>Edit Board</span>
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem onClick={(e) => handleShare(e, item.id)}>
-                      {copiedBoardId === item.id ? (
-                        <>
-                          <CheckIcon className="text-emerald-500" />
-                          <span className="text-emerald-500">Link Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShareIcon className="text-muted-foreground" />
-                          <span>Share Link</span>
-                        </>
-                      )}
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => setActiveBoardForDelete(item)}
-                    >
-                      <Trash2Icon className="text-destructive" />
-                      <span>Delete Board</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </SidebarMenuItem>
-            )
-          })}
-        </SidebarMenu>
+        <DragDropProvider
+          onDragOver={(event) => {
+            const { source, target } = event.operation
+            if (!source || !target) return
+            const fromIndex = items.findIndex((b) => b.id === source.id)
+            const toIndex = items.findIndex((b) => b.id === target.id)
+            if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+              setItems((prev) => arrayMove(prev, fromIndex, toIndex))
+            }
+          }}
+          onDragEnd={() => {
+            useBoardsStore.getState().reorderBoards(items)
+          }}
+        >
+          <SidebarMenu className="space-y-1">
+            {items.map((item, index) => (
+              <SortablePinnedItem
+                key={item.id}
+                item={item}
+                index={index}
+                isCurrentPage={
+                  currentView.name === 'board-detail' &&
+                  String(currentView.boardId) === String(item.id)
+                }
+                isMobile={isMobile}
+                copiedBoardId={copiedBoardId}
+                onNavigate={() => {
+                  if (item.id !== undefined) navigate({ name: 'board-detail', boardId: item.id })
+                }}
+                onUnpin={(e) => handleUnpin(e, item)}
+                onEdit={() => setActiveBoardForEdit(item)}
+                onShare={(e) => handleShare(e, item.id)}
+                onDelete={() => setActiveBoardForDelete(item)}
+              />
+            ))}
+          </SidebarMenu>
+        </DragDropProvider>
       </SidebarGroup>
 
       {/* Edit Drawer */}
@@ -173,5 +140,99 @@ export function NavPinnedBoards({ boards }: { boards?: Board[] } = {}) {
         }}
       />
     </>
+  )
+}
+
+// ── Sortable item extracted for useSortable hook ──
+function SortablePinnedItem({
+  item,
+  index,
+  isCurrentPage,
+  isMobile,
+  copiedBoardId,
+  onNavigate,
+  onUnpin,
+  onEdit,
+  onShare,
+  onDelete,
+}: {
+  item: Board
+  index: number
+  isCurrentPage: boolean
+  isMobile: boolean
+  copiedBoardId: number | string | null
+  onNavigate: () => void
+  onUnpin: (e: React.MouseEvent) => void
+  onEdit: () => void
+  onShare: (e: React.MouseEvent) => void
+  onDelete: () => void
+}) {
+  const { ref, isDragSource } = useSortable({ id: item.id!, index })
+
+  return (
+    <SidebarMenuItem ref={ref} className={isDragSource ? 'opacity-50' : ''}>
+      <SidebarMenuButton
+        className="cursor-pointer"
+        isActive={isCurrentPage}
+        onClick={onNavigate}
+      >
+        <span>{item.icon || '📋'}</span>
+        <span className="truncate">{item.title}</span>
+      </SidebarMenuButton>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<SidebarMenuAction showOnHover className="aria-expanded:bg-muted" />}
+        >
+          <MoreHorizontalIcon />
+          <span className="sr-only">More options for {item.title}</span>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent
+          className="w-48"
+          side={isMobile ? 'bottom' : 'right'}
+          align={isMobile ? 'end' : 'start'}
+        >
+          <DropdownMenuItem onClick={onNavigate}>
+            <FolderIcon className="text-muted-foreground" />
+            <span>View Board</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={onUnpin}>
+            <PinOffIcon className="text-muted-foreground" />
+            <span>Unpin Board</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={onEdit}>
+            <PencilIcon className="text-muted-foreground" />
+            <span>Edit Board</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={onShare}>
+            {copiedBoardId === item.id ? (
+              <>
+                <CheckIcon className="text-emerald-500" />
+                <span className="text-emerald-500">Link Copied!</span>
+              </>
+            ) : (
+              <>
+                <ShareIcon className="text-muted-foreground" />
+                <span>Share Link</span>
+              </>
+            )}
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={onDelete}
+          >
+            <Trash2Icon className="text-destructive" />
+            <span>Delete Board</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </SidebarMenuItem>
   )
 }

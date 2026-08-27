@@ -3,7 +3,7 @@ import { RealtimeChannel } from '@supabase/supabase-js'
 
 // 1. Fetch all boards (optionally filtered by owner)
 export async function getBoards(owner?: string): Promise<Board[]> {
-  let query = supabase.from('boards').select('*').order('created_at', { ascending: false })
+  let query = supabase.from('boards').select('*').order('order', { ascending: true })
 
   if (owner) {
     query = query.eq('owner', owner)
@@ -26,7 +26,7 @@ export async function getPaginatedBoards(
   let query = supabase
     .from('boards')
     .select('*')
-    .order('created_at', { ascending: false })
+    .order('order', { ascending: true })
     .range(from, to)
 
   if (owner) {
@@ -48,7 +48,7 @@ export async function searchBoards(filters?: {
   ids?: (number | string)[]
   owner?: string
 }): Promise<Board[]> {
-  let query = supabase.from('boards').select('*').order('created_at', { ascending: false })
+  let query = supabase.from('boards').select('*').order('order', { ascending: true })
 
   if (filters?.owner) {
     query = query.eq('owner', filters.owner)
