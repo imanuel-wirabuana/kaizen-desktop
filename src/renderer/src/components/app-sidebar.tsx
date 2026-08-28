@@ -6,7 +6,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { NavBoards, NavPinnedBoards, CreateBoardDrawer } from '@/components/boards'
+import { NavSidebarBoards, CreateBoardDrawer } from '@/components/boards'
 import { usePinnedBoards, useUnpinnedBoards } from '@/hooks/use-boards'
 import { useNavigationStore } from '@/stores/navigation'
 
@@ -37,8 +37,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavPinnedBoards boards={pinnedBoards} />
-        <NavBoards boards={unpinnedBoards} />
+        <NavSidebarBoards pinnedBoards={pinnedBoards} unpinnedBoards={unpinnedBoards} />
       </SidebarContent>
       <SidebarFooter className="p-2">
         <span className="text-[10px] text-muted-foreground/70">

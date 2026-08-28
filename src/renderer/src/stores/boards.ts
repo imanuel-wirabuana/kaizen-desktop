@@ -149,19 +149,19 @@ export const useBoardsStore = create<BoardsState>()(
     reorderBoards: async (reordered: Board[]) => {
       const prev = get().boards
 
-      // Build full new list with updated order index
-      const withOrder = reordered.map((b, i) => ({ ...b, order: i }))
-      const orderMap = new Map(withOrder.map((b) => [b.id, b.order]))
+      // Build full new list with updated order index and pinned status
+      const withOrder = reordered.map((b, i) => ({ ...b, order: i, pinned: Boolean(b.pinned) }))
+      const updatesMap = new Map(withOrder.map((b) => [b.id, { order: b.order, pinned: b.pinned }]))
 
       // Apply locally
       set((s) => ({
-        boards: s.boards.map((b) => (orderMap.has(b.id) ? { ...b, order: orderMap.get(b.id) } : b))
+        boards: s.boards.map((b) => (updatesMap.has(b.id) ? { ...b, ...updatesMap.get(b.id) } : b))
       }))
 
-      // Persist all changed orders to DB
+      // Persist all changed orders and pinned state to DB
       const updates = withOrder
-        .filter((b) => b.id !== undefined && b.id > 0)
-        .map((b) => boardsService.updateBoard(b.id!, { order: b.order }))
+        .filter((b) => b.id !== undefined && (typeof b.id === 'string' || b.id > 0))
+        .map((b) => boardsService.updateBoard(b.id!, { order: b.order, pinned: b.pinned }))
 
       const results = await Promise.all(updates)
       if (results.some((r) => r === null)) {
