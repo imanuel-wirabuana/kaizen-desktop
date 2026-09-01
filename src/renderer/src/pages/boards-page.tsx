@@ -89,14 +89,31 @@ export function BoardsPage() {
     <div className="flex flex-1 min-h-0 flex-col overflow-y-auto p-4 md:p-6 space-y-6">
       {/* ── Main Board Content Area ── */}
       {loading ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex flex-col rounded-xl border p-3 space-y-2 bg-card">
-              <Skeleton className="h-6 w-full rounded-md" />
-              <Skeleton className="h-3 w-3/4" />
-              <Skeleton className="h-3 w-1/2" />
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-28 rounded" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex min-h-[105px] flex-col justify-between overflow-hidden rounded-xl border bg-card shadow-xs"
+                >
+                  <Skeleton className="h-6 w-full rounded-none" />
+                  <div className="p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="size-6 rounded" />
+                      <Skeleton className="h-4 w-32 rounded" />
+                    </div>
+                    <Skeleton className="h-3 w-3/4 rounded" />
+                  </div>
+                  <div className="flex items-center justify-between border-t px-3 py-1.5 bg-muted/10">
+                    <Skeleton className="h-3 w-16 rounded" />
+                    <Skeleton className="h-3 w-12 rounded" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       ) : !hasBoards ? (
         /* Empty State */

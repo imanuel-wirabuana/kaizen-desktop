@@ -31,9 +31,10 @@ import {
 } from 'lucide-react'
 import { EditBoardDrawer } from './edit-board-drawer'
 import { DeleteBoardDrawer } from './delete-board-drawer'
-import { useBoardsStore } from '@/stores/boards'
+import { useBoardsStore, selectLoading } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { usePinnedBoards, useUnpinnedBoards } from '@/hooks/use-boards'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export function NavSidebarBoards({
   pinnedBoards: propsPinnedBoards,
@@ -42,6 +43,7 @@ export function NavSidebarBoards({
   pinnedBoards?: Board[]
   unpinnedBoards?: Board[]
 } = {}) {
+  const loading = useBoardsStore(selectLoading)
   const hookPinned = usePinnedBoards()
   const hookUnpinned = useUnpinnedBoards()
 
@@ -87,6 +89,28 @@ export function NavSidebarBoards({
     navigator.clipboard.writeText(`kaizen://boards/${boardId}`)
     setCopiedBoardId(boardId)
     setTimeout(() => setCopiedBoardId(null), 2000)
+  }
+
+  if (loading) {
+    return (
+      <SidebarGroup className="group-data-[collapsible=icon]:hidden space-y-4 p-2">
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-14 rounded" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-7 w-full rounded-md" />
+            <Skeleton className="h-7 w-full rounded-md" />
+          </div>
+        </div>
+        <div className="space-y-2 pt-2">
+          <Skeleton className="h-3 w-20 rounded" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-7 w-full rounded-md" />
+            <Skeleton className="h-7 w-full rounded-md" />
+            <Skeleton className="h-7 w-full rounded-md" />
+          </div>
+        </div>
+      </SidebarGroup>
+    )
   }
 
   return (

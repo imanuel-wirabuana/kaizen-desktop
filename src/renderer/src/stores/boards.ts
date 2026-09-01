@@ -26,15 +26,16 @@ let realtimeCleanup: (() => void) | null = null
 export const useBoardsStore = create<BoardsState>()(
   subscribeWithSelector((set, get) => ({
     boards: [],
-    loading: false,
+    loading: true,
     owner: undefined,
 
     init: async (owner: string) => {
       const prev = get().owner
-      if (prev === owner) return // already watching this owner
+      if (prev === owner && !get().loading) return // already watching this owner and loaded
 
       // Cleanup previous subscription
-      get().cleanup()
+      realtimeCleanup?.()
+      realtimeCleanup = null
 
       set({ owner, loading: true })
 

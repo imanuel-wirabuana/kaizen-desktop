@@ -22,11 +22,14 @@ import {
 import { useEventListener } from '@/hooks/use-event-listener'
 import { usePinnedBoards, useUnpinnedBoards } from '@/hooks/use-boards'
 import { useNavigationStore } from '@/stores/navigation'
+import { useBoardsStore, selectLoading } from '@/stores/boards'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const isMac = typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent)
 
 export function SearchCommand() {
   const [open, setOpen] = React.useState(false)
+  const loading = useBoardsStore(selectLoading)
   const navigate = useNavigationStore((s) => s.navigate)
   const pinnedBoards = usePinnedBoards()
   const unpinnedBoards = useUnpinnedBoards()
@@ -94,16 +97,28 @@ export function SearchCommand() {
         <CommandList className="max-h-64">
           <CommandEmpty>No results found.</CommandEmpty>
 
-          {pinnedBoards.length > 0 && (
-            <CommandGroup heading="Pinned Boards">
-              {pinnedBoards.map((b) => renderBoard(b, true))}
+          {loading ? (
+            <CommandGroup heading="Loading Boards...">
+              <div className="space-y-2 p-2">
+                <Skeleton className="h-6 w-full rounded" />
+                <Skeleton className="h-6 w-full rounded" />
+                <Skeleton className="h-6 w-full rounded" />
+              </div>
             </CommandGroup>
-          )}
+          ) : (
+            <>
+              {pinnedBoards.length > 0 && (
+                <CommandGroup heading="Pinned Boards">
+                  {pinnedBoards.map((b) => renderBoard(b, true))}
+                </CommandGroup>
+              )}
 
-          {unpinnedBoards.length > 0 && (
-            <CommandGroup heading={pinnedBoards.length > 0 ? 'Other Boards' : 'Boards'}>
-              {unpinnedBoards.map((b) => renderBoard(b, false))}
-            </CommandGroup>
+              {unpinnedBoards.length > 0 && (
+                <CommandGroup heading={pinnedBoards.length > 0 ? 'Other Boards' : 'Boards'}>
+                  {unpinnedBoards.map((b) => renderBoard(b, false))}
+                </CommandGroup>
+              )}
+            </>
           )}
 
           <CommandSeparator />

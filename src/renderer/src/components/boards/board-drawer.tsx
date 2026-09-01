@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SidebarMenuButton } from '@/components/ui/sidebar'
-import { Plus, Loader2, Image as ImageIcon, X } from 'lucide-react'
+import { Plus, Loader2, Palette } from 'lucide-react'
 import { useBoardsStore } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { useUser } from '@clerk/clerk-react'
@@ -261,11 +261,14 @@ export function BoardDrawer({
               />
             </div>
 
-            {/* Background Style - Tailwind Presets */}
+            {/* Background Style - Presets & Custom Color */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground flex items-center justify-between">
-                <span>Theme Background</span>
-                <span className="text-[11px] text-muted-foreground/70">Tailwind Presets</span>
+                <span className="flex items-center gap-1.5">
+                  <Palette className="size-3.5" />
+                  <span>Background Color</span>
+                </span>
+                <span className="text-[11px] text-muted-foreground/70">Presets & Custom</span>
               </label>
 
               <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -277,7 +280,7 @@ export function BoardDrawer({
                       type="button"
                       onClick={() => setBackground(preset.value)}
                       className={cn(
-                        'flex items-center gap-2 rounded-md border p-1.5 text-left text-xs transition-all hover:border-primary/50',
+                        'flex items-center gap-2 rounded-md border p-1.5 text-left text-xs transition-all hover:border-primary/50 cursor-pointer',
                         isSelected
                           ? 'border-primary bg-primary/10 font-medium text-primary shadow-xs ring-1 ring-primary/30'
                           : 'border-input bg-background hover:bg-muted/50'
@@ -291,34 +294,40 @@ export function BoardDrawer({
                   )
                 })}
               </div>
-            </div>
 
-            {/* Custom Image Wallpaper URL */}
-            <div className="space-y-1.5 pt-1">
-              <label className="text-xs font-medium text-muted-foreground flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <ImageIcon className="size-3.5" />
-                  <span>Custom Image Wallpaper URL</span>
-                </span>
-              </label>
-              <div className="relative flex items-center">
-                <Input
-                  placeholder="Paste image URL (e.g. https://example.com/wallpaper.jpg)..."
-                  value={background}
-                  onChange={(e) => setBackground(e.target.value)}
-                  disabled={isSubmitting}
-                  className="pr-8 text-xs font-mono"
-                />
-                {background && (
-                  <button
-                    type="button"
-                    onClick={() => setBackground('')}
-                    className="absolute right-2 text-muted-foreground hover:text-foreground p-0.5 rounded"
-                    title="Clear background"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                )}
+              {/* Custom Color Input */}
+              <div className="flex items-center gap-2 pt-1">
+                <label htmlFor="custom-color-picker" className="text-xs text-muted-foreground shrink-0">
+                  Custom Color:
+                </label>
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    id="custom-color-picker"
+                    type="color"
+                    value={background.startsWith('#') ? background : '#3b82f6'}
+                    onChange={(e) => setBackground(e.target.value)}
+                    className="size-7 rounded border border-input cursor-pointer bg-transparent p-0.5 shrink-0"
+                    title="Pick custom background color"
+                  />
+                  <Input
+                    placeholder="Hex color (e.g. #3b82f6)..."
+                    value={background.startsWith('#') ? background : ''}
+                    onChange={(e) => setBackground(e.target.value)}
+                    disabled={isSubmitting}
+                    className="text-xs font-mono h-8 flex-1"
+                  />
+                  {background ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setBackground('')}
+                      className="h-8 text-xs text-muted-foreground hover:text-foreground px-2 shrink-0"
+                    >
+                      Clear
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </div>
 
@@ -327,11 +336,7 @@ export function BoardDrawer({
               <div className="space-y-1 pt-1">
                 <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
                   <span>Background Preview:</span>
-                  <span className="text-[10px] opacity-70">
-                    {getBoardBackgroundStyleAndClass(background).isImage
-                      ? 'Image Wallpaper'
-                      : 'Tailwind Theme'}
-                  </span>
+                  <span className="text-[10px] opacity-70">Color Theme</span>
                 </div>
                 <div
                   className={cn(
@@ -340,9 +345,6 @@ export function BoardDrawer({
                   )}
                   style={getBoardBackgroundStyleAndClass(background).style}
                 >
-                  {getBoardBackgroundStyleAndClass(background).isImage && (
-                    <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px]" />
-                  )}
                   <span className="relative z-10 text-xs font-medium bg-background/85 backdrop-blur-xs px-3 py-1 rounded-md border shadow-xs flex items-center gap-1.5">
                     <span>{icon}</span>
                     <span className="truncate max-w-[200px]">{title || 'Board Title'}</span>
