@@ -10,3 +10,15 @@ type Board = {
   owner?: string | null
   order?: number
 }
+
+type Lane = {
+  id: number
+  board_id?: number | null
+  title?: string | null
+  description?: string | null
+  background?: string | null
+  order?: number | null
+  updated_at?: string | null
+  created_at?: string
+}
+

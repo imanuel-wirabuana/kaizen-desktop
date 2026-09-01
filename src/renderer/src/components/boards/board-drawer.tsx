@@ -18,22 +18,9 @@ import { useNavigationStore } from '@/stores/navigation'
 import { useUser } from '@clerk/clerk-react'
 import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
-
-const BG_PRESETS = [
-  { label: 'None', value: '', colorClass: 'bg-muted/40 border-muted' },
-  { label: 'Sunset Accent', value: 'from-amber-500/15 to-rose-500/15', colorClass: 'bg-gradient-to-br from-amber-500/40 to-rose-500/40' },
-  { label: 'Ocean Accent', value: 'from-blue-500/15 to-cyan-500/15', colorClass: 'bg-gradient-to-br from-blue-500/40 to-cyan-500/40' },
-  { label: 'Emerald Accent', value: 'from-emerald-500/15 to-teal-500/15', colorClass: 'bg-gradient-to-br from-emerald-500/40 to-teal-500/40' },
-  { label: 'Purple Accent', value: 'from-purple-500/15 to-pink-500/15', colorClass: 'bg-gradient-to-br from-purple-500/40 to-pink-500/40' },
-  { label: 'Midnight Accent', value: 'from-slate-900/40 to-indigo-950/60', colorClass: 'bg-gradient-to-br from-slate-900/60 to-indigo-950/80' },
-  { label: 'Cosmic', value: 'bg-gradient-to-r from-purple-600 to-indigo-600', colorClass: 'bg-gradient-to-r from-purple-600 to-indigo-600' },
-  { label: 'Sunset Glow', value: 'bg-gradient-to-r from-amber-500 to-rose-600', colorClass: 'bg-gradient-to-r from-amber-500 to-rose-600' },
-  { label: 'Northern Lights', value: 'bg-gradient-to-r from-emerald-500 to-teal-700', colorClass: 'bg-gradient-to-r from-emerald-500 to-teal-700' },
-  { label: 'Slate Dark', value: 'bg-slate-900', colorClass: 'bg-slate-900 border-slate-700' },
-  { label: 'Zinc Dark', value: 'bg-zinc-900', colorClass: 'bg-zinc-900 border-zinc-700' }
-]
 
 export type BoardDrawerProps = {
   mode?: 'create' | 'edit'
@@ -261,7 +248,7 @@ export function BoardDrawer({
               />
             </div>
 
-            {/* Background Style - Presets & Custom Color */}
+            {/* Background Style - Reusable Presets & Custom Color */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
@@ -271,64 +258,12 @@ export function BoardDrawer({
                 <span className="text-[11px] text-muted-foreground/70">Presets & Custom</span>
               </label>
 
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-                {BG_PRESETS.map((preset) => {
-                  const isSelected = background === preset.value
-                  return (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => setBackground(preset.value)}
-                      className={cn(
-                        'flex items-center gap-2 rounded-md border p-1.5 text-left text-xs transition-all hover:border-primary/50 cursor-pointer',
-                        isSelected
-                          ? 'border-primary bg-primary/10 font-medium text-primary shadow-xs ring-1 ring-primary/30'
-                          : 'border-input bg-background hover:bg-muted/50'
-                      )}
-                    >
-                      <span
-                        className={cn('size-3.5 shrink-0 rounded-full border shadow-xs', preset.colorClass)}
-                      />
-                      <span className="truncate text-[11px]">{preset.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Custom Color Input */}
-              <div className="flex items-center gap-2 pt-1">
-                <label htmlFor="custom-color-picker" className="text-xs text-muted-foreground shrink-0">
-                  Custom Color:
-                </label>
-                <div className="flex items-center gap-2 flex-1">
-                  <input
-                    id="custom-color-picker"
-                    type="color"
-                    value={background.startsWith('#') ? background : '#3b82f6'}
-                    onChange={(e) => setBackground(e.target.value)}
-                    className="size-7 rounded border border-input cursor-pointer bg-transparent p-0.5 shrink-0"
-                    title="Pick custom background color"
-                  />
-                  <Input
-                    placeholder="Hex color (e.g. #3b82f6)..."
-                    value={background.startsWith('#') ? background : ''}
-                    onChange={(e) => setBackground(e.target.value)}
-                    disabled={isSubmitting}
-                    className="text-xs font-mono h-8 flex-1"
-                  />
-                  {background ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setBackground('')}
-                      className="h-8 text-xs text-muted-foreground hover:text-foreground px-2 shrink-0"
-                    >
-                      Clear
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
+              <BackgroundPickerContent
+                value={background}
+                onChange={setBackground}
+                columns={3}
+                showTitle={false}
+              />
             </div>
 
             {/* Background Live Preview */}

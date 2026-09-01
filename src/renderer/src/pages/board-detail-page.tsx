@@ -1,10 +1,14 @@
 import { useEffect, useState, useMemo } from 'react'
+import { DragDropProvider, DragOverlay } from '@dnd-kit/react'
+import { RestrictToHorizontalAxis } from '@dnd-kit/abstract/modifiers'
 import { useBreadcrumbs } from '@/stores/dynamic-breadcrumb'
 import { useBoardsStore } from '@/stores/boards'
+import { useLanesStore, selectLanes, selectLanesLoading } from '@/stores/lanes'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EditBoardDrawer } from '@/components/boards/edit-board-drawer'
 import { DeleteBoardDrawer } from '@/components/boards/delete-board-drawer'
+import { LaneColumn, LaneColumnPreview, InlineCreateLane } from '@/components/lanes'
 import { AlertCircle, Pencil, Trash2, Pin, PinOff } from 'lucide-react'
 import { useNavigationStore } from '@/stores/navigation'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
@@ -17,6 +21,10 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const [loading, setLoading] = useState(true)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+
+  // Lanes store state
+  const lanes = useLanesStore(selectLanes)
+  const lanesLoading = useLanesStore(selectLanesLoading)
 
   // Declarative breadcrumb synchronization
   const breadcrumbItems = useMemo(() => {
@@ -49,7 +57,10 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       )
     }
 
-    // Stay in sync with store (optimistic updates from sidebar, etc.)
+    // Initialize lanes store for this board
+    useLanesStore.getState().init(boardId)
+
+    // Stay in sync with boards store
     const unsub = useBoardsStore.subscribe(
       (s) => s.boards,
       (boards) => {
@@ -61,8 +72,26 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     return () => {
       isCancelled = true
       unsub()
+      useLanesStore.getState().cleanup()
     }
   }, [boardId])
+
+  // Drag and drop column reordering handler
+  const handleDragEnd = (event: any) => {
+    const { source, target } = event.operation || {}
+    if (!source || !target || source.id === target.id) return
+
+    const currentLanes = [...lanes]
+    const oldIndex = currentLanes.findIndex((l) => String(l.id) === String(source.id))
+    const newIndex = currentLanes.findIndex((l) => String(l.id) === String(target.id))
+
+    if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+      const reordered = [...currentLanes]
+      const [moved] = reordered.splice(oldIndex, 1)
+      reordered.splice(newIndex, 0, moved)
+      useLanesStore.getState().reorderLanes(reordered)
+    }
+  }
 
   if (loading) {
     return (
@@ -85,9 +114,9 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
         {/* Kanban Board Columns Skeleton */}
         <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-xl border bg-muted/10 p-4">
-          <div className="grid h-full grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex h-full gap-4 overflow-x-auto pb-2">
             {[1, 2, 3].map((col) => (
-              <div key={col} className="flex flex-col rounded-xl border bg-card/60 p-3 space-y-3">
+              <div key={col} className="flex h-full w-72 shrink-0 flex-col rounded-xl border bg-card/60 p-3 space-y-3">
                 <div className="flex items-center justify-between pb-1 border-b">
                   <Skeleton className="h-4 w-24 rounded" />
                   <Skeleton className="size-5 rounded-full" />
@@ -101,12 +130,6 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                     <Skeleton className="h-3.5 w-4/5 rounded" />
                     <Skeleton className="h-2.5 w-2/3 rounded" />
                   </div>
-                  {col !== 3 && (
-                    <div className="rounded-lg border bg-background p-3 space-y-2">
-                      <Skeleton className="h-3.5 w-2/3 rounded" />
-                      <Skeleton className="h-2.5 w-1/3 rounded" />
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
@@ -195,25 +218,67 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         </div>
       </div>
 
-      {/* Board Content Area / Kanban with Custom Background */}
+      {/* Board Content Area / Kanban Lanes Canvas */}
       <div
         className={cn(
-          'relative flex-1 min-h-0 w-full overflow-hidden rounded-xl border bg-muted/20 p-4 transition-all',
+          'relative flex-1 min-h-0 w-full overflow-hidden rounded-2xl border bg-muted/20 p-4 transition-all',
           bgProps.className
         )}
         style={bgProps.style}
       >
-        {/* Subtle overlay for legibility if background image is present */}
+        {/* Overlay for background images */}
         {bgProps.isImage && (
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] pointer-events-none rounded-xl" />
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] pointer-events-none rounded-2xl" />
         )}
 
-        <div className="relative z-10 h-full w-full">
-          {/* Kanban items container placeholder / future items */}
+        <div className="relative z-10 h-full w-full overflow-x-auto overflow-y-hidden">
+          {lanesLoading ? (
+            <div className="flex h-full gap-4 items-start pb-2">
+              {[1, 2, 3].map((col) => (
+                <div key={col} className="flex h-full w-72 shrink-0 flex-col rounded-xl border bg-card/60 p-3 space-y-3">
+                  <div className="flex items-center justify-between pb-1 border-b">
+                    <Skeleton className="h-4 w-24 rounded" />
+                    <Skeleton className="size-5 rounded-full" />
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-12 w-full rounded-lg" />
+                    <Skeleton className="h-12 w-full rounded-lg" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <DragDropProvider
+              modifiers={[RestrictToHorizontalAxis]}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="flex h-full items-start gap-4 pb-2 min-w-max">
+                {lanes.map((lane, index) => (
+                  <LaneColumn
+                    key={lane.id}
+                    lane={lane}
+                    index={index}
+                    totalLanes={lanes.length}
+                  />
+                ))}
+
+                {/* Inline Create Lane Card */}
+                <InlineCreateLane boardId={boardId} />
+              </div>
+
+              <DragOverlay>
+                {(source) => {
+                  if (!source || source.type !== 'lane') return null
+                  const activeLane = lanes.find((l) => String(l.id) === String(source.id))
+                  return activeLane ? <LaneColumnPreview lane={activeLane} /> : null
+                }}
+              </DragOverlay>
+            </DragDropProvider>
+          )}
         </div>
       </div>
 
-      {/* Edit Drawer */}
+      {/* Edit Board Drawer */}
       <EditBoardDrawer
         board={board}
         open={isEditOpen}
@@ -221,7 +286,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         onSuccess={(updated) => setBoard(updated)}
       />
 
-      {/* Delete Drawer */}
+      {/* Delete Board Drawer */}
       <DeleteBoardDrawer
         board={board}
         open={isDeleteOpen}
