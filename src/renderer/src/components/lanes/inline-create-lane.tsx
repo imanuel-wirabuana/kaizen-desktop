@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
 import { Plus, X, Loader2, Palette, Sparkles } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 import { BackgroundPicker } from '@/components/ui/background-picker'
@@ -10,14 +12,17 @@ import { cn } from '@/lib/utils'
 export function InlineCreateLane({ boardId }: { boardId: number | string }) {
   const [isOpen, setIsOpen] = useState(false)
   const [title, setTitle] = useState('')
+  const [icon, setIcon] = useState('📌')
   const [description, setDescription] = useState('')
   const [background, setBackground] = useState('')
+  const [popoverOpen, setPopoverOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const addLane = useLanesStore((s) => s.addLane)
 
   const handleOpen = () => {
     setTitle('')
+    setIcon('📌')
     setDescription('')
     setBackground('')
     setIsOpen(true)
@@ -26,6 +31,7 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
   const handleClose = () => {
     setIsOpen(false)
     setTitle('')
+    setIcon('📌')
     setDescription('')
     setBackground('')
   }
@@ -39,12 +45,11 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
       await addLane({
         board_id: Number(boardId),
         title: title.trim(),
+        icon: icon || null,
         description: description.trim() || null,
         background: background || null
       })
-      // Reset form and keep focus open for rapidly adding another column!
-      setTitle('')
-      setDescription('')
+      handleClose()
     } catch (err) {
       console.error('Error creating lane inline:', err)
     } finally {
@@ -122,8 +127,38 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
           </div>
         </div>
 
-        {/* Inputs */}
+        {/* Icon & Title Inputs */}
         <div className="space-y-2">
+          {/* Emoji Icon Selector */}
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex h-8 w-full items-center justify-between px-2.5 text-left font-normal bg-background"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">{icon}</span>
+                    <span className="text-xs text-muted-foreground">Choose Emoji Icon</span>
+                  </span>
+                </Button>
+              }
+            />
+            <PopoverContent align="start" className="w-[300px] border-none bg-transparent p-0 shadow-none z-50">
+              <EmojiPicker
+                className="h-[300px] w-full rounded-lg border shadow-md"
+                onEmojiSelect={({ emoji }) => {
+                  setIcon(emoji)
+                  setPopoverOpen(false)
+                }}
+              >
+                <EmojiPickerSearch />
+                <EmojiPickerContent />
+              </EmojiPicker>
+            </PopoverContent>
+          </Popover>
+
           <Input
             placeholder="Lane title (e.g. In Progress)..."
             value={title}
@@ -161,14 +196,17 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
 
           <div
             className={cn(
-              'flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-semibold shadow-2xs overflow-hidden transition-all duration-200',
+              'flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-semibold shadow-2xs overflow-hidden transition-all duration-200 gap-1.5',
               hasCustomBackground ? bgProps.className : 'bg-muted/30 border-border/80'
             )}
             style={hasCustomBackground ? { background: background! } : undefined}
           >
-            <span className="truncate text-foreground font-semibold">
-              {title.trim() || 'Untitled Lane'}
-            </span>
+            <div className="flex items-center gap-1.5 truncate">
+              {icon && <span className="text-sm shrink-0">{icon}</span>}
+              <span className="truncate text-foreground font-semibold">
+                {title.trim() || 'Untitled Lane'}
+              </span>
+            </div>
             <span className="flex size-4 items-center justify-center rounded-full bg-background/80 text-[9px] font-bold text-muted-foreground border shrink-0">
               0
             </span>

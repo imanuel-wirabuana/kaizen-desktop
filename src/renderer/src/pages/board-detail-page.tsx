@@ -1,15 +1,16 @@
 import { useEffect, useState, useMemo } from 'react'
-import { DragDropProvider, DragOverlay } from '@dnd-kit/react'
-import { RestrictToHorizontalAxis } from '@dnd-kit/abstract/modifiers'
 import { useBreadcrumbs } from '@/stores/dynamic-breadcrumb'
 import { useBoardsStore } from '@/stores/boards'
 import { useLanesStore, selectLanes, selectLanesLoading } from '@/stores/lanes'
+import { useItemsStore, selectItems } from '@/stores/items'
+import { useDraftSidebarStore } from '@/stores/draft-sidebar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EditBoardDrawer } from '@/components/boards/edit-board-drawer'
 import { DeleteBoardDrawer } from '@/components/boards/delete-board-drawer'
-import { LaneColumn, LaneColumnPreview, InlineCreateLane } from '@/components/lanes'
-import { AlertCircle, Pencil, Trash2, Pin, PinOff } from 'lucide-react'
+import { LaneColumn, InlineCreateLane } from '@/components/lanes'
+import { DraftSidebar } from '@/components/items'
+import { AlertCircle, Inbox, Pencil, Trash2 } from 'lucide-react'
 import { useNavigationStore } from '@/stores/navigation'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
@@ -22,9 +23,21 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
-  // Lanes store state
+  // Draft Sidebar store state
+  const isDraftOpen = useDraftSidebarStore((s) => s.isOpen)
+  const toggleDraftSidebar = useDraftSidebarStore((s) => s.toggle)
+  const closeDraftSidebar = useDraftSidebarStore((s) => s.close)
+
+  // Lanes and Items stores
   const lanes = useLanesStore(selectLanes)
   const lanesLoading = useLanesStore(selectLanesLoading)
+  const items = useItemsStore(selectItems)
+
+  // Filter canvas lanes (real user lanes with non-null id)
+  const canvasLanes = useMemo(() => lanes.filter((l) => l.id !== null), [lanes])
+
+  // Count items in Draft (lane_id === null)
+  const draftItemsCount = useMemo(() => items.filter((i) => i.lane_id === null).length, [items])
 
   // Declarative breadcrumb synchronization
   const breadcrumbItems = useMemo(() => {
@@ -57,8 +70,9 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       )
     }
 
-    // Initialize lanes store for this board
+    // Initialize lanes and items stores for this board
     useLanesStore.getState().init(boardId)
+    useItemsStore.getState().init(boardId)
 
     // Stay in sync with boards store
     const unsub = useBoardsStore.subscribe(
@@ -72,26 +86,11 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     return () => {
       isCancelled = true
       unsub()
+      closeDraftSidebar()
       useLanesStore.getState().cleanup()
+      useItemsStore.getState().cleanup()
     }
-  }, [boardId])
-
-  // Drag and drop column reordering handler
-  const handleDragEnd = (event: any) => {
-    const { source, target } = event.operation || {}
-    if (!source || !target || source.id === target.id) return
-
-    const currentLanes = [...lanes]
-    const oldIndex = currentLanes.findIndex((l) => String(l.id) === String(source.id))
-    const newIndex = currentLanes.findIndex((l) => String(l.id) === String(target.id))
-
-    if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-      const reordered = [...currentLanes]
-      const [moved] = reordered.splice(oldIndex, 1)
-      reordered.splice(newIndex, 0, moved)
-      useLanesStore.getState().reorderLanes(reordered)
-    }
-  }
+  }, [boardId, closeDraftSidebar])
 
   if (loading) {
     return (
@@ -165,28 +164,84 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
   const bgProps = getBoardBackgroundStyleAndClass(board.background)
 
-  const handleTogglePin = async () => {
-    if (board.id === undefined) return
-    const updated = await useBoardsStore.getState().updateBoard(board.id, { pinned: !board.pinned })
-    if (updated) setBoard(updated)
-  }
-
   return (
     <div className="flex h-full pb-2 min-h-0 flex-col gap-3 overflow-hidden">
-      {/* Board Content Area / Kanban Lanes Canvas */}
-      <div
-        className={cn(
-          'relative flex-1 min-h-0 w-full overflow-hidden rounded-2xl border bg-muted/20 p-2 transition-all',
-          bgProps.className
-        )}
-        style={bgProps.style}
-      >
-        {/* Overlay for background images */}
-        {bgProps.isImage && (
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] pointer-events-none rounded-2xl" />
-        )}
+      {/* Board Header Bar */}
+      <div className="flex items-center justify-between gap-3 px-1 py-0.5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex size-8 items-center justify-center rounded-xl border bg-background text-base shadow-2xs shrink-0">
+            {board.icon || '📋'}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-sm font-bold tracking-tight text-foreground truncate">
+              {board.title || 'Untitled Board'}
+            </h1>
+            {board.description && (
+              <p className="text-[11px] text-muted-foreground line-clamp-1">
+                {board.description}
+              </p>
+            )}
+          </div>
+        </div>
 
-        <div className="relative z-10 h-full w-full overflow-x-auto overflow-y-hidden">
+        {/* Top Right Header Controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Draft Sidebar Toggle Button */}
+          <Button
+            variant={isDraftOpen ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={toggleDraftSidebar}
+            className="h-8 gap-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+            title={isDraftOpen ? 'Close Draft Sidebar' : 'Open Draft Sidebar'}
+          >
+            <Inbox className={cn('size-3.5', isDraftOpen ? 'text-primary' : 'text-muted-foreground')} />
+            <span>Drafts</span>
+            {draftItemsCount > 0 && (
+              <span className="flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                {draftItemsCount}
+              </span>
+            )}
+          </Button>
+
+          {/* Edit Board Details Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsEditOpen(true)}
+            className="h-8 gap-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            <Pencil className="size-3.5" />
+            <span className="hidden sm:inline">Edit</span>
+          </Button>
+
+          {/* Delete Board Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsDeleteOpen(true)}
+            className="h-8 size-8 p-0 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            title="Delete Board"
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Canvas & Right Draft Sidebar Area (Same level under Board Header) */}
+      <div className="flex flex-1 min-h-0 w-full gap-3 overflow-hidden">
+        {/* Main Kanban Canvas */}
+        <div
+          className={cn(
+            'relative flex-1 min-h-0 w-full overflow-hidden rounded-2xl border bg-muted/20 p-2 transition-all flex gap-3',
+            bgProps.className
+          )}
+          style={bgProps.style}
+        >
+          {/* Overlay for background images */}
+          {bgProps.isImage && (
+            <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] pointer-events-none rounded-2xl" />
+          )}
+
           {lanesLoading ? (
             <div className="flex h-full gap-4 items-start pb-2">
               {[1, 2, 3].map((col) => (
@@ -218,34 +273,21 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
               ))}
             </div>
           ) : (
-            <DragDropProvider modifiers={[RestrictToHorizontalAxis]} onDragEnd={handleDragEnd}>
+            <div className="relative z-10 h-full flex-1 min-w-0 overflow-x-auto overflow-y-hidden">
               <div className="flex h-full items-start gap-4 pb-2 min-w-max">
-                {lanes.map((lane, index) => (
-                  <LaneColumn key={lane.id} lane={lane} index={index} totalLanes={lanes.length} />
+                {canvasLanes.map((lane, index) => (
+                  <LaneColumn key={lane.id!} lane={lane} index={index} totalLanes={canvasLanes.length} />
                 ))}
 
                 {/* Inline Create Lane Card */}
                 <InlineCreateLane boardId={boardId} />
               </div>
-
-              <DragOverlay>
-                {(source) => {
-                  if (!source || source.type !== 'lane') return null
-                  const activeLane = lanes.find((l) => String(l.id) === String(source.id))
-                  if (!activeLane) return null
-                  const width = source.element
-                    ? source.element.getBoundingClientRect().width
-                    : undefined
-                  return (
-                    <div style={{ width: width ? `${width}px` : undefined }}>
-                      <LaneColumnPreview lane={activeLane} />
-                    </div>
-                  )
-                }}
-              </DragOverlay>
-            </DragDropProvider>
+            </div>
           )}
         </div>
+
+        {/* Right Draft Sidebar (Same level as Canvas) */}
+        <DraftSidebar />
       </div>
 
       {/* Edit Board Drawer */}

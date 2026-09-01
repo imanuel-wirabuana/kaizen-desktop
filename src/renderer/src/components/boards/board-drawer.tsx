@@ -157,9 +157,14 @@ export function BoardDrawer({
   const activeTrigger: React.ReactElement | null =
     trigger !== undefined ? trigger : isControlled || isEdit ? null : defaultTrigger
 
-
   return (
-    <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
+    <Drawer
+      open={open}
+      modal={false}
+      disablePointerDismissal
+      onOpenChange={setOpen}
+      swipeDirection="right"
+    >
       {activeTrigger ? <DrawerTrigger render={activeTrigger} /> : null}
       <DrawerContent>
         <form onSubmit={handleSubmit}>
@@ -341,7 +346,11 @@ export function CreateBoardDrawer(props: Omit<BoardDrawerProps, 'mode' | 'board'
 }
 
 export function EditBoardDrawer(
-  props: Omit<BoardDrawerProps, 'mode'> & { board: Board | null; open: boolean; onOpenChange: (open: boolean) => void }
+  props: Omit<BoardDrawerProps, 'mode'> & {
+    board: Board | null
+    open: boolean
+    onOpenChange: (open: boolean) => void
+  }
 ) {
   return <BoardDrawer mode="edit" {...props} />
 }

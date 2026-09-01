@@ -21,7 +21,7 @@ export function DeleteLaneDialog({ lane, open, onOpenChange }: DeleteLaneDialogP
   const [isDeleting, setIsDeleting] = useState(false)
   const removeLane = useLanesStore((s) => s.removeLane)
 
-  if (!lane) return null
+  if (!lane || lane.isVirtual || lane.id === null) return null
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -43,9 +43,13 @@ export function DeleteLaneDialog({ lane, open, onOpenChange }: DeleteLaneDialogP
             <AlertTriangle className="size-5 shrink-0" />
             <DialogTitle>Delete Lane</DialogTitle>
           </div>
-          <DialogDescription className="pt-2 text-xs">
-            Are you sure you want to delete <span className="font-semibold text-foreground">"{lane.title}"</span>?
-            This action cannot be undone and will permanently remove this column.
+          <DialogDescription className="pt-2 text-xs space-y-1">
+            <span>
+              Are you sure you want to delete <span className="font-semibold text-foreground">"{lane.title}"</span>?
+            </span>
+            <span className="block text-muted-foreground font-medium pt-1">
+              Items in this lane will automatically be moved to Draft.
+            </span>
           </DialogDescription>
         </DialogHeader>
 

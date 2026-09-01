@@ -184,20 +184,6 @@ export function NavSidebarBoards({
           onDelete={setActiveBoardForDelete}
         />
 
-        <DragOverlay>
-          {(source) => {
-            if (!source) return null
-            const allBoards = [...items.pinned, ...items.unpinned]
-            const activeBoard = allBoards.find((b) => String(b.id) === String(source.id))
-            if (!activeBoard) return null
-            const width = source.element ? source.element.getBoundingClientRect().width : undefined
-            return (
-              <div style={{ width: width ? `${width}px` : undefined }}>
-                <BoardDragPreview item={activeBoard} />
-              </div>
-            )
-          }}
-        </DragOverlay>
       </DragDropProvider>
 
       {/* Edit Drawer */}
@@ -472,7 +458,7 @@ function SortableSidebarBoardItem({
   )
 }
 
-function BoardDragPreview({ item }: { item: Board }) {
+export function BoardDragPreview({ item }: { item: Board }) {
   return (
     <div className="w-full pointer-events-none select-none list-none">
       <SidebarMenuButton

@@ -3,6 +3,19 @@ import { subscribeWithSelector } from 'zustand/middleware'
 import * as lanesService from '@/services/lanes'
 import { supabase } from '@/lib/supabase'
 
+export function createVirtualDraftLane(boardId: number | string): Lane {
+  return {
+    id: null,
+    board_id: Number(boardId),
+    title: 'Draft',
+    description: 'Unassigned & draft items',
+    background: null,
+    order: -Infinity,
+    isVirtual: true,
+    created_at: new Date().toISOString()
+  }
+}
+
 type LanesState = {
   lanes: Lane[]
   loading: boolean
@@ -16,13 +29,14 @@ type LanesState = {
   addLane: (
     draft: Partial<Omit<Lane, 'id' | 'created_at' | 'updated_at'>>
   ) => Promise<Lane | null>
-  updateLane: (id: number | string, updates: Partial<Lane>) => Promise<Lane | null>
-  removeLane: (id: number | string) => Promise<boolean>
-  moveLane: (id: number | string, direction: 'left' | 'right') => Promise<void>
+  updateLane: (id: number | string | null, updates: Partial<Lane>) => Promise<Lane | null>
+  removeLane: (id: number | string | null) => Promise<boolean>
+  moveLane: (id: number | string | null, direction: 'left' | 'right') => Promise<void>
   reorderLanes: (reordered: Lane[]) => Promise<void>
 }
 
 let realtimeCleanup: (() => void) | null = null
+let suppressRealtimeRefetch = false
 
 export const useLanesStore = create<LanesState>()(
   subscribeWithSelector((set, get) => ({
@@ -39,13 +53,15 @@ export const useLanesStore = create<LanesState>()(
 
       set({ boardId, loading: true })
 
-      const data = await lanesService.getLanesByBoardId(boardId)
-      set({ lanes: data, loading: false })
+      const userLanes = await lanesService.getLanesByBoardId(boardId)
+      const virtualDraft = createVirtualDraftLane(boardId)
+      set({ lanes: [virtualDraft, ...userLanes], loading: false })
 
-      // Realtime subscription — refetch on changes
+      // Realtime subscription — refetch on changes (unless suppressed during batch reorder)
       const channel = lanesService.subscribeLanes(boardId, () => {
+        if (suppressRealtimeRefetch) return
         lanesService.getLanesByBoardId(boardId).then((fresh) => {
-          set({ lanes: fresh })
+          set({ lanes: [createVirtualDraftLane(boardId), ...fresh] })
         })
       })
 
@@ -62,8 +78,8 @@ export const useLanesStore = create<LanesState>()(
 
     // ── Optimistic create ──────────────────────────────────────
     addLane: async (draft) => {
-      const currentLanes = get().lanes
-      const maxOrder = currentLanes.length > 0 ? Math.max(...currentLanes.map((l) => l.order ?? 0)) : 0
+      const realLanes = get().lanes.filter((l) => l.id !== null)
+      const maxOrder = realLanes.length > 0 ? Math.max(...realLanes.map((l) => l.order ?? 0)) : 0
       const order = maxOrder + 1
 
       const tempId = -Date.now()
@@ -71,6 +87,7 @@ export const useLanesStore = create<LanesState>()(
         id: tempId,
         board_id: draft.board_id ?? (get().boardId ? Number(get().boardId) : null),
         title: draft.title ?? 'New Lane',
+        icon: draft.icon ?? null,
         description: draft.description ?? null,
         background: draft.background ?? null,
         order,
@@ -99,6 +116,8 @@ export const useLanesStore = create<LanesState>()(
 
     // ── Optimistic update ──────────────────────────────────────
     updateLane: async (id, updates) => {
+      if (id === null || String(id) === 'null') return null
+
       const prevLane = get().lanes.find((l) => String(l.id) === String(id))
       if (!prevLane) return null
 
@@ -127,6 +146,8 @@ export const useLanesStore = create<LanesState>()(
 
     // ── Optimistic delete ──────────────────────────────────────
     removeLane: async (id) => {
+      if (id === null || String(id) === 'null') return false
+
       const prevLanes = get().lanes
       const target = prevLanes.find((l) => String(l.id) === String(id))
       if (!target) return false
@@ -145,40 +166,58 @@ export const useLanesStore = create<LanesState>()(
 
     // ── Move lane left/right ───────────────────────────────────
     moveLane: async (id, direction) => {
-      const current = [...get().lanes].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-      const index = current.findIndex((l) => String(l.id) === String(id))
+      if (id === null || String(id) === 'null') return
+
+      const realLanes = get().lanes.filter((l) => l.id !== null).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      const index = realLanes.findIndex((l) => String(l.id) === String(id))
 
       if (index === -1) return
       if (direction === 'left' && index === 0) return
-      if (direction === 'right' && index === current.length - 1) return
+      if (direction === 'right' && index === realLanes.length - 1) return
 
       const targetIndex = direction === 'left' ? index - 1 : index + 1
-      const temp = current[index]
-      current[index] = current[targetIndex]
-      current[targetIndex] = temp
+      const reordered = [...realLanes]
+      const [moved] = reordered.splice(index, 1)
+      reordered.splice(targetIndex, 0, moved)
 
-      // Update orders
-      const reordered = current.map((l, i) => ({ ...l, order: i + 1 }))
       await get().reorderLanes(reordered)
     },
 
     // ── Optimistic reorder ─────────────────────────────────────
     reorderLanes: async (reordered: Lane[]) => {
+      const currentBoardId = get().boardId
+      const realReordered = reordered.filter((l) => l.id !== null)
       const prevLanes = get().lanes
-      const withOrder = reordered.map((l, i) => ({ ...l, order: i + 1 }))
-      const orderMap = new Map(withOrder.map((l) => [l.id, l.order]))
 
-      set((s) => ({
-        lanes: s.lanes
-          .map((l) => (orderMap.has(l.id) ? { ...l, order: orderMap.get(l.id) } : l))
-          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-      }))
+      const withOrder = realReordered.map((l, i) => ({ ...l, order: i + 1 }))
+      const orderMap = new Map(withOrder.map((l) => [String(l.id), l.order]))
 
-      const updates = withOrder.map((l) => lanesService.updateLane(l.id, { order: l.order }))
-      const results = await Promise.all(updates)
+      const draftLane = currentBoardId ? createVirtualDraftLane(currentBoardId) : null
+      const updatedRealLanes = prevLanes
+        .filter((l) => l.id !== null)
+        .map((l) => {
+          const key = String(l.id)
+          return orderMap.has(key) ? { ...l, order: orderMap.get(key)! } : l
+        })
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
-      if (results.some((r) => r === null)) {
+      set({ lanes: draftLane ? [draftLane, ...updatedRealLanes] : updatedRealLanes })
+
+      // Suppress realtime refetch during batch update to prevent race conditions
+      suppressRealtimeRefetch = true
+      try {
+        const updates = withOrder.map((l) => lanesService.updateLane(Number(l.id), { order: l.order }))
+        const results = await Promise.all(updates)
+
+        if (results.some((r) => r === null)) {
+          console.error('reorderLanes: one or more lane database updates failed, reverting')
+          set({ lanes: prevLanes })
+        }
+      } catch (err) {
+        console.error('reorderLanes error:', err)
         set({ lanes: prevLanes })
+      } finally {
+        suppressRealtimeRefetch = false
       }
     }
   }))

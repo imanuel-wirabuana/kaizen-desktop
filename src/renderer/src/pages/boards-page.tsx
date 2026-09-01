@@ -207,7 +207,7 @@ export function BoardsPage() {
             />
           </div>
 
-          <DragOverlay>
+          <DragOverlay dropAnimation={null}>
             {(source) => {
               if (!source) return null
               const allBoards = [...items.pinned, ...items.unpinned]

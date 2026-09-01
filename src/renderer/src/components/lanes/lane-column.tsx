@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/react/sortable'
+import { useDroppable } from '@dnd-kit/react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -29,13 +30,15 @@ import {
   ArrowLeft,
   ArrowRight,
   Palette,
-  Plus,
+  Inbox,
   Sparkles
 } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
+import { useItemsStore } from '@/stores/items'
 import { InlineEditLane } from './inline-edit-lane'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { DeleteLaneDialog } from './delete-lane-dialog'
+import { TaskCard, TaskCardPreview, InlineCreateTask } from '@/components/items'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
 
@@ -51,20 +54,38 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
 
   const updateLane = useLanesStore((s) => s.updateLane)
   const moveLane = useLanesStore((s) => s.moveLane)
+  const allItems = useItemsStore((s) => s.items)
 
-  // Attach sortable drag & drop ref
+  const isVirtual = Boolean(lane.isVirtual || lane.id === null)
+
+  // Attach sortable drag & drop ref for column reordering
   const { ref, handleRef, isDragSource } = useSortable({
-    id: lane.id,
+    id: lane.id ?? 'draft-lane-virtual',
     index,
     type: 'lane',
     accept: 'lane',
-    disabled: isEditing
+    group: 'lanes',
+    disabled: isEditing || isVirtual
   })
+
+  // Attach droppable ref for task items dropping into this column (especially when empty)
+  const { ref: columnDropRef, isDropTarget } = useDroppable({
+    id: `lane-drop-target-${lane.id}`,
+    type: 'item',
+    accept: 'item',
+    data: { type: 'lane', laneId: lane.id }
+  })
+
+  // Filter items belonging to this lane
+  const columnItems = allItems
+    .filter((i) => (lane.id === null ? i.lane_id === null : i.lane_id === lane.id))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
   const bgProps = getBoardBackgroundStyleAndClass(lane.background)
   const hasCustomBackground = Boolean(lane.background && lane.background.trim())
 
   const handleBackgroundChange = (newBg: string) => {
+    if (isVirtual || lane.id === null) return
     updateLane(lane.id, { background: newBg || null })
   }
 
@@ -77,203 +98,229 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
               ref={ref}
               className={cn(
                 'group/column flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border border-border/70 bg-card/95 backdrop-blur-md shadow-xs hover:shadow-md transition-all duration-200 overflow-hidden relative select-none',
-                isDragSource ? 'opacity-40 ring-2 ring-primary/50 shadow-xl scale-[0.99]' : 'hover:border-border'
+                isDragSource ? 'opacity-40 ring-2 ring-primary/50 shadow-xl scale-[0.99]' : 'hover:border-border',
+                isVirtual ? 'border-primary/30 bg-card/98 ring-1 ring-primary/10' : ''
               )}
             >
-              {/* Column Header (Displays custom background or sleek glassmorphism) */}
+              {/* Column Header */}
               <div
                 className={cn(
                   'flex items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200',
-                  hasCustomBackground ? bgProps.className : 'bg-muted/30 backdrop-blur-md'
+                  hasCustomBackground ? bgProps.className : isVirtual ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 backdrop-blur-md'
                 )}
                 style={hasCustomBackground ? { background: lane.background! } : undefined}
               >
                 <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  {/* Drag Handle Icon */}
-                  <span
-                    ref={handleRef}
-                    className="flex size-6 items-center justify-center rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-background/50 transition-colors cursor-grab active:cursor-grabbing touch-none shrink-0"
-                    title="Drag column to reorder"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <GripVertical className="size-4" />
-                  </span>
+                  {/* Drag Handle Icon or Virtual Inbox Badge */}
+                  {isVirtual ? (
+                    <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0" title="Virtual Draft Lane">
+                      <Inbox className="size-3.5" />
+                    </div>
+                  ) : (
+                    <span
+                      ref={handleRef}
+                      className="flex size-6 items-center justify-center rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-background/50 transition-colors cursor-grab active:cursor-grabbing touch-none shrink-0"
+                      title="Drag column to reorder"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <GripVertical className="size-4" />
+                    </span>
+                  )}
 
-                  {/* Inline Edit Header Title */}
-                  <InlineEditLane
-                    lane={lane}
-                    isEditing={isEditing}
-                    onEditingChange={setIsEditing}
-                  />
+                  {/* Header Title */}
+                  {isVirtual ? (
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="text-xs font-semibold tracking-tight text-foreground truncate">Draft</span>
+                      <span className="rounded-full bg-primary/15 px-1.5 py-0.2 text-[9px] font-semibold text-primary uppercase tracking-wider">
+                        Virtual
+                      </span>
+                    </div>
+                  ) : (
+                    <InlineEditLane
+                      lane={lane}
+                      isEditing={isEditing}
+                      onEditingChange={setIsEditing}
+                    />
+                  )}
                 </div>
 
                 {/* Controls Area */}
                 <div className="flex items-center gap-1 shrink-0">
                   {/* Item Count Pill Badge */}
                   <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-background/80 border text-[10px] font-bold text-muted-foreground shadow-2xs backdrop-blur-xs">
-                    0
+                    {columnItems.length}
                   </span>
 
                   {/* Options Dropdown Menu Trigger */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60"
-                          title="Column options"
+                  {!isVirtual && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60"
+                            title="Column options"
+                          >
+                            <MoreHorizontal className="size-3.5" />
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
+                        <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                          <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+                          <span>Edit Title & Description</span>
+                        </DropdownMenuItem>
+
+                        {/* Color Accent Submenu */}
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <Palette className="mr-2 size-3.5 text-muted-foreground" />
+                            <span>Change Color Accent</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-[240px] p-2">
+                            <BackgroundPickerContent
+                              value={lane.background}
+                              onChange={handleBackgroundChange}
+                            />
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuItem
+                          disabled={index === 0}
+                          onClick={() => moveLane(lane.id!, 'left')}
                         >
-                          <MoreHorizontal className="size-3.5" />
-                        </Button>
-                      }
-                    />
-                    <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                        <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-                        <span>Edit Title & Description</span>
-                      </DropdownMenuItem>
+                          <ArrowLeft className="mr-2 size-3.5 text-muted-foreground" />
+                          <span>Move Left</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={index === totalLanes - 1}
+                          onClick={() => moveLane(lane.id!, 'right')}
+                        >
+                          <ArrowRight className="mr-2 size-3.5 text-muted-foreground" />
+                          <span>Move Right</span>
+                        </DropdownMenuItem>
 
-                      {/* Color Accent Submenu */}
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Palette className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Change Color Accent</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-[240px] p-2">
-                          <BackgroundPickerContent
-                            value={lane.background}
-                            onChange={handleBackgroundChange}
-                          />
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
+                        <DropdownMenuSeparator />
 
-                      <DropdownMenuSeparator />
-
-                      <DropdownMenuItem
-                        disabled={index === 0}
-                        onClick={() => moveLane(lane.id, 'left')}
-                      >
-                        <ArrowLeft className="mr-2 size-3.5 text-muted-foreground" />
-                        <span>Move Left</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={index === totalLanes - 1}
-                        onClick={() => moveLane(lane.id, 'right')}
-                      >
-                        <ArrowRight className="mr-2 size-3.5 text-muted-foreground" />
-                        <span>Move Right</span>
-                      </DropdownMenuItem>
-
-                      <DropdownMenuSeparator />
-
-                      <DropdownMenuItem
-                        onClick={() => setIsDeleteOpen(true)}
-                        className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 size-3.5" />
-                        <span>Delete Column</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        <DropdownMenuItem
+                          onClick={() => setIsDeleteOpen(true)}
+                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 size-3.5" />
+                          <span>Delete Column</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               </div>
 
-              {/* Column Cards Drop Body (Height fits items) */}
-              <div className="flex-1 min-h-0 overflow-y-auto p-2.5 space-y-2">
-                {/* Modern Empty State Placeholder */}
-                <div className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/15 bg-muted/10 p-6 text-center transition-all hover:border-muted-foreground/30">
-                  <div className="flex size-9 items-center justify-center rounded-xl bg-background border shadow-2xs text-muted-foreground">
-                    <Sparkles className="size-4 text-muted-foreground/70" />
+              {/* Column Cards Drop Body */}
+              <div
+                ref={columnDropRef}
+                className={cn(
+                  'flex-1 min-h-[40px] overflow-y-auto p-2.5 space-y-2 transition-all rounded-xl',
+                  isDropTarget ? 'bg-primary/10 ring-2 ring-primary/40 border-2 border-dashed border-primary/50' : ''
+                )}
+              >
+                {columnItems.length > 0 ? (
+                  columnItems.map((item, idx) => (
+                    <TaskCard key={item.id} item={item} index={idx} />
+                  ))
+                ) : (
+                  /* Ultra-Compact Empty State Placeholder */
+                  <div className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-muted-foreground/20 bg-muted/5 py-1.5 px-2 text-center transition-all">
+                    <Sparkles className="size-3 text-muted-foreground/60" />
+                    <span className="text-[10px] font-medium text-muted-foreground/80">No tasks</span>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground/80">No tasks in this lane</p>
-                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">Click below to add a card</p>
-                  </div>
-                </div>
+                )}
               </div>
 
-              {/* Footer Quick Action Button */}
+              {/* Footer Inline Create Task Button */}
               <div className="p-2 border-t border-border/50 bg-muted/20 backdrop-blur-xs">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start gap-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-background/80 h-8 rounded-xl shadow-2xs transition-all cursor-pointer group/btn"
-                >
-                  <div className="flex size-4 items-center justify-center rounded-md bg-muted group-hover/btn:bg-primary group-hover/btn:text-primary-foreground transition-colors">
-                    <Plus className="size-3" />
-                  </div>
-                  <span>Add Task</span>
-                </Button>
+                <InlineCreateTask laneId={lane.id} />
               </div>
             </div>
           }
         />
 
         {/* Right-click Context Menu */}
-        <ContextMenuContent className="w-48 text-xs shadow-xl">
-          <ContextMenuItem onClick={() => setIsEditing(true)}>
-            <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-            <span>Edit Title & Description</span>
-          </ContextMenuItem>
+        {!isVirtual && (
+          <ContextMenuContent className="w-48 text-xs shadow-xl">
+            <ContextMenuItem onClick={() => setIsEditing(true)}>
+              <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+              <span>Edit Title & Description</span>
+            </ContextMenuItem>
 
-          {/* Color Accent Submenu */}
-          <ContextMenuSub>
-            <ContextMenuSubTrigger>
-              <Palette className="mr-2 size-3.5 text-muted-foreground" />
-              <span>Change Color Accent</span>
-            </ContextMenuSubTrigger>
-            <ContextMenuSubContent className="w-[240px] p-2">
-              <BackgroundPickerContent
-                value={lane.background}
-                onChange={handleBackgroundChange}
-              />
-            </ContextMenuSubContent>
-          </ContextMenuSub>
+            {/* Color Accent Submenu */}
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>
+                <Palette className="mr-2 size-3.5 text-muted-foreground" />
+                <span>Change Color Accent</span>
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-[240px] p-2">
+                <BackgroundPickerContent
+                  value={lane.background}
+                  onChange={handleBackgroundChange}
+                />
+              </ContextMenuSubContent>
+            </ContextMenuSub>
 
-          <ContextMenuSeparator />
+            <ContextMenuSeparator />
 
-          <ContextMenuItem
-            disabled={index === 0}
-            onClick={() => moveLane(lane.id, 'left')}
-          >
-            <ArrowLeft className="mr-2 size-3.5 text-muted-foreground" />
-            <span>Move Left</span>
-          </ContextMenuItem>
-          <ContextMenuItem
-            disabled={index === totalLanes - 1}
-            onClick={() => moveLane(lane.id, 'right')}
-          >
-            <ArrowRight className="mr-2 size-3.5 text-muted-foreground" />
-            <span>Move Right</span>
-          </ContextMenuItem>
+            <ContextMenuItem
+              disabled={index === 0}
+              onClick={() => moveLane(lane.id!, 'left')}
+            >
+              <ArrowLeft className="mr-2 size-3.5 text-muted-foreground" />
+              <span>Move Left</span>
+            </ContextMenuItem>
+            <ContextMenuItem
+              disabled={index === totalLanes - 1}
+              onClick={() => moveLane(lane.id!, 'right')}
+            >
+              <ArrowRight className="mr-2 size-3.5 text-muted-foreground" />
+              <span>Move Right</span>
+            </ContextMenuItem>
 
-          <ContextMenuSeparator />
+            <ContextMenuSeparator />
 
-          <ContextMenuItem
-            variant="destructive"
-            onClick={() => setIsDeleteOpen(true)}
-          >
-            <Trash2 className="mr-2 size-3.5" />
-            <span>Delete Column</span>
-          </ContextMenuItem>
-        </ContextMenuContent>
+            <ContextMenuItem
+              variant="destructive"
+              onClick={() => setIsDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 size-3.5" />
+              <span>Delete Column</span>
+            </ContextMenuItem>
+          </ContextMenuContent>
+        )}
       </ContextMenu>
 
-      {/* Delete confirmation dialog */}
-      <DeleteLaneDialog
-        lane={lane}
-        open={isDeleteOpen}
-        onOpenChange={setIsDeleteOpen}
-      />
+      {/* Delete Confirmation Modal */}
+      {!isVirtual && (
+        <DeleteLaneDialog
+          lane={lane}
+          open={isDeleteOpen}
+          onOpenChange={setIsDeleteOpen}
+        />
+      )}
     </>
   )
 }
 
 // ── Drag Overlay Preview Component for Lane Column ──
 export function LaneColumnPreview({ lane }: { lane: Lane }) {
+  const allItems = useItemsStore.getState().items
+  const columnItems = allItems
+    .filter((i) => (lane.id === null ? i.lane_id === null : i.lane_id === lane.id))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
   const bgProps = getBoardBackgroundStyleAndClass(lane.background)
   const hasCustomBackground = Boolean(lane.background && lane.background.trim())
+  const isVirtual = Boolean(lane.isVirtual || lane.id === null)
 
   return (
     <div className="flex h-fit max-h-full w-full shrink-0 flex-col rounded-2xl border border-primary/50 bg-card/95 backdrop-blur-md shadow-2xl overflow-hidden ring-2 ring-primary/40 opacity-95 pointer-events-none select-none">
@@ -281,57 +328,31 @@ export function LaneColumnPreview({ lane }: { lane: Lane }) {
       <div
         className={cn(
           'flex items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200',
-          hasCustomBackground ? bgProps.className : 'bg-muted/30 backdrop-blur-md'
+          hasCustomBackground ? bgProps.className : isVirtual ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 backdrop-blur-md'
         )}
         style={hasCustomBackground ? { background: lane.background! } : undefined}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <span className="flex size-6 items-center justify-center rounded-md text-primary">
-            <GripVertical className="size-4" />
-          </span>
-          <span className="truncate text-xs font-semibold text-foreground">
-            {lane.title || 'Untitled Lane'}
-          </span>
+          <GripVertical className="size-4 text-primary shrink-0" />
+          <span className="text-xs font-semibold text-foreground truncate">{lane.title || 'Untitled Lane'}</span>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-background/80 border text-[10px] font-bold text-muted-foreground shadow-2xs">
-            0
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 rounded-md text-muted-foreground opacity-70"
-          >
-            <MoreHorizontal className="size-3.5" />
-          </Button>
-        </div>
+        <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-background/80 border text-[10px] font-bold text-muted-foreground shadow-2xs">
+          {columnItems.length}
+        </span>
       </div>
 
-      {/* Column Cards Drop Area */}
-      <div className="flex-1 min-h-0 p-2.5 space-y-2">
-        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/15 bg-muted/10 p-6 text-center">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-background border shadow-2xs text-muted-foreground">
-            <Sparkles className="size-4 text-muted-foreground/70" />
+      {/* Column Cards Preview Body */}
+      <div className="p-2.5 space-y-2 max-h-[400px] overflow-hidden">
+        {columnItems.length > 0 ? (
+          columnItems.map((item) => (
+            <TaskCardPreview key={item.id} item={item} />
+          ))
+        ) : (
+          <div className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-muted-foreground/20 bg-muted/5 py-1.5 px-2 text-center">
+            <Sparkles className="size-3 text-muted-foreground/60" />
+            <span className="text-[10px] font-medium text-muted-foreground/80">No tasks</span>
           </div>
-          <div>
-            <p className="text-xs font-semibold text-foreground/80">No tasks in this lane</p>
-            <p className="text-[10px] text-muted-foreground/70 mt-0.5">Click below to add a card</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer Quick Action Button */}
-      <div className="p-2 border-t border-border/50 bg-muted/20 backdrop-blur-xs">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2 text-xs font-medium text-muted-foreground h-8 rounded-xl"
-        >
-          <div className="flex size-4 items-center justify-center rounded-md bg-muted text-muted-foreground">
-            <Plus className="size-3" />
-          </div>
-          <span>Add Task</span>
-        </Button>
+        )}
       </div>
     </div>
   )
