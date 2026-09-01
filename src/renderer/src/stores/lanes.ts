@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import * as lanesService from '@/services/lanes'
+import { useItemsStore } from '@/stores/items'
 import { supabase } from '@/lib/supabase'
 
 export function createVirtualDraftLane(boardId: number | string): Lane {
@@ -32,6 +33,7 @@ type LanesState = {
   updateLane: (id: number | string | null, updates: Partial<Lane>) => Promise<Lane | null>
   removeLane: (id: number | string | null) => Promise<boolean>
   moveLane: (id: number | string | null, direction: 'left' | 'right') => Promise<void>
+  moveLaneToBoard: (laneId: number | string, targetBoardId: number | string) => Promise<boolean>
   reorderLanes: (reordered: Lane[]) => Promise<void>
 }
 
@@ -90,6 +92,7 @@ export const useLanesStore = create<LanesState>()(
         icon: draft.icon ?? null,
         description: draft.description ?? null,
         background: draft.background ?? null,
+        owner: draft.owner ?? null,
         order,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -181,6 +184,40 @@ export const useLanesStore = create<LanesState>()(
       reordered.splice(targetIndex, 0, moved)
 
       await get().reorderLanes(reordered)
+    },
+
+    // ── Move lane to another board ──────────────────────────────
+    moveLaneToBoard: async (laneId: number | string, targetBoardId: number | string) => {
+      if (laneId === null || String(laneId) === 'null') return false
+
+      suppressRealtimeRefetch = true
+
+      const prevLanes = get().lanes
+      const prevItems = useItemsStore.getState().items
+
+      // Optimistically remove lane from current board view
+      set((s) => ({
+        lanes: s.lanes.filter((l) => String(l.id) !== String(laneId))
+      }))
+
+      // Optimistically remove lane's items from current board items state
+      useItemsStore.setState({
+        items: prevItems.filter((i) => String(i.lane_id) !== String(laneId))
+      })
+
+      const success = await lanesService.moveLaneToBoard(laneId, targetBoardId)
+
+      setTimeout(() => {
+        suppressRealtimeRefetch = false
+      }, 500)
+
+      if (!success) {
+        // Rollback
+        set({ lanes: prevLanes })
+        useItemsStore.setState({ items: prevItems })
+        return false
+      }
+      return true
     },
 
     // ── Optimistic reorder ─────────────────────────────────────

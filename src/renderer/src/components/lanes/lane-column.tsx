@@ -31,13 +31,16 @@ import {
   ArrowRight,
   Palette,
   Inbox,
-  Sparkles
+  Sparkles,
+  FolderInput
 } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
+import { useBoardsStore } from '@/stores/boards'
 import { InlineEditLane } from './inline-edit-lane'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { DeleteLaneDialog } from './delete-lane-dialog'
+import { MoveLaneDialog } from './move-lane-dialog'
 import { TaskCard, TaskCardPreview, InlineCreateTask } from '@/components/items'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
@@ -51,9 +54,18 @@ type LaneColumnProps = {
 export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [targetBoardForMove, setTargetBoardForMove] = useState<Board | null>(null)
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false)
+
+  const handleRequestMoveToBoard = (targetBoard: Board) => {
+    setTargetBoardForMove(targetBoard)
+    setIsMoveDialogOpen(true)
+  }
 
   const updateLane = useLanesStore((s) => s.updateLane)
   const moveLane = useLanesStore((s) => s.moveLane)
+  const boards = useBoardsStore((s) => s.boards)
+  const otherBoards = boards.filter((b) => String(b.id) !== String(lane.board_id))
   const allItems = useItemsStore((s) => s.items)
 
   const isVirtual = Boolean(lane.isVirtual || lane.id === null)
@@ -172,6 +184,34 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
                           <span>Edit Title & Description</span>
                         </DropdownMenuItem>
 
+                        {/* Move to Board Submenu */}
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <FolderInput className="mr-2 size-3.5 text-muted-foreground" />
+                            <span>Move to</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-48 text-xs shadow-xl">
+                            {otherBoards.length > 0 ? (
+                              otherBoards.map((b) => (
+                                <DropdownMenuItem
+                                  key={b.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleRequestMoveToBoard(b)
+                                  }}
+                                >
+                                  <span className="mr-2 text-xs shrink-0">{b.icon || '📋'}</span>
+                                  <span className="truncate flex-1 font-medium">{b.title || 'Untitled Board'}</span>
+                                </DropdownMenuItem>
+                              ))
+                            ) : (
+                              <div className="p-2 text-center text-[10px] text-muted-foreground">
+                                No other boards
+                              </div>
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
                         {/* Color Accent Submenu */}
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>
@@ -255,6 +295,34 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
               <span>Edit Title & Description</span>
             </ContextMenuItem>
 
+            {/* Move to Board Submenu */}
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>
+                <FolderInput className="mr-2 size-3.5 text-muted-foreground" />
+                <span>Move to</span>
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-48 text-xs shadow-xl">
+                {otherBoards.length > 0 ? (
+                  otherBoards.map((b) => (
+                    <ContextMenuItem
+                      key={b.id}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRequestMoveToBoard(b)
+                      }}
+                    >
+                      <span className="mr-2 text-xs shrink-0">{b.icon || '📋'}</span>
+                      <span className="truncate flex-1 font-medium">{b.title || 'Untitled Board'}</span>
+                    </ContextMenuItem>
+                  ))
+                ) : (
+                  <div className="p-2 text-center text-[10px] text-muted-foreground">
+                    No other boards
+                  </div>
+                )}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+
             {/* Color Accent Submenu */}
             <ContextMenuSub>
               <ContextMenuSubTrigger>
@@ -301,11 +369,19 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
 
       {/* Delete Confirmation Modal */}
       {!isVirtual && (
-        <DeleteLaneDialog
-          lane={lane}
-          open={isDeleteOpen}
-          onOpenChange={setIsDeleteOpen}
-        />
+        <>
+          <DeleteLaneDialog
+            lane={lane}
+            open={isDeleteOpen}
+            onOpenChange={setIsDeleteOpen}
+          />
+          <MoveLaneDialog
+            lane={lane}
+            targetBoard={targetBoardForMove}
+            open={isMoveDialogOpen}
+            onOpenChange={setIsMoveDialogOpen}
+          />
+        </>
       )}
     </>
   )

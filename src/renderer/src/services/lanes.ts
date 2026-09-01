@@ -70,6 +70,32 @@ export async function deleteLane(id: number | string): Promise<boolean> {
   return true
 }
 
+// 6. Move lane and all its items to another board
+export async function moveLaneToBoard(laneId: number | string, targetBoardId: number | string): Promise<boolean> {
+  // 1. Update board_id of all items belonging to this lane FIRST so items move WITH the lane
+  const { error: itemsError } = await supabase
+    .from('items')
+    .update({ board_id: Number(targetBoardId), updated_at: new Date().toISOString() })
+    .eq('lane_id', Number(laneId))
+
+  if (itemsError) {
+    console.error('Error updating items board_id for moved lane:', itemsError)
+  }
+
+  // 2. Update lane board_id
+  const { error: laneError } = await supabase
+    .from('lanes')
+    .update({ board_id: Number(targetBoardId), updated_at: new Date().toISOString() })
+    .eq('id', Number(laneId))
+
+  if (laneError) {
+    console.error('Error moving lane to target board:', laneError)
+    return false
+  }
+
+  return true
+}
+
 // 6. Realtime subscription for lanes table on a specific board
 export function subscribeLanes(
   boardId: number | string,

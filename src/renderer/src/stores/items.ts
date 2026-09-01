@@ -86,6 +86,7 @@ export const useItemsStore = create<ItemsState>()(
         priority: draft.priority ?? 0,
         due_date: draft.due_date ?? null,
         background: draft.background ?? null,
+        owner: draft.owner ?? null,
         order,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

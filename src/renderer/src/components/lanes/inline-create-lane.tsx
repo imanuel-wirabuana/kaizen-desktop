@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useUser } from '@clerk/clerk-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -10,6 +11,7 @@ import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
 
 export function InlineCreateLane({ boardId }: { boardId: number | string }) {
+  const { user } = useUser()
   const [isOpen, setIsOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [icon, setIcon] = useState('📌')
@@ -47,7 +49,8 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
         title: title.trim(),
         icon: icon || null,
         description: description.trim() || null,
-        background: background || null
+        background: background || null,
+        owner: user?.id || null
       })
       handleClose()
     } catch (err) {

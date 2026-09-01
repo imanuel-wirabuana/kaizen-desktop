@@ -42,7 +42,8 @@ export async function createItem(
     order: item.order ?? 100,
     priority: item.priority ?? 0,
     due_date: item.due_date ?? null,
-    background: item.background ?? null
+    background: item.background ?? null,
+    owner: item.owner ?? null
   }
 
   const { data, error } = await supabase

@@ -19,6 +19,7 @@ type Lane = {
   description?: string | null
   background?: string | null
   order?: number | null
+  owner?: string | null
   updated_at?: string | null
   created_at?: string
   isVirtual?: boolean
@@ -35,6 +36,7 @@ type KanbanItem = {
   priority?: number | null
   due_date?: string | null
   background?: string | null
+  owner?: string | null
   created_at?: string
   updated_at?: string | null
 }

@@ -10,7 +10,31 @@ import { EditBoardDrawer } from '@/components/boards/edit-board-drawer'
 import { DeleteBoardDrawer } from '@/components/boards/delete-board-drawer'
 import { LaneColumn, InlineCreateLane } from '@/components/lanes'
 import { DraftSidebar } from '@/components/items'
-import { AlertCircle, Inbox, Pencil, Trash2 } from 'lucide-react'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger
+} from '@/components/ui/context-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertCircle,
+  Inbox,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
+  Pin,
+  PinOff,
+  Share2,
+  Check
+} from 'lucide-react'
 import { useNavigationStore } from '@/stores/navigation'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
@@ -22,6 +46,14 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const [loading, setLoading] = useState(true)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const updateBoard = useBoardsStore((s) => s.updateBoard)
+  const [copiedLink, setCopiedLink] = useState(false)
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href)
+    setCopiedLink(true)
+    setTimeout(() => setCopiedLink(false), 2000)
+  }
 
   // Draft Sidebar store state
   const isDraftOpen = useDraftSidebarStore((s) => s.isOpen)
@@ -166,66 +198,158 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
   return (
     <div className="flex h-full pb-2 min-h-0 flex-col gap-3 overflow-hidden">
-      {/* Board Header Bar */}
-      <div className="flex items-center justify-between gap-3 px-1 py-0.5">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex size-8 items-center justify-center rounded-xl border bg-background text-base shadow-2xs shrink-0">
-            {board.icon || '📋'}
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-sm font-bold tracking-tight text-foreground truncate">
-              {board.title || 'Untitled Board'}
-            </h1>
-            {board.description && (
-              <p className="text-[11px] text-muted-foreground line-clamp-1">
-                {board.description}
-              </p>
+      {/* Board Header Bar with Right-click Context Menu */}
+      <ContextMenu>
+        <ContextMenuTrigger
+          render={
+            <div className="flex items-center justify-between gap-3 px-1 py-0.5 select-none">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex size-8 items-center justify-center rounded-xl border bg-background text-base shadow-2xs shrink-0">
+                  {board.icon || '📋'}
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-sm font-bold tracking-tight text-foreground truncate">
+                    {board.title || 'Untitled Board'}
+                  </h1>
+                  {board.description && (
+                    <p className="text-[11px] text-muted-foreground line-clamp-1">{board.description}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Top Right Header Controls */}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Board Options Dropdown Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 size-8 p-0 rounded-xl text-muted-foreground hover:text-foreground"
+                        title="Board options"
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
+                    <DropdownMenuItem
+                      onClick={() => updateBoard(board.id!, { pinned: !board.pinned })}
+                    >
+                      {board.pinned ? (
+                        <>
+                          <PinOff className="mr-2 size-3.5 text-muted-foreground" />
+                          <span>Unpin Board</span>
+                        </>
+                      ) : (
+                        <>
+                          <Pin className="mr-2 size-3.5 text-muted-foreground" />
+                          <span>Pin Board</span>
+                        </>
+                      )}
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
+                      <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+                      <span>Edit Board</span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem onClick={handleCopyLink}>
+                      {copiedLink ? (
+                        <>
+                          <Check className="mr-2 size-3.5 text-emerald-500" />
+                          <span className="text-emerald-500 font-semibold">Link Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="mr-2 size-3.5 text-muted-foreground" />
+                          <span>Share Link</span>
+                        </>
+                      )}
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      onClick={() => setIsDeleteOpen(true)}
+                      className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 size-3.5" />
+                      <span>Delete Board</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Draft Sidebar Toggle Button */}
+                <Button
+                  variant={isDraftOpen ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={toggleDraftSidebar}
+                  className="h-8 gap-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                  title={isDraftOpen ? 'Close Draft Sidebar' : 'Open Draft Sidebar'}
+                >
+                  <Inbox
+                    className={cn('size-3.5', isDraftOpen ? 'text-primary' : 'text-muted-foreground')}
+                  />
+                  <span>Drafts</span>
+                  {draftItemsCount > 0 && (
+                    <span className="flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                      {draftItemsCount}
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Right-click Context Menu */}
+        <ContextMenuContent className="w-48 text-xs shadow-xl">
+          <ContextMenuItem onClick={() => updateBoard(board.id!, { pinned: !board.pinned })}>
+            {board.pinned ? (
+              <>
+                <PinOff className="mr-2 size-3.5 text-muted-foreground" />
+                <span>Unpin Board</span>
+              </>
+            ) : (
+              <>
+                <Pin className="mr-2 size-3.5 text-muted-foreground" />
+                <span>Pin Board</span>
+              </>
             )}
-          </div>
-        </div>
+          </ContextMenuItem>
 
-        {/* Top Right Header Controls */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Draft Sidebar Toggle Button */}
-          <Button
-            variant={isDraftOpen ? 'secondary' : 'outline'}
-            size="sm"
-            onClick={toggleDraftSidebar}
-            className="h-8 gap-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-            title={isDraftOpen ? 'Close Draft Sidebar' : 'Open Draft Sidebar'}
-          >
-            <Inbox className={cn('size-3.5', isDraftOpen ? 'text-primary' : 'text-muted-foreground')} />
-            <span>Drafts</span>
-            {draftItemsCount > 0 && (
-              <span className="flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                {draftItemsCount}
-              </span>
+          <ContextMenuItem onClick={() => setIsEditOpen(true)}>
+            <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+            <span>Edit Board</span>
+          </ContextMenuItem>
+
+          <ContextMenuItem onClick={handleCopyLink}>
+            {copiedLink ? (
+              <>
+                <Check className="mr-2 size-3.5 text-emerald-500" />
+                <span className="text-emerald-500 font-semibold">Link Copied!</span>
+              </>
+            ) : (
+              <>
+                <Share2 className="mr-2 size-3.5 text-muted-foreground" />
+                <span>Share Link</span>
+              </>
             )}
-          </Button>
+          </ContextMenuItem>
 
-          {/* Edit Board Details Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsEditOpen(true)}
-            className="h-8 gap-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
-            <Pencil className="size-3.5" />
-            <span className="hidden sm:inline">Edit</span>
-          </Button>
+          <ContextMenuSeparator />
 
-          {/* Delete Board Button */}
-          <Button
-            variant="ghost"
-            size="sm"
+          <ContextMenuItem
             onClick={() => setIsDeleteOpen(true)}
-            className="h-8 size-8 p-0 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            title="Delete Board"
+            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
           >
-            <Trash2 className="size-3.5" />
-          </Button>
-        </div>
-      </div>
+            <Trash2 className="mr-2 size-3.5" />
+            <span>Delete Board</span>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       {/* Canvas & Right Draft Sidebar Area (Same level under Board Header) */}
       <div className="flex flex-1 min-h-0 w-full gap-3 overflow-hidden">
@@ -276,7 +400,12 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
             <div className="relative z-10 h-full flex-1 min-w-0 overflow-x-auto overflow-y-hidden">
               <div className="flex h-full items-start gap-4 pb-2 min-w-max">
                 {canvasLanes.map((lane, index) => (
-                  <LaneColumn key={lane.id!} lane={lane} index={index} totalLanes={canvasLanes.length} />
+                  <LaneColumn
+                    key={lane.id!}
+                    lane={lane}
+                    index={index}
+                    totalLanes={canvasLanes.length}
+                  />
                 ))}
 
                 {/* Inline Create Lane Card */}

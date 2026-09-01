@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useUser } from '@clerk/clerk-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -16,6 +17,7 @@ type InlineCreateTaskProps = {
 }
 
 export function InlineCreateTask({ laneId }: InlineCreateTaskProps) {
+  const { user } = useUser()
   const [isOpen, setIsOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [icon, setIcon] = useState<string | null>(null)
@@ -61,7 +63,8 @@ export function InlineCreateTask({ laneId }: InlineCreateTaskProps) {
         description: description.trim() || null,
         priority,
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
-        background: background || null
+        background: background || null,
+        owner: user?.id || null
       })
       handleClose()
     } catch (err) {
