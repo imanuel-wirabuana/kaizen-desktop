@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EditBoardDrawer } from '@/components/boards/edit-board-drawer'
 import { DeleteBoardDrawer } from '@/components/boards/delete-board-drawer'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Pencil, Trash2, Pin, PinOff } from 'lucide-react'
 import { useNavigationStore } from '@/stores/navigation'
+import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
+import { cn } from '@/lib/utils'
 
 export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const navigate = useNavigationStore((s) => s.navigate)
@@ -98,12 +100,89 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     )
   }
 
-  return (
-    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
-      {/* Board Content Area / Kanban */}
-      <div className="flex-1 min-h-0 w-full overflow-hidden rounded-lg border bg-muted/10 p-2"></div>
+  const bgProps = getBoardBackgroundStyleAndClass(board.background)
 
-      {/* Edit Modal */}
+  const handleTogglePin = async () => {
+    if (board.id === undefined) return
+    const updated = await useBoardsStore.getState().updateBoard(board.id, { pinned: !board.pinned })
+    if (updated) setBoard(updated)
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+      {/* Board Header & Controls */}
+      <div className="flex items-center justify-between border-b pb-2.5">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background text-xl shadow-xs">
+            {board.icon || '📋'}
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold tracking-tight">{board.title}</h1>
+            {board.description && (
+              <p className="truncate text-xs text-muted-foreground">{board.description}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={handleTogglePin}
+          >
+            {board.pinned ? (
+              <>
+                <PinOff className="size-3.5" />
+                <span>Unpin</span>
+              </>
+            ) : (
+              <>
+                <Pin className="size-3.5" />
+                <span>Pin</span>
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => setIsEditOpen(true)}
+          >
+            <Pencil className="size-3.5" />
+            <span>Edit</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setIsDeleteOpen(true)}
+          >
+            <Trash2 className="size-3.5" />
+            <span>Delete</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Board Content Area / Kanban with Custom Background */}
+      <div
+        className={cn(
+          'relative flex-1 min-h-0 w-full overflow-hidden rounded-xl border bg-muted/20 p-4 transition-all',
+          bgProps.className
+        )}
+        style={bgProps.style}
+      >
+        {/* Subtle overlay for legibility if background image is present */}
+        {bgProps.isImage && (
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] pointer-events-none rounded-xl" />
+        )}
+
+        <div className="relative z-10 h-full w-full">
+          {/* Kanban items container placeholder / future items */}
+        </div>
+      </div>
+
+      {/* Edit Drawer */}
       <EditBoardDrawer
         board={board}
         open={isEditOpen}
@@ -111,7 +190,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         onSuccess={(updated) => setBoard(updated)}
       />
 
-      {/* Delete Modal */}
+      {/* Delete Drawer */}
       <DeleteBoardDrawer
         board={board}
         open={isDeleteOpen}

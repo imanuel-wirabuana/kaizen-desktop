@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { DragDropProvider, useDroppable } from '@dnd-kit/react'
+import { DragDropProvider, DragOverlay, useDroppable } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { move } from '@dnd-kit/helpers'
 import { CollisionPriority } from '@dnd-kit/abstract'
@@ -148,6 +148,16 @@ export function NavSidebarBoards({
           onShare={handleShare}
           onDelete={setActiveBoardForDelete}
         />
+
+        <DragOverlay>
+          {(source) => {
+            if (!source) return null
+            const allBoards = [...items.pinned, ...items.unpinned]
+            const activeBoard = allBoards.find((b) => String(b.id) === String(source.id))
+            if (!activeBoard) return null
+            return <BoardDragPreview item={activeBoard} />
+          }}
+        </DragOverlay>
       </DragDropProvider>
 
       {/* Edit Drawer */}
@@ -421,3 +431,18 @@ function SortableSidebarBoardItem({
     </ContextMenu>
   )
 }
+
+function BoardDragPreview({ item }: { item: Board }) {
+  return (
+    <div className="flex h-8 w-[200px] items-center justify-between rounded-md border border-sidebar-border bg-sidebar-accent px-2 text-sidebar-accent-foreground shadow-lg backdrop-blur-xs ring-1 ring-primary/20 opacity-95 pointer-events-none">
+      <div className="flex items-center gap-2 truncate">
+        <span>{item.icon}</span>
+        <span className="truncate text-xs font-medium">{item.title}</span>
+      </div>
+      <span className="cursor-grabbing text-muted-foreground">
+        <GripVerticalIcon className="size-4" />
+      </span>
+    </div>
+  )
+}
+
