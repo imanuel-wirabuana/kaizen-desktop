@@ -79,7 +79,7 @@ export function SortableGridBoardCard({
               }
             }}
             className={cn(
-              'group relative flex min-h-[105px] flex-col justify-between overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 cursor-pointer select-none',
+              'group relative flex min-h-[105px] flex-col justify-between overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 cursor-pointer select-none',
               isDragSource ? 'opacity-40 ring-2 ring-primary/30' : ''
             )}
           />
@@ -262,12 +262,12 @@ export function BoardCardPreview({ board }: { board: Board }) {
   const bgProps = getBoardBackgroundStyleAndClass(board.background)
 
   return (
-    <div className="flex min-h-[105px] w-[240px] flex-col justify-between overflow-hidden rounded-xl border border-primary/30 bg-card text-card-foreground shadow-xl ring-2 ring-primary/20 opacity-95 pointer-events-none">
+    <div className="flex min-h-[105px] w-full flex-col justify-between overflow-hidden rounded-2xl border border-primary/50 bg-card text-card-foreground shadow-2xl ring-2 ring-primary/30 opacity-95 pointer-events-none select-none">
       <div
         className={cn('h-6 w-full border-b bg-muted/40 overflow-hidden', bgProps.className)}
         style={bgProps.style}
       />
-      <div className="flex items-start gap-2.5 p-2.5">
+      <div className="flex items-start gap-2.5 p-3">
         <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border bg-background text-sm shadow-2xs">
           {board.icon || '📋'}
         </div>
@@ -278,9 +278,9 @@ export function BoardCardPreview({ board }: { board: Board }) {
           </p>
         </div>
       </div>
-      <div className="flex items-center justify-between border-t bg-muted/20 px-2.5 py-1 text-[10px] text-muted-foreground">
-        <span>Dragging board...</span>
-        <GripVertical className="size-3 text-muted-foreground" />
+      <div className="flex items-center justify-between border-t bg-muted/20 px-3 py-1.5 text-[10px] text-muted-foreground">
+        <span>Moving board...</span>
+        <GripVertical className="size-3 text-primary" />
       </div>
     </div>
   )

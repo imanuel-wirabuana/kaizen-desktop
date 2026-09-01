@@ -101,15 +101,12 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    'size-6 rounded-md text-muted-foreground hover:text-foreground relative',
+                    'size-6 rounded-md text-muted-foreground hover:text-foreground',
                     hasCustomBackground ? 'text-primary bg-primary/10' : ''
                   )}
                   title="Choose Lane Background Accent"
                 >
                   <Palette className="size-3.5" />
-                  {hasCustomBackground && (
-                    <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary ring-2 ring-background" />
-                  )}
                 </Button>
               }
             />

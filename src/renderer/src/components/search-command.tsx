@@ -99,10 +99,13 @@ export function SearchCommand() {
 
           {loading ? (
             <CommandGroup heading="Loading Boards...">
-              <div className="space-y-2 p-2">
-                <Skeleton className="h-6 w-full rounded" />
-                <Skeleton className="h-6 w-full rounded" />
-                <Skeleton className="h-6 w-full rounded" />
+              <div className="space-y-1.5 p-1.5">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-2.5 px-2 py-2 rounded-lg border bg-muted/20">
+                    <Skeleton className="size-4 rounded-md shrink-0" />
+                    <Skeleton className="h-4 w-40 rounded-md" />
+                  </div>
+                ))}
               </div>
             </CommandGroup>
           ) : (

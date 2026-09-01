@@ -91,24 +91,23 @@ export function BoardsPage() {
       {loading ? (
         <div className="space-y-6">
           <div className="space-y-3">
-            <Skeleton className="h-4 w-28 rounded" />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <Skeleton className="h-4 w-32 rounded-lg" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={i}
-                  className="flex min-h-[105px] flex-col justify-between overflow-hidden rounded-xl border bg-card shadow-xs"
+                  className="flex flex-col justify-between overflow-hidden rounded-2xl border border-border/70 bg-card p-4 space-y-4 shadow-xs"
                 >
-                  <Skeleton className="h-6 w-full rounded-none" />
-                  <div className="p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="size-6 rounded" />
-                      <Skeleton className="h-4 w-32 rounded" />
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <Skeleton className="size-7 rounded-lg shrink-0" />
+                      <Skeleton className="h-4 w-36 rounded-md" />
                     </div>
-                    <Skeleton className="h-3 w-3/4 rounded" />
+                    <Skeleton className="h-3 w-4/5 rounded-md" />
                   </div>
-                  <div className="flex items-center justify-between border-t px-3 py-1.5 bg-muted/10">
-                    <Skeleton className="h-3 w-16 rounded" />
-                    <Skeleton className="h-3 w-12 rounded" />
+                  <div className="flex items-center justify-between border-t pt-3">
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-3.5 w-16 rounded-md" />
                   </div>
                 </div>
               ))}
@@ -214,7 +213,12 @@ export function BoardsPage() {
               const allBoards = [...items.pinned, ...items.unpinned]
               const activeBoard = allBoards.find((b) => String(b.id) === String(source.id))
               if (!activeBoard) return null
-              return <BoardCardPreview board={activeBoard} />
+              const width = source.element ? source.element.getBoundingClientRect().width : undefined
+              return (
+                <div style={{ width: width ? `${width}px` : undefined }}>
+                  <BoardCardPreview board={activeBoard} />
+                </div>
+              )
             }}
           </DragOverlay>
         </DragDropProvider>

@@ -276,21 +276,62 @@ export function LaneColumnPreview({ lane }: { lane: Lane }) {
   const hasCustomBackground = Boolean(lane.background && lane.background.trim())
 
   return (
-    <div className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border border-primary/40 bg-card/95 shadow-2xl overflow-hidden opacity-95 pointer-events-none ring-2 ring-primary/30">
+    <div className="flex h-fit max-h-full w-full shrink-0 flex-col rounded-2xl border border-primary/50 bg-card/95 backdrop-blur-md shadow-2xl overflow-hidden ring-2 ring-primary/40 opacity-95 pointer-events-none select-none">
+      {/* Column Header */}
       <div
         className={cn(
-          'flex items-center justify-between border-b px-3.5 py-3 backdrop-blur-md',
-          hasCustomBackground ? bgProps.className : 'bg-background/80'
+          'flex items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200',
+          hasCustomBackground ? bgProps.className : 'bg-muted/30 backdrop-blur-md'
         )}
         style={hasCustomBackground ? { background: lane.background! } : undefined}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <GripVertical className="size-4 text-primary" />
-          <span className="truncate text-xs font-semibold text-foreground">{lane.title || 'Lane'}</span>
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <span className="flex size-6 items-center justify-center rounded-md text-primary">
+            <GripVertical className="size-4" />
+          </span>
+          <span className="truncate text-xs font-semibold text-foreground">
+            {lane.title || 'Untitled Lane'}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-background/80 border text-[10px] font-bold text-muted-foreground shadow-2xs">
+            0
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 rounded-md text-muted-foreground opacity-70"
+          >
+            <MoreHorizontal className="size-3.5" />
+          </Button>
         </div>
       </div>
-      <div className="p-5 flex items-center justify-center text-xs text-muted-foreground font-medium">
-        Moving column...
+
+      {/* Column Cards Drop Area */}
+      <div className="flex-1 min-h-0 p-2.5 space-y-2">
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/15 bg-muted/10 p-6 text-center">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-background border shadow-2xs text-muted-foreground">
+            <Sparkles className="size-4 text-muted-foreground/70" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-foreground/80">No tasks in this lane</p>
+            <p className="text-[10px] text-muted-foreground/70 mt-0.5">Click below to add a card</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Quick Action Button */}
+      <div className="p-2 border-t border-border/50 bg-muted/20 backdrop-blur-xs">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-xs font-medium text-muted-foreground h-8 rounded-xl"
+        >
+          <div className="flex size-4 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <Plus className="size-3" />
+          </div>
+          <span>Add Task</span>
+        </Button>
       </div>
     </div>
   )

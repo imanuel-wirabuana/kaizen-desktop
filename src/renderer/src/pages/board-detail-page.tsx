@@ -97,39 +97,48 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     return (
       <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
         {/* Header Skeleton */}
-        <div className="flex items-center justify-between border-b pb-2.5">
+        <div className="flex items-center justify-between border-b pb-3">
           <div className="flex items-center gap-3">
-            <Skeleton className="size-9 rounded-lg" />
-            <div className="space-y-1.5">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-3.5 w-60" />
+            <Skeleton className="size-9 rounded-xl" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-44 rounded-lg" />
+              <Skeleton className="h-3.5 w-64 rounded-md" />
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-16 rounded-md" />
-            <Skeleton className="h-8 w-16 rounded-md" />
-            <Skeleton className="h-8 w-16 rounded-md" />
+            <Skeleton className="h-8 w-20 rounded-xl" />
+            <Skeleton className="h-8 w-20 rounded-xl" />
+            <Skeleton className="h-8 w-20 rounded-xl" />
           </div>
         </div>
 
-        {/* Kanban Board Columns Skeleton */}
-        <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-xl border bg-muted/10 p-4">
-          <div className="flex h-full gap-4 overflow-x-auto pb-2">
+        {/* Kanban Board Canvas Area Skeleton */}
+        <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-2xl border bg-muted/20 p-4">
+          <div className="flex h-full gap-4 items-start overflow-x-auto pb-2">
             {[1, 2, 3].map((col) => (
-              <div key={col} className="flex h-full w-72 shrink-0 flex-col rounded-xl border bg-card/60 p-3 space-y-3">
-                <div className="flex items-center justify-between pb-1 border-b">
-                  <Skeleton className="h-4 w-24 rounded" />
+              <div
+                key={col}
+                className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border bg-card/90 p-3.5 space-y-3 shadow-xs"
+              >
+                <div className="flex items-center justify-between pb-2.5 border-b">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="size-4 rounded" />
+                    <Skeleton className="h-4 w-28 rounded-md" />
+                  </div>
                   <Skeleton className="size-5 rounded-full" />
                 </div>
-                <div className="space-y-2 flex-1">
-                  <div className="rounded-lg border bg-background p-3 space-y-2">
-                    <Skeleton className="h-3.5 w-3/4 rounded" />
-                    <Skeleton className="h-2.5 w-1/2 rounded" />
+                <div className="space-y-2.5 flex-1 min-h-[120px]">
+                  <div className="rounded-xl border bg-background/80 p-3 space-y-2">
+                    <Skeleton className="h-3.5 w-3/4 rounded-md" />
+                    <Skeleton className="h-2.5 w-1/2 rounded-md" />
                   </div>
-                  <div className="rounded-lg border bg-background p-3 space-y-2">
-                    <Skeleton className="h-3.5 w-4/5 rounded" />
-                    <Skeleton className="h-2.5 w-2/3 rounded" />
+                  <div className="rounded-xl border bg-background/80 p-3 space-y-2">
+                    <Skeleton className="h-3.5 w-4/5 rounded-md" />
+                    <Skeleton className="h-2.5 w-2/3 rounded-md" />
                   </div>
+                </div>
+                <div className="pt-2 border-t">
+                  <Skeleton className="h-8 w-full rounded-xl" />
                 </div>
               </div>
             ))}
@@ -163,65 +172,11 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
-      {/* Board Header & Controls */}
-      <div className="flex items-center justify-between border-b pb-2.5">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background text-xl shadow-xs">
-            {board.icon || '📋'}
-          </div>
-          <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold tracking-tight">{board.title}</h1>
-            {board.description && (
-              <p className="truncate text-xs text-muted-foreground">{board.description}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={handleTogglePin}
-          >
-            {board.pinned ? (
-              <>
-                <PinOff className="size-3.5" />
-                <span>Unpin</span>
-              </>
-            ) : (
-              <>
-                <Pin className="size-3.5" />
-                <span>Pin</span>
-              </>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => setIsEditOpen(true)}
-          >
-            <Pencil className="size-3.5" />
-            <span>Edit</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => setIsDeleteOpen(true)}
-          >
-            <Trash2 className="size-3.5" />
-            <span>Delete</span>
-          </Button>
-        </div>
-      </div>
-
+    <div className="flex h-full pb-2 min-h-0 flex-col gap-3 overflow-hidden">
       {/* Board Content Area / Kanban Lanes Canvas */}
       <div
         className={cn(
-          'relative flex-1 min-h-0 w-full overflow-hidden rounded-2xl border bg-muted/20 p-4 transition-all',
+          'relative flex-1 min-h-0 w-full overflow-hidden rounded-2xl border bg-muted/20 p-2 transition-all',
           bgProps.className
         )}
         style={bgProps.style}
@@ -235,31 +190,38 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
           {lanesLoading ? (
             <div className="flex h-full gap-4 items-start pb-2">
               {[1, 2, 3].map((col) => (
-                <div key={col} className="flex h-full w-72 shrink-0 flex-col rounded-xl border bg-card/60 p-3 space-y-3">
-                  <div className="flex items-center justify-between pb-1 border-b">
-                    <Skeleton className="h-4 w-24 rounded" />
+                <div
+                  key={col}
+                  className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border bg-card/90 p-3.5 space-y-3 shadow-xs"
+                >
+                  <div className="flex items-center justify-between pb-2.5 border-b">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="size-4 rounded" />
+                      <Skeleton className="h-4 w-28 rounded-md" />
+                    </div>
                     <Skeleton className="size-5 rounded-full" />
                   </div>
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-12 w-full rounded-lg" />
-                    <Skeleton className="h-12 w-full rounded-lg" />
+                  <div className="space-y-2.5 flex-1 min-h-[120px]">
+                    <div className="rounded-xl border bg-background/80 p-3 space-y-2">
+                      <Skeleton className="h-3.5 w-3/4 rounded-md" />
+                      <Skeleton className="h-2.5 w-1/2 rounded-md" />
+                    </div>
+                    <div className="rounded-xl border bg-background/80 p-3 space-y-2">
+                      <Skeleton className="h-3.5 w-4/5 rounded-md" />
+                      <Skeleton className="h-2.5 w-2/3 rounded-md" />
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <Skeleton className="h-8 w-full rounded-xl" />
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <DragDropProvider
-              modifiers={[RestrictToHorizontalAxis]}
-              onDragEnd={handleDragEnd}
-            >
+            <DragDropProvider modifiers={[RestrictToHorizontalAxis]} onDragEnd={handleDragEnd}>
               <div className="flex h-full items-start gap-4 pb-2 min-w-max">
                 {lanes.map((lane, index) => (
-                  <LaneColumn
-                    key={lane.id}
-                    lane={lane}
-                    index={index}
-                    totalLanes={lanes.length}
-                  />
+                  <LaneColumn key={lane.id} lane={lane} index={index} totalLanes={lanes.length} />
                 ))}
 
                 {/* Inline Create Lane Card */}
@@ -270,7 +232,15 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                 {(source) => {
                   if (!source || source.type !== 'lane') return null
                   const activeLane = lanes.find((l) => String(l.id) === String(source.id))
-                  return activeLane ? <LaneColumnPreview lane={activeLane} /> : null
+                  if (!activeLane) return null
+                  const width = source.element
+                    ? source.element.getBoundingClientRect().width
+                    : undefined
+                  return (
+                    <div style={{ width: width ? `${width}px` : undefined }}>
+                      <LaneColumnPreview lane={activeLane} />
+                    </div>
+                  )
                 }}
               </DragOverlay>
             </DragDropProvider>

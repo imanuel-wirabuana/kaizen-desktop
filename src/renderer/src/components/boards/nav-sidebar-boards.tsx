@@ -95,18 +95,29 @@ export function NavSidebarBoards({
     return (
       <SidebarGroup className="group-data-[collapsible=icon]:hidden space-y-4 p-2">
         <div className="space-y-2">
-          <Skeleton className="h-3 w-14 rounded" />
-          <div className="space-y-1.5">
-            <Skeleton className="h-7 w-full rounded-md" />
-            <Skeleton className="h-7 w-full rounded-md" />
+          <Skeleton className="h-3 w-16 rounded-md" />
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 px-2 py-1">
+              <Skeleton className="size-4 rounded-md shrink-0" />
+              <Skeleton className="h-4 w-32 rounded-md" />
+            </div>
+            <div className="flex items-center gap-2 px-2 py-1">
+              <Skeleton className="size-4 rounded-md shrink-0" />
+              <Skeleton className="h-4 w-28 rounded-md" />
+            </div>
           </div>
         </div>
-        <div className="space-y-2 pt-2">
-          <Skeleton className="h-3 w-20 rounded" />
-          <div className="space-y-1.5">
-            <Skeleton className="h-7 w-full rounded-md" />
-            <Skeleton className="h-7 w-full rounded-md" />
-            <Skeleton className="h-7 w-full rounded-md" />
+        <div className="space-y-2 pt-1">
+          <Skeleton className="h-3 w-20 rounded-md" />
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 px-2 py-1">
+              <Skeleton className="size-4 rounded-md shrink-0" />
+              <Skeleton className="h-4 w-36 rounded-md" />
+            </div>
+            <div className="flex items-center gap-2 px-2 py-1">
+              <Skeleton className="size-4 rounded-md shrink-0" />
+              <Skeleton className="h-4 w-24 rounded-md" />
+            </div>
           </div>
         </div>
       </SidebarGroup>
@@ -179,7 +190,12 @@ export function NavSidebarBoards({
             const allBoards = [...items.pinned, ...items.unpinned]
             const activeBoard = allBoards.find((b) => String(b.id) === String(source.id))
             if (!activeBoard) return null
-            return <BoardDragPreview item={activeBoard} />
+            const width = source.element ? source.element.getBoundingClientRect().width : undefined
+            return (
+              <div style={{ width: width ? `${width}px` : undefined }}>
+                <BoardDragPreview item={activeBoard} />
+              </div>
+            )
           }}
         </DragOverlay>
       </DragDropProvider>
@@ -458,14 +474,18 @@ function SortableSidebarBoardItem({
 
 function BoardDragPreview({ item }: { item: Board }) {
   return (
-    <div className="flex h-8 w-[200px] items-center justify-between rounded-md border border-sidebar-border bg-sidebar-accent px-2 text-sidebar-accent-foreground shadow-lg backdrop-blur-xs ring-1 ring-primary/20 opacity-95 pointer-events-none">
-      <div className="flex items-center gap-2 truncate">
-        <span>{item.icon}</span>
-        <span className="truncate text-xs font-medium">{item.title}</span>
-      </div>
-      <span className="cursor-grabbing text-muted-foreground">
-        <GripVerticalIcon className="size-4" />
-      </span>
+    <div className="w-full pointer-events-none select-none list-none">
+      <SidebarMenuButton
+        className="flex w-full items-center justify-between border border-primary/40 bg-sidebar-accent text-sidebar-accent-foreground shadow-xl ring-1 ring-primary/30 rounded-md"
+      >
+        <div className="flex items-center gap-2 truncate">
+          <span>{item.icon}</span>
+          <span className="truncate text-xs font-medium">{item.title}</span>
+        </div>
+        <span className="text-primary cursor-grabbing">
+          <GripVerticalIcon className="size-4" />
+        </span>
+      </SidebarMenuButton>
     </div>
   )
 }
