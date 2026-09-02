@@ -164,45 +164,63 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         {/* Header Skeleton */}
         <div className="flex items-center justify-between border-b pb-3">
           <div className="flex items-center gap-3">
-            <Skeleton className="size-9 rounded-xl" />
+            <Skeleton className="size-9 rounded-xl shrink-0" />
             <div className="space-y-2">
-              <Skeleton className="h-5 w-44 rounded-lg" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-44 rounded-lg" />
+                <Skeleton className="h-4 w-16 rounded-full" />
+              </div>
               <Skeleton className="h-3.5 w-64 rounded-md" />
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Skeleton className="h-8 w-20 rounded-xl" />
-            <Skeleton className="h-8 w-20 rounded-xl" />
-            <Skeleton className="h-8 w-20 rounded-xl" />
+            <Skeleton className="h-8 size-8 rounded-xl" />
+            <Skeleton className="h-8 w-24 rounded-xl" />
           </div>
         </div>
 
         {/* Kanban Board Canvas Area Skeleton */}
-        <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-2xl border bg-muted/20 p-4">
+        <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-2xl border bg-muted/20 p-3">
           <div className="flex h-full gap-4 items-start overflow-x-auto pb-2">
-            {[1, 2, 3].map((col) => (
+            {[1, 2, 3, 4].map((col) => (
               <div
                 key={col}
-                className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border bg-card/90 p-3.5 space-y-3 shadow-xs"
+                className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border bg-card/90 p-3 space-y-3 shadow-2xs"
               >
-                <div className="flex items-center justify-between pb-2.5 border-b">
+                {/* Column Header */}
+                <div className="flex items-center justify-between pb-2 border-b">
                   <div className="flex items-center gap-2">
-                    <Skeleton className="size-4 rounded" />
+                    <Skeleton className="size-3.5 rounded-full shrink-0" />
                     <Skeleton className="h-4 w-28 rounded-md" />
+                    <Skeleton className="h-4 w-6 rounded-full" />
                   </div>
-                  <Skeleton className="size-5 rounded-full" />
+                  <Skeleton className="size-5 rounded-md" />
                 </div>
-                <div className="space-y-2.5 flex-1 min-h-[120px]">
-                  <div className="rounded-xl border bg-background/80 p-3 space-y-2">
-                    <Skeleton className="h-3.5 w-3/4 rounded-md" />
-                    <Skeleton className="h-2.5 w-1/2 rounded-md" />
+                {/* Cards List */}
+                <div className="space-y-2.5 flex-1 min-h-[140px]">
+                  <div className="rounded-xl border bg-background p-3 space-y-2.5 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-3.5 w-14 rounded-full" />
+                      <Skeleton className="size-4 rounded-full" />
+                    </div>
+                    <Skeleton className="h-4 w-4/5 rounded-md" />
+                    <Skeleton className="h-3 w-3/5 rounded-md" />
+                    <div className="flex items-center justify-between pt-1">
+                      <Skeleton className="h-3 w-16 rounded-md" />
+                      <Skeleton className="size-5 rounded-full" />
+                    </div>
                   </div>
-                  <div className="rounded-xl border bg-background/80 p-3 space-y-2">
-                    <Skeleton className="h-3.5 w-4/5 rounded-md" />
-                    <Skeleton className="h-2.5 w-2/3 rounded-md" />
+                  <div className="rounded-xl border bg-background p-3 space-y-2.5 shadow-2xs">
+                    <Skeleton className="h-4 w-3/4 rounded-md" />
+                    <div className="flex items-center justify-between pt-1">
+                      <Skeleton className="h-3 w-12 rounded-md" />
+                      <Skeleton className="size-5 rounded-full" />
+                    </div>
                   </div>
                 </div>
-                <div className="pt-2 border-t">
+                {/* Footer Button Skeleton */}
+                <div className="pt-1 border-t">
                   <Skeleton className="h-8 w-full rounded-xl" />
                 </div>
               </div>
@@ -258,7 +276,9 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                     )}
                   </div>
                   {board.description && (
-                    <p className="text-[11px] text-muted-foreground line-clamp-1">{board.description}</p>
+                    <p className="text-[11px] text-muted-foreground line-clamp-1">
+                      {board.description}
+                    </p>
                   )}
                 </div>
               </div>
@@ -316,27 +336,6 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                     )}
 
                     {isOwner && (
-                      <DropdownMenuItem onClick={() => setIsShareOpen(true)}>
-                        <Share2 className="mr-2 size-3.5 text-muted-foreground" />
-                        <span>Share Board & Invites</span>
-                      </DropdownMenuItem>
-                    )}
-
-                    <DropdownMenuItem onClick={handleCopyLink}>
-                      {copiedLink ? (
-                        <>
-                          <Check className="mr-2 size-3.5 text-emerald-500" />
-                          <span className="text-emerald-500 font-semibold">Link Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Share2 className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Share Link</span>
-                        </>
-                      )}
-                    </DropdownMenuItem>
-
-                    {isOwner && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -360,7 +359,10 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                   title={isDraftOpen ? 'Close Draft Sidebar' : 'Open Draft Sidebar'}
                 >
                   <Inbox
-                    className={cn('size-3.5', isDraftOpen ? 'text-primary' : 'text-muted-foreground')}
+                    className={cn(
+                      'size-3.5',
+                      isDraftOpen ? 'text-primary' : 'text-muted-foreground'
+                    )}
                   />
                   <span>Drafts</span>
                   {draftItemsCount > 0 && (
@@ -394,13 +396,6 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
             <ContextMenuItem onClick={() => setIsEditOpen(true)}>
               <Pencil className="mr-2 size-3.5 text-muted-foreground" />
               <span>Edit Board</span>
-            </ContextMenuItem>
-          )}
-
-          {isOwner && (
-            <ContextMenuItem onClick={() => setIsShareOpen(true)}>
-              <Share2 className="mr-2 size-3.5 text-muted-foreground" />
-              <span>Share Board</span>
             </ContextMenuItem>
           )}
 
@@ -438,26 +433,38 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
               {[1, 2, 3].map((col) => (
                 <div
                   key={col}
-                  className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border bg-card/90 p-3.5 space-y-3 shadow-xs"
+                  className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border bg-card/90 p-3 space-y-3 shadow-2xs"
                 >
-                  <div className="flex items-center justify-between pb-2.5 border-b">
+                  <div className="flex items-center justify-between pb-2 border-b">
                     <div className="flex items-center gap-2">
-                      <Skeleton className="size-4 rounded" />
+                      <Skeleton className="size-3.5 rounded-full shrink-0" />
                       <Skeleton className="h-4 w-28 rounded-md" />
+                      <Skeleton className="h-4 w-6 rounded-full" />
                     </div>
-                    <Skeleton className="size-5 rounded-full" />
+                    <Skeleton className="size-5 rounded-md" />
                   </div>
-                  <div className="space-y-2.5 flex-1 min-h-[120px]">
-                    <div className="rounded-xl border bg-background/80 p-3 space-y-2">
-                      <Skeleton className="h-3.5 w-3/4 rounded-md" />
-                      <Skeleton className="h-2.5 w-1/2 rounded-md" />
+                  <div className="space-y-2.5 flex-1 min-h-[140px]">
+                    <div className="rounded-xl border bg-background p-3 space-y-2.5 shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-3.5 w-14 rounded-full" />
+                        <Skeleton className="size-4 rounded-full" />
+                      </div>
+                      <Skeleton className="h-4 w-4/5 rounded-md" />
+                      <Skeleton className="h-3 w-3/5 rounded-md" />
+                      <div className="flex items-center justify-between pt-1">
+                        <Skeleton className="h-3 w-16 rounded-md" />
+                        <Skeleton className="size-5 rounded-full" />
+                      </div>
                     </div>
-                    <div className="rounded-xl border bg-background/80 p-3 space-y-2">
-                      <Skeleton className="h-3.5 w-4/5 rounded-md" />
-                      <Skeleton className="h-2.5 w-2/3 rounded-md" />
+                    <div className="rounded-xl border bg-background p-3 space-y-2.5 shadow-2xs">
+                      <Skeleton className="h-4 w-3/4 rounded-md" />
+                      <div className="flex items-center justify-between pt-1">
+                        <Skeleton className="h-3 w-12 rounded-md" />
+                        <Skeleton className="size-5 rounded-full" />
+                      </div>
                     </div>
                   </div>
-                  <div className="pt-2 border-t">
+                  <div className="pt-1 border-t">
                     <Skeleton className="h-8 w-full rounded-xl" />
                   </div>
                 </div>
@@ -504,14 +511,9 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       />
 
       {/* Share Board Modal */}
-      <ShareBoardModal
-        board={board}
-        open={isShareOpen}
-        onOpenChange={setIsShareOpen}
-      />
+      <ShareBoardModal board={board} open={isShareOpen} onOpenChange={setIsShareOpen} />
     </div>
   )
 }
 
 export default BoardDetailPage
-

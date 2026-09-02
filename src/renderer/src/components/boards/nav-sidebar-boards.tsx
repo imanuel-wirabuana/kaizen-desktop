@@ -92,29 +92,31 @@ export function NavSidebarBoards({
     return (
       <SidebarGroup className="group-data-[collapsible=icon]:hidden space-y-4 p-2">
         <div className="space-y-2">
-          <Skeleton className="h-3 w-16 rounded-md" />
+          <Skeleton className="h-3 w-14 rounded-md ml-1" />
           <div className="space-y-1">
-            <div className="flex items-center gap-2 px-2 py-1">
-              <Skeleton className="size-4 rounded-md shrink-0" />
-              <Skeleton className="h-4 w-32 rounded-md" />
-            </div>
-            <div className="flex items-center gap-2 px-2 py-1">
-              <Skeleton className="size-4 rounded-md shrink-0" />
-              <Skeleton className="h-4 w-28 rounded-md" />
-            </div>
+            {[1, 2].map((i) => (
+              <div key={i} className="flex h-8 items-center justify-between gap-2 px-2 rounded-lg border border-transparent bg-muted/10">
+                <div className="flex items-center gap-2 flex-1">
+                  <Skeleton className="size-4 rounded-md shrink-0" />
+                  <Skeleton className="h-3.5 w-28 rounded-md" />
+                </div>
+                <Skeleton className="size-3.5 rounded shrink-0" />
+              </div>
+            ))}
           </div>
         </div>
         <div className="space-y-2 pt-1">
-          <Skeleton className="h-3 w-20 rounded-md" />
+          <Skeleton className="h-3 w-16 rounded-md ml-1" />
           <div className="space-y-1">
-            <div className="flex items-center gap-2 px-2 py-1">
-              <Skeleton className="size-4 rounded-md shrink-0" />
-              <Skeleton className="h-4 w-36 rounded-md" />
-            </div>
-            <div className="flex items-center gap-2 px-2 py-1">
-              <Skeleton className="size-4 rounded-md shrink-0" />
-              <Skeleton className="h-4 w-24 rounded-md" />
-            </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex h-8 items-center justify-between gap-2 px-2 rounded-lg border border-transparent bg-muted/10">
+                <div className="flex items-center gap-2 flex-1">
+                  <Skeleton className="size-4 rounded-md shrink-0" />
+                  <Skeleton className="h-3.5 w-32 rounded-md" />
+                </div>
+                <Skeleton className="size-3.5 rounded shrink-0" />
+              </div>
+            ))}
           </div>
         </div>
       </SidebarGroup>
@@ -417,11 +419,6 @@ function SortableSidebarBoardItem({
       </ContextMenuTrigger>
 
       <ContextMenuContent>
-        <ContextMenuItem onClick={onNavigate}>
-          <FolderIcon className="text-muted-foreground" />
-          <span>View Board</span>
-        </ContextMenuItem>
-
         <ContextMenuItem onClick={onTogglePin}>
           {pinned ? (
             <>
@@ -445,11 +442,6 @@ function SortableSidebarBoardItem({
 
         {(!item.role || item.role === 'owner') && (
           <>
-            <ContextMenuItem onClick={onShare}>
-              <ShareIcon className="text-muted-foreground" />
-              <span>Share Board</span>
-            </ContextMenuItem>
-
             <ContextMenuSeparator />
 
             <ContextMenuItem variant="destructive" onClick={onDelete}>

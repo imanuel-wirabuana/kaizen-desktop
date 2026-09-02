@@ -48,7 +48,7 @@ export function LandingPage() {
         </div>
       </main>
 
-      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} defaultTab="signup" />
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   )
 }

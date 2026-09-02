@@ -155,20 +155,6 @@ export function SortableGridBoardCard({
 
                 {(!board.role || board.role === 'owner') && (
                   <>
-                    <DropdownMenuItem onClick={onShare}>
-                      {copiedId === board.id ? (
-                        <>
-                          <Check className="size-3.5 text-emerald-500" />
-                          <span className="text-emerald-500 font-medium">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Share2 className="size-3.5 text-muted-foreground" />
-                          <span>Share Board</span>
-                        </>
-                      )}
-                    </DropdownMenuItem>
-
                     <DropdownMenuSeparator />
 
                     <DropdownMenuItem variant="destructive" onClick={onDelete}>
@@ -240,11 +226,6 @@ export function SortableGridBoardCard({
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-40">
-        <ContextMenuItem onClick={onNavigate}>
-          <FolderOpen className="size-3.5 text-muted-foreground" />
-          <span>Open Board</span>
-        </ContextMenuItem>
-
         {(!board.role || board.role === 'owner' || board.role === 'edit') && (
           <ContextMenuItem onClick={onEdit}>
             <Pencil className="size-3.5 text-muted-foreground" />
@@ -268,19 +249,6 @@ export function SortableGridBoardCard({
 
         {(!board.role || board.role === 'owner') && (
           <>
-            <ContextMenuItem onClick={onShare}>
-              {copiedId === board.id ? (
-                <>
-                  <Check className="size-3.5 text-emerald-500" />
-                  <span className="text-emerald-500 font-medium">Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="size-3.5 text-muted-foreground" />
-                  <span>Share Board</span>
-                </>
-              )}
-            </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem variant="destructive" onClick={onDelete}>
               <Trash2 className="size-3.5" />

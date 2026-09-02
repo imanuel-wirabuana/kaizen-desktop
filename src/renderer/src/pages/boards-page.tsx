@@ -125,18 +125,32 @@ export function BoardsPage() {
               {Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={i}
-                  className="flex flex-col justify-between overflow-hidden rounded-2xl border border-border/70 bg-card p-4 space-y-4 shadow-xs"
+                  className="flex min-h-[140px] flex-col justify-between overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xs"
                 >
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <Skeleton className="size-7 rounded-lg shrink-0" />
-                      <Skeleton className="h-4 w-36 rounded-md" />
+                  {/* Top Strip Skeleton */}
+                  <div className="h-6 w-full border-b bg-muted/30 p-1 flex items-center justify-between px-2">
+                    <Skeleton className="h-2.5 w-12 rounded-full" />
+                    <div className="flex gap-1">
+                      <Skeleton className="size-4 rounded-md" />
+                      <Skeleton className="size-4 rounded-md" />
                     </div>
-                    <Skeleton className="h-3 w-4/5 rounded-md" />
                   </div>
-                  <div className="flex items-center justify-between border-t pt-3">
-                    <Skeleton className="h-5 w-20 rounded-full" />
-                    <Skeleton className="h-3.5 w-16 rounded-md" />
+
+                  {/* Body Content Skeleton */}
+                  <div className="p-3.5 space-y-3 flex-1 flex flex-col justify-between">
+                    <div className="flex items-start gap-2.5">
+                      <Skeleton className="size-8 rounded-xl shrink-0" />
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <Skeleton className="h-4 w-3/4 rounded-md" />
+                        <Skeleton className="h-3 w-full rounded-md" />
+                      </div>
+                    </div>
+
+                    {/* Footer Row Skeleton */}
+                    <div className="flex items-center justify-between border-t border-border/40 pt-2.5">
+                      <Skeleton className="h-4 w-16 rounded-full" />
+                      <Skeleton className="h-3 w-12 rounded-md" />
+                    </div>
                   </div>
                 </div>
               ))}

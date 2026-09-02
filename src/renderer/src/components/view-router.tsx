@@ -29,7 +29,7 @@ export function ViewRouter() {
     )
   }
 
-  if (isLoaded && !isSignedIn && currentView.name !== 'landing') {
+  if (isLoaded && !isSignedIn) {
     return <LandingPage />
   }
 

@@ -29,6 +29,10 @@ type BoardMember = {
   id: number
   board_id: number | null
   user_id: string | null
+  user_email?: string | null
+  user_name?: string | null
+  email?: string | null
+  full_name?: string | null
   permission: 'view' | 'edit' | 'owner' | null
   created_at: string
   updated_at?: string | null

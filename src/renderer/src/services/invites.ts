@@ -202,15 +202,23 @@ export async function redeemInviteCode(code: string, userId: string): Promise<Re
     }
   }
 
+  // Fetch current user email if available
+  const authUser = (await supabase.auth.getUser()).data.user
+  const userEmail = authUser?.email || null
+
   // Insert member
-  const { error: insertErr } = await supabase.from('board_members').insert([
-    {
-      board_id: invite.board_id,
-      user_id: userId,
-      permission: invite.permission || 'view',
-      created_at: new Date().toISOString()
-    }
-  ])
+  const memberPayload: Record<string, any> = {
+    board_id: invite.board_id,
+    user_id: userId,
+    permission: invite.permission || 'view',
+    created_at: new Date().toISOString()
+  }
+
+  if (userEmail) {
+    memberPayload.user_email = userEmail
+  }
+
+  const { error: insertErr } = await supabase.from('board_members').insert([memberPayload])
 
   if (insertErr) {
     if (insertErr.code === '23505') {

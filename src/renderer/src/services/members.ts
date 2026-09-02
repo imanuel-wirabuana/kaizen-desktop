@@ -7,9 +7,33 @@ export async function getBoardMembers(boardId: number | string): Promise<BoardMe
     .eq('board_id', Number(boardId))
     .order('created_at', { ascending: true })
 
-  if (error) {
-    console.error('Error fetching board members:', error)
+  if (error || !data) {
+    if (error) console.error('Error fetching board members:', error)
     return []
+  }
+
+  const userIds = data.map((m: any) => m.user_id).filter(Boolean)
+  if (userIds.length === 0) return data as BoardMember[]
+
+  try {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, email, full_name, display_name, name')
+      .in('id', userIds)
+
+    if (profiles && profiles.length > 0) {
+      const profileMap = new Map(profiles.map((p: any) => [p.id, p]))
+      return data.map((m: any) => {
+        const prof = profileMap.get(m.user_id)
+        return {
+          ...m,
+          user_email: m.user_email || m.email || prof?.email || null,
+          user_name: m.user_name || m.full_name || prof?.full_name || prof?.display_name || prof?.name || null
+        }
+      }) as BoardMember[]
+    }
+  } catch (_e) {
+    // Ignore if profiles table does not exist
   }
 
   return data as BoardMember[]

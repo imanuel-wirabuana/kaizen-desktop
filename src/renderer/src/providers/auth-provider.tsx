@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User as SupabaseUser, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { useNavigationStore } from '@/stores/navigation'
 
 export type AppUser = {
   id: string
@@ -30,11 +31,14 @@ const AuthContext = createContext<AuthContextType>({
 function formatAppUser(user: SupabaseUser | null): AppUser | null {
   if (!user) return null
   const email = user.email || ''
-  const fullName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0] || 'User'
+  const fullName =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    (email ? email.split('@')[0] : 'User')
   const imageUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture
 
   return {
-    id: user.id,
+    id: user.id || '',
     email,
     fullName,
     primaryEmailAddress: { emailAddress: email },
@@ -63,6 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session)
       setUser(formatAppUser(session?.user ?? null))
       setIsLoaded(true)
+
+      if (!session) {
+        useNavigationStore.getState().navigate({ name: 'landing' })
+      }
     })
 
     return () => {
@@ -71,6 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signOut = async () => {
+    useNavigationStore.getState().navigate({ name: 'landing' })
     await supabase.auth.signOut()
   }
 

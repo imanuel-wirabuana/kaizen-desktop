@@ -236,13 +236,16 @@ export function SearchCommand() {
           {loading ? (
             <CommandGroup heading="Loading Boards & Tasks...">
               <div className="space-y-1.5 p-1.5">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg border bg-muted/20">
-                    <Skeleton className="size-5 rounded-md shrink-0" />
-                    <div className="flex-1 space-y-1">
-                      <Skeleton className="h-3.5 w-40 rounded-md" />
-                      <Skeleton className="h-2.5 w-24 rounded-md" />
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg border border-border/40 bg-muted/10">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <Skeleton className="size-5 rounded-md shrink-0" />
+                      <div className="flex-1 space-y-1 min-w-0">
+                        <Skeleton className="h-3.5 w-40 rounded-md" />
+                        <Skeleton className="h-2.5 w-24 rounded-md" />
+                      </div>
                     </div>
+                    <Skeleton className="h-4 w-12 rounded-full shrink-0" />
                   </div>
                 ))}
               </div>

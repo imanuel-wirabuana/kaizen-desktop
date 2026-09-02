@@ -14,22 +14,17 @@ import {
   ExpirationOption,
   MaxUsesOption
 } from '@/services/invites'
-import {
-  getBoardMembers,
-  updateMemberPermission,
-  removeMember
-} from '@/services/members'
+import { getBoardMembers, updateMemberPermission, removeMember } from '@/services/members'
 import { useUser } from '@/providers/auth-provider'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Copy, Check, Share2, Trash2, Users, KeyRound, Shield, Loader2 } from 'lucide-react'
 import {
-  Copy,
-  Check,
-  Share2,
-  Trash2,
-  Users,
-  KeyRound,
-  Shield,
-  Loader2
-} from 'lucide-react'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 
 type ShareBoardModalProps = {
   board: Board | null
@@ -113,15 +108,10 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
     }
   }
 
-  const handleMemberPermissionChange = async (
-    memberId: number,
-    newPerm: 'view' | 'edit'
-  ) => {
+  const handleMemberPermissionChange = async (memberId: number, newPerm: 'view' | 'edit') => {
     const ok = await updateMemberPermission(memberId, newPerm)
     if (ok) {
-      setMembers((prev) =>
-        prev.map((m) => (m.id === memberId ? { ...m, permission: newPerm } : m))
-      )
+      setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, permission: newPerm } : m)))
     }
   }
 
@@ -154,7 +144,9 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
             <DialogTitle>Share Board</DialogTitle>
           </div>
           <DialogDescription>
-            Invite teammates to <span className="font-semibold text-foreground">{board?.title}</span> using temporary invite codes.
+            Invite teammates to{' '}
+            <span className="font-semibold text-foreground">{board?.title}</span> using temporary
+            invite codes.
           </DialogDescription>
         </DialogHeader>
 
@@ -168,45 +160,57 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
             {/* Permission Selector */}
             <div className="space-y-1">
               <label className="text-[11px] text-muted-foreground font-medium">Permission:</label>
-              <select
+              <Select
                 value={permission}
-                onChange={(e) => setPermission(e.target.value as 'view' | 'edit')}
-                className="w-full h-8 rounded-lg border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                onValueChange={(val: string) => setPermission(val as 'view' | 'edit')}
               >
-                <option value="view">View</option>
-                <option value="edit">Edit</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="view">View</SelectItem>
+                  <SelectItem value="edit">Edit</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Expires Selector */}
             <div className="space-y-1">
               <label className="text-[11px] text-muted-foreground font-medium">Expires:</label>
-              <select
+              <Select
                 value={expiresOption}
-                onChange={(e) => setExpiresOption(e.target.value as ExpirationOption)}
-                className="w-full h-8 rounded-lg border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                onValueChange={(val: string) => setExpiresOption(val as ExpirationOption)}
               >
-                <option value="never">Never</option>
-                <option value="1_hour">1 hour</option>
-                <option value="1_day">1 day</option>
-                <option value="7_days">7 days</option>
-                <option value="30_days">30 days</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="never">Never</SelectItem>
+                  <SelectItem value="1_hour">1 hour</SelectItem>
+                  <SelectItem value="1_day">1 day</SelectItem>
+                  <SelectItem value="7_days">7 days</SelectItem>
+                  <SelectItem value="30_days">30 days</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Maximum Uses Selector */}
             <div className="space-y-1">
               <label className="text-[11px] text-muted-foreground font-medium">Maximum uses:</label>
-              <select
+              <Select
                 value={maxUsesOption}
-                onChange={(e) => setMaxUsesOption(e.target.value as MaxUsesOption)}
-                className="w-full h-8 rounded-lg border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                onValueChange={(val: string) => setMaxUsesOption(val as MaxUsesOption)}
               >
-                <option value="unlimited">Unlimited</option>
-                <option value="1">1 use</option>
-                <option value="5">5 uses</option>
-                <option value="10">10 uses</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unlimited">Unlimited</SelectItem>
+                  <SelectItem value="1">1 use</SelectItem>
+                  <SelectItem value="5">5 uses</SelectItem>
+                  <SelectItem value="10">10 uses</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -267,7 +271,20 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
           </h4>
 
           {loadingData ? (
-            <div className="p-3 text-center text-xs text-muted-foreground">Loading invites...</div>
+            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+              {[1, 2].map((i) => (
+                <div key={i} className="flex items-center justify-between gap-2 rounded-lg border bg-muted/20 p-2 text-xs">
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-24 rounded-md" />
+                      <Skeleton className="h-3.5 w-12 rounded-full" />
+                    </div>
+                    <Skeleton className="h-3 w-36 rounded-md" />
+                  </div>
+                  <Skeleton className="h-7 w-14 rounded-md" />
+                </div>
+              ))}
+            </div>
           ) : invites.length === 0 ? (
             <div className="rounded-lg border border-dashed p-3 text-center text-xs text-muted-foreground/70">
               No active invite codes. Generate one above.
@@ -323,15 +340,49 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
           </h4>
 
           <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-            {/* Owner Row */}
+            {loadingData ? (
+              <>
+                <div className="flex items-center justify-between gap-2 rounded-lg border bg-accent/30 p-2 text-xs">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Skeleton className="size-6 rounded-full shrink-0" />
+                    <div className="space-y-1 flex-1">
+                      <Skeleton className="h-3.5 w-24 rounded-md" />
+                      <Skeleton className="h-2.5 w-32 rounded-md" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-4 w-12 rounded-md" />
+                </div>
+                <div className="flex items-center justify-between gap-2 rounded-lg border bg-background p-2 text-xs">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Skeleton className="size-6 rounded-full shrink-0" />
+                    <div className="space-y-1 flex-1">
+                      <Skeleton className="h-3.5 w-28 rounded-md" />
+                      <Skeleton className="h-2.5 w-36 rounded-md" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-16 rounded-md" />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Owner Row */}
             <div className="flex items-center justify-between gap-2 rounded-lg border bg-accent/30 p-2 text-xs">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="flex size-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                   👑
                 </div>
-                <span className="truncate font-medium text-foreground">
-                  {board?.owner === user?.id ? 'You (Owner)' : board?.owner || 'Owner'}
-                </span>
+                <div className="flex flex-col min-w-0">
+                  <span className="truncate font-medium text-foreground">
+                    {board?.owner === user?.id ? `${user?.fullName || 'You'} (You)` : 'Board Owner'}
+                  </span>
+                  <span className="truncate text-[10px] text-muted-foreground">
+                    {board?.owner === user?.id
+                      ? user?.email
+                      : board?.owner
+                        ? `ID: ${board.owner.slice(0, 16)}...`
+                        : ''}
+                  </span>
+                </div>
               </div>
               <span className="text-[11px] font-semibold text-primary px-2 py-0.5 rounded-md bg-primary/10">
                 Owner
@@ -339,44 +390,67 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
             </div>
 
             {/* Joined Members */}
-            {members.map((mem) => (
-              <div
-                key={mem.id}
-                className="flex items-center justify-between gap-2 rounded-lg border bg-background p-2 text-xs"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex size-6 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
-                    👤
+            {members.map((mem) => {
+              const isCurrentUser = mem.user_id === user?.id
+              const memberEmail = isCurrentUser ? user?.email : mem.user_email || mem.email
+              const memberName = isCurrentUser
+                ? `${user?.fullName || 'You'} (You)`
+                : mem.user_name ||
+                  mem.full_name ||
+                  (memberEmail ? memberEmail.split('@')[0] : 'Member')
+              const displayEmail =
+                memberEmail || (mem.user_id ? `ID: ${mem.user_id.slice(0, 16)}...` : '')
+
+              return (
+                <div
+                  key={mem.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border bg-background p-2 text-xs"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
+                      👤
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate font-medium text-foreground">{memberName}</span>
+                      {displayEmail && (
+                        <span className="truncate text-[10px] text-muted-foreground">
+                          {displayEmail}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="truncate font-medium text-foreground">
-                    {mem.user_id === user?.id ? `${mem.user_id} (You)` : mem.user_id}
-                  </span>
-                </div>
 
-                <div className="flex items-center gap-1.5">
-                  <select
-                    value={mem.permission || 'view'}
-                    onChange={(e) =>
-                      handleMemberPermissionChange(mem.id, e.target.value as 'view' | 'edit')
-                    }
-                    className="h-6 rounded border bg-background px-1.5 text-[11px] capitalize focus:outline-none"
-                  >
-                    <option value="view">View</option>
-                    <option value="edit">Edit</option>
-                  </select>
+                  <div className="flex items-center gap-1.5">
+                    <Select
+                      value={mem.permission || 'view'}
+                      onValueChange={(val: string) =>
+                        handleMemberPermissionChange(mem.id, val as 'view' | 'edit')
+                      }
+                    >
+                      <SelectTrigger className="h-6 w-auto min-w-16 rounded border bg-background px-1.5 text-[11px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="view">View</SelectItem>
+                        <SelectItem value="edit">Edit</SelectItem>
+                      </SelectContent>
+                    </Select>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveMember(mem.id)}
-                    className="h-6 size-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    title="Remove access"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveMember(mem.id)}
+                      className="h-6 size-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      title="Remove access"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
+              </>
+            )}
           </div>
         </div>
       </DialogContent>

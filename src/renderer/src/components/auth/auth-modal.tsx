@@ -21,6 +21,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   const [tab, setTab] = useState<'signin' | 'signup'>(defaultTab)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,6 +30,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   const resetForm = () => {
     setEmail('')
     setPassword('')
+    setConfirmPassword('')
     setFullName('')
     setError(null)
     setSuccessMessage(null)
@@ -72,6 +74,11 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters long.')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
       return
     }
 
@@ -233,6 +240,17 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Confirm Password</label>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 disabled={loading}
               />

@@ -208,3 +208,34 @@
     display: none;
   }
 }
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    oklch(0.93 0.005 250 / 0.7) 0%,
+    oklch(0.98 0.005 250 / 0.95) 50%,
+    oklch(0.93 0.005 250 / 0.7) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite ease-in-out;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    oklch(0.22 0.005 250 / 0.6) 0%,
+    oklch(0.32 0.005 250 / 0.9) 50%,
+    oklch(0.22 0.005 250 / 0.6) 100%
+  );
+  background-size: 200% 100%;
+}
+
