@@ -8,8 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EditBoardDrawer } from '@/components/boards/edit-board-drawer'
 import { DeleteBoardDrawer } from '@/components/boards/delete-board-drawer'
+import { ShareBoardModal } from '@/components/boards/share-board-modal'
 import { LaneColumn, InlineCreateLane } from '@/components/lanes'
 import { DraftSidebar } from '@/components/items'
+import { getUserBoardPermission } from '@/services/members'
+import { useUser } from '@clerk/clerk-react'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -33,7 +36,9 @@ import {
   Pin,
   PinOff,
   Share2,
-  Check
+  Check,
+  Eye,
+  UserCheck
 } from 'lucide-react'
 import { useNavigationStore } from '@/stores/navigation'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
@@ -41,11 +46,14 @@ import { cn } from '@/lib/utils'
 
 export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const navigate = useNavigationStore((s) => s.navigate)
+  const { user } = useUser()
 
   const [board, setBoard] = useState<Board | null>(null)
+  const [permissionRole, setPermissionRole] = useState<'owner' | 'edit' | 'view'>('owner')
   const [loading, setLoading] = useState(true)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isShareOpen, setIsShareOpen] = useState(false)
   const updateBoard = useBoardsStore((s) => s.updateBoard)
   const [copiedLink, setCopiedLink] = useState(false)
 
@@ -90,16 +98,35 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     const fromStore = useBoardsStore.getState().boards.find((b) => String(b.id) === String(boardId))
     if (fromStore) {
       setBoard(fromStore)
+      if (fromStore.role) {
+        setPermissionRole(fromStore.role)
+      } else if (user?.id && fromStore.owner === user.id) {
+        setPermissionRole('owner')
+      }
       setLoading(false)
     } else {
       import('@/services/boards').then(({ getBoardById }) =>
         getBoardById(boardId).then((data) => {
           if (!isCancelled) {
             setBoard(data)
+            if (data?.role) {
+              setPermissionRole(data.role)
+            } else if (user?.id && data?.owner === user.id) {
+              setPermissionRole('owner')
+            }
             setLoading(false)
           }
         })
       )
+    }
+
+    // Also fetch exact user permission from DB if user present
+    if (user?.id) {
+      getUserBoardPermission(boardId, user.id).then((role) => {
+        if (!isCancelled && role) {
+          setPermissionRole(role)
+        }
+      })
     }
 
     // Initialize lanes and items stores for this board
@@ -111,7 +138,10 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       (s) => s.boards,
       (boards) => {
         const updated = boards.find((b) => String(b.id) === String(boardId))
-        if (updated) setBoard(updated)
+        if (updated) {
+          setBoard(updated)
+          if (updated.role) setPermissionRole(updated.role)
+        }
       }
     )
 
@@ -122,7 +152,11 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       useLanesStore.getState().cleanup()
       useItemsStore.getState().cleanup()
     }
-  }, [boardId, closeDraftSidebar])
+  }, [boardId, user?.id, closeDraftSidebar])
+
+  const isOwner = permissionRole === 'owner'
+  const isReadOnly = permissionRole === 'view'
+  const canEdit = permissionRole === 'owner' || permissionRole === 'edit'
 
   if (loading) {
     return (
@@ -208,9 +242,21 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                   {board.icon || '📋'}
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-sm font-bold tracking-tight text-foreground truncate">
-                    {board.title || 'Untitled Board'}
-                  </h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-sm font-bold tracking-tight text-foreground truncate">
+                      {board.title || 'Untitled Board'}
+                    </h1>
+                    {isReadOnly && (
+                      <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                        <Eye className="size-3" /> View Only
+                      </span>
+                    )}
+                    {permissionRole === 'edit' && (
+                      <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        <UserCheck className="size-3" /> Edit Access
+                      </span>
+                    )}
+                  </div>
                   {board.description && (
                     <p className="text-[11px] text-muted-foreground line-clamp-1">{board.description}</p>
                   )}
@@ -219,6 +265,18 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
               {/* Top Right Header Controls */}
               <div className="flex items-center gap-2 shrink-0">
+                {/* Share Board Action (Owner only) */}
+                {isOwner && (
+                  <Button
+                    size="sm"
+                    onClick={() => setIsShareOpen(true)}
+                    className="h-8 gap-1.5 rounded-xl text-xs font-semibold shadow-2xs cursor-pointer"
+                  >
+                    <Share2 className="size-3.5" />
+                    <span>Share</span>
+                  </Button>
+                )}
+
                 {/* Board Options Dropdown Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -250,10 +308,19 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                       )}
                     </DropdownMenuItem>
 
-                    <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
-                      <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-                      <span>Edit Board</span>
-                    </DropdownMenuItem>
+                    {canEdit && (
+                      <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
+                        <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+                        <span>Edit Board</span>
+                      </DropdownMenuItem>
+                    )}
+
+                    {isOwner && (
+                      <DropdownMenuItem onClick={() => setIsShareOpen(true)}>
+                        <Share2 className="mr-2 size-3.5 text-muted-foreground" />
+                        <span>Share Board & Invites</span>
+                      </DropdownMenuItem>
+                    )}
 
                     <DropdownMenuItem onClick={handleCopyLink}>
                       {copiedLink ? (
@@ -269,15 +336,18 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                       )}
                     </DropdownMenuItem>
 
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem
-                      onClick={() => setIsDeleteOpen(true)}
-                      className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                    >
-                      <Trash2 className="mr-2 size-3.5" />
-                      <span>Delete Board</span>
-                    </DropdownMenuItem>
+                    {isOwner && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setIsDeleteOpen(true)}
+                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 size-3.5" />
+                          <span>Delete Board</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -320,34 +390,31 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
             )}
           </ContextMenuItem>
 
-          <ContextMenuItem onClick={() => setIsEditOpen(true)}>
-            <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-            <span>Edit Board</span>
-          </ContextMenuItem>
+          {canEdit && (
+            <ContextMenuItem onClick={() => setIsEditOpen(true)}>
+              <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+              <span>Edit Board</span>
+            </ContextMenuItem>
+          )}
 
-          <ContextMenuItem onClick={handleCopyLink}>
-            {copiedLink ? (
-              <>
-                <Check className="mr-2 size-3.5 text-emerald-500" />
-                <span className="text-emerald-500 font-semibold">Link Copied!</span>
-              </>
-            ) : (
-              <>
-                <Share2 className="mr-2 size-3.5 text-muted-foreground" />
-                <span>Share Link</span>
-              </>
-            )}
-          </ContextMenuItem>
+          {isOwner && (
+            <ContextMenuItem onClick={() => setIsShareOpen(true)}>
+              <Share2 className="mr-2 size-3.5 text-muted-foreground" />
+              <span>Share Board</span>
+            </ContextMenuItem>
+          )}
 
           <ContextMenuSeparator />
 
-          <ContextMenuItem
-            onClick={() => setIsDeleteOpen(true)}
-            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-          >
-            <Trash2 className="mr-2 size-3.5" />
-            <span>Delete Board</span>
-          </ContextMenuItem>
+          {isOwner && (
+            <ContextMenuItem
+              onClick={() => setIsDeleteOpen(true)}
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+            >
+              <Trash2 className="mr-2 size-3.5" />
+              <span>Delete Board</span>
+            </ContextMenuItem>
+          )}
         </ContextMenuContent>
       </ContextMenu>
 
@@ -405,11 +472,12 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                     lane={lane}
                     index={index}
                     totalLanes={canvasLanes.length}
+                    readOnly={isReadOnly}
                   />
                 ))}
 
-                {/* Inline Create Lane Card */}
-                <InlineCreateLane boardId={boardId} />
+                {/* Inline Create Lane Card (only for owners & editors) */}
+                {canEdit && <InlineCreateLane boardId={boardId} />}
               </div>
             </div>
           )}
@@ -434,8 +502,16 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         onOpenChange={setIsDeleteOpen}
         onSuccess={() => navigate({ name: 'boards' })}
       />
+
+      {/* Share Board Modal */}
+      <ShareBoardModal
+        board={board}
+        open={isShareOpen}
+        onOpenChange={setIsShareOpen}
+      />
     </div>
   )
 }
 
 export default BoardDetailPage
+

@@ -7,4 +7,7 @@ export * from './nav-pinned-boards'
 export * from './nav-sidebar-boards'
 export * from './grid-board-card'
 export * from './grid-board-sections'
+export * from './share-board-modal'
+export * from './join-board-modal'
+
 

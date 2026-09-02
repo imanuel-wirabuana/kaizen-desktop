@@ -5,7 +5,6 @@ import { useNavigationStore } from '@/stores/navigation'
 import { useBoardsStore, selectLoading } from '@/stores/boards'
 import { usePinnedBoards, useUnpinnedBoards } from '@/hooks/use-boards'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   BoardDrawer,
@@ -13,9 +12,11 @@ import {
   DeleteBoardDrawer,
   PinnedGridSection,
   UnpinnedGridSection,
-  BoardCardPreview
+  BoardCardPreview,
+  ShareBoardModal,
+  JoinBoardModal
 } from '@/components/boards'
-import { Plus, Search, Kanban, X, Sparkles } from 'lucide-react'
+import { Plus, Search, Sparkles, LogIn } from 'lucide-react'
 
 export function BoardsPage() {
   const navigate = useNavigationStore((s) => s.navigate)
@@ -45,6 +46,8 @@ export function BoardsPage() {
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
   const [editingBoard, setEditingBoard] = useState<Board | null>(null)
   const [deletingBoard, setDeletingBoard] = useState<Board | null>(null)
+  const [sharingBoard, setSharingBoard] = useState<Board | null>(null)
+  const [joinModalOpen, setJoinModalOpen] = useState(false)
   const [copiedId, setCopiedId] = useState<number | string | null>(null)
 
   // Filtered views when searching
@@ -80,13 +83,39 @@ export function BoardsPage() {
     e.stopPropagation()
     if (boardId === undefined) return
 
-    navigator.clipboard.writeText(`kaizen://boards/${boardId}`)
-    setCopiedId(boardId)
-    setTimeout(() => setCopiedId(null), 2000)
+    const targetBoard = [...items.pinned, ...items.unpinned].find((b) => b.id === boardId)
+    if (targetBoard) {
+      setSharingBoard(targetBoard)
+    }
   }
 
   return (
     <div className="flex flex-1 min-h-0 flex-col overflow-y-auto p-4 md:p-6 space-y-6">
+      {/* Top Bar Header Actions */}
+      <div className="flex items-center justify-between gap-3 border-b pb-3">
+        <div>
+          <h1 className="text-lg font-bold tracking-tight text-foreground">My Boards</h1>
+          <p className="text-xs text-muted-foreground">Manage owned and shared kanban boards.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setJoinModalOpen(true)}
+            className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
+          >
+            <LogIn className="size-3.5" /> Join Board
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setCreateDrawerOpen(true)}
+            className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
+          >
+            <Plus className="size-3.5" /> Create Board
+          </Button>
+        </div>
+      </div>
+
       {/* ── Main Board Content Area ── */}
       {loading ? (
         <div className="space-y-6">
@@ -122,14 +151,23 @@ export function BoardsPage() {
           </div>
           <h3 className="text-sm font-semibold text-foreground">No boards created yet</h3>
           <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-            Create a board to start tracking continuous improvement tasks.
+            Create a board or join a shared board to start tracking tasks.
           </p>
-          <Button
-            onClick={() => setCreateDrawerOpen(true)}
-            className="mt-4 h-8 gap-1.5 text-xs font-medium cursor-pointer"
-          >
-            <Plus className="size-3.5" /> Create Board
-          </Button>
+          <div className="mt-4 flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setJoinModalOpen(true)}
+              className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
+            >
+              <LogIn className="size-3.5" /> Join Board
+            </Button>
+            <Button
+              onClick={() => setCreateDrawerOpen(true)}
+              className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
+            >
+              <Plus className="size-3.5" /> Create Board
+            </Button>
+          </div>
         </div>
       ) : !hasSearchResults ? (
         /* Search Empty State */
@@ -238,8 +276,17 @@ export function BoardsPage() {
         open={!!deletingBoard}
         onOpenChange={(open) => !open && setDeletingBoard(null)}
       />
+
+      <ShareBoardModal
+        board={sharingBoard}
+        open={!!sharingBoard}
+        onOpenChange={(open) => !open && setSharingBoard(null)}
+      />
+
+      <JoinBoardModal open={joinModalOpen} onOpenChange={setJoinModalOpen} />
     </div>
   )
 }
 
 export default BoardsPage
+

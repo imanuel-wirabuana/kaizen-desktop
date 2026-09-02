@@ -1,11 +1,37 @@
+import { useEffect } from 'react'
+import { useAuth } from '@clerk/clerk-react'
 import { useNavigationStore } from '@/stores/navigation'
 import { LandingPage } from '@/pages/landing-page'
 import { BoardsPage } from '@/pages/boards-page'
 import { BoardDetailPage } from '@/pages/board-detail-page'
 import { BoardsLayout } from '@/layouts/boards-layout'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export function ViewRouter() {
   const currentView = useNavigationStore((s) => s.currentView)
+  const navigate = useNavigationStore((s) => s.navigate)
+  const { isLoaded, isSignedIn } = useAuth()
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn && currentView.name !== 'landing') {
+      navigate({ name: 'landing' })
+    }
+  }, [isLoaded, isSignedIn, currentView.name, navigate])
+
+  if (!isLoaded && currentView.name !== 'landing') {
+    return (
+      <div className="flex h-dvh w-full items-center justify-center bg-background p-6">
+        <div className="space-y-3 text-center">
+          <Skeleton className="h-8 w-48 mx-auto rounded-lg" />
+          <Skeleton className="h-4 w-32 mx-auto rounded-md" />
+        </div>
+      </div>
+    )
+  }
+
+  if (isLoaded && !isSignedIn && currentView.name !== 'landing') {
+    return <LandingPage />
+  }
 
   switch (currentView.name) {
     case 'landing':
@@ -28,3 +54,4 @@ export function ViewRouter() {
 }
 
 export default ViewRouter
+

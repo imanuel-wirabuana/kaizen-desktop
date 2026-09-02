@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import { EditBoardDrawer } from './edit-board-drawer'
 import { DeleteBoardDrawer } from './delete-board-drawer'
+import { ShareBoardModal } from './share-board-modal'
 import { useBoardsStore, selectLoading } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { usePinnedBoards, useUnpinnedBoards } from '@/hooks/use-boards'
@@ -72,7 +73,7 @@ export function NavSidebarBoards({
 
   const [activeBoardForEdit, setActiveBoardForEdit] = useState<Board | null>(null)
   const [activeBoardForDelete, setActiveBoardForDelete] = useState<Board | null>(null)
-  const [copiedBoardId, setCopiedBoardId] = useState<number | string | null>(null)
+  const [activeBoardForShare, setActiveBoardForShare] = useState<Board | null>(null)
 
   const handleTogglePin = async (e: React.MouseEvent, item: Board) => {
     e.preventDefault()
@@ -81,14 +82,10 @@ export function NavSidebarBoards({
     await useBoardsStore.getState().updateBoard(item.id, { pinned: !item.pinned })
   }
 
-  const handleShare = (e: React.MouseEvent, boardId?: number | string) => {
+  const handleShare = (e: React.MouseEvent, item: Board) => {
     e.preventDefault()
     e.stopPropagation()
-    if (boardId === undefined) return
-
-    navigator.clipboard.writeText(`kaizen://boards/${boardId}`)
-    setCopiedBoardId(boardId)
-    setTimeout(() => setCopiedBoardId(null), 2000)
+    setActiveBoardForShare(item)
   }
 
   if (loading) {
@@ -163,11 +160,11 @@ export function NavSidebarBoards({
           items={items.pinned}
           currentView={currentView}
           isMobile={isMobile}
-          copiedBoardId={copiedBoardId}
+          copiedBoardId={null}
           onNavigate={(id) => navigate({ name: 'board-detail', boardId: id })}
           onTogglePin={handleTogglePin}
           onEdit={setActiveBoardForEdit}
-          onShare={handleShare}
+          onShare={(e, item) => handleShare(e, item)}
           onDelete={setActiveBoardForDelete}
         />
 
@@ -176,11 +173,11 @@ export function NavSidebarBoards({
           items={items.unpinned}
           currentView={currentView}
           isMobile={isMobile}
-          copiedBoardId={copiedBoardId}
+          copiedBoardId={null}
           onNavigate={(id) => navigate({ name: 'board-detail', boardId: id })}
           onTogglePin={handleTogglePin}
           onEdit={setActiveBoardForEdit}
-          onShare={handleShare}
+          onShare={(e, item) => handleShare(e, item)}
           onDelete={setActiveBoardForDelete}
         />
 
@@ -207,6 +204,13 @@ export function NavSidebarBoards({
           }
         }}
       />
+
+      {/* Share Modal */}
+      <ShareBoardModal
+        board={activeBoardForShare}
+        open={!!activeBoardForShare}
+        onOpenChange={(open: boolean) => !open && setActiveBoardForShare(null)}
+      />
     </>
   )
 }
@@ -230,7 +234,7 @@ function PinnedBoardsGroup({
   onNavigate: (id: number | string) => void
   onTogglePin: (e: React.MouseEvent, item: Board) => void
   onEdit: (item: Board) => void
-  onShare: (e: React.MouseEvent, id?: number | string) => void
+  onShare: (e: React.MouseEvent, item: Board) => void
   onDelete: (item: Board) => void
 }) {
   const { isDropTarget, ref } = useDroppable({
@@ -265,7 +269,7 @@ function PinnedBoardsGroup({
               onNavigate={() => item.id !== undefined && onNavigate(item.id)}
               onTogglePin={(e) => onTogglePin(e, item)}
               onEdit={() => onEdit(item)}
-              onShare={(e) => onShare(e, item.id)}
+              onShare={(e) => onShare(e, item)}
               onDelete={() => onDelete(item)}
             />
           ))}
@@ -299,7 +303,7 @@ function UnpinnedBoardsGroup({
   onNavigate: (id: number | string) => void
   onTogglePin: (e: React.MouseEvent, item: Board) => void
   onEdit: (item: Board) => void
-  onShare: (e: React.MouseEvent, id?: number | string) => void
+  onShare: (e: React.MouseEvent, item: Board) => void
   onDelete: (item: Board) => void
 }) {
   const { isDropTarget, ref } = useDroppable({
@@ -334,7 +338,7 @@ function UnpinnedBoardsGroup({
               onNavigate={() => item.id !== undefined && onNavigate(item.id)}
               onTogglePin={(e) => onTogglePin(e, item)}
               onEdit={() => onEdit(item)}
-              onShare={(e) => onShare(e, item.id)}
+              onShare={(e) => onShare(e, item)}
               onDelete={() => onDelete(item)}
             />
           ))}
@@ -355,7 +359,6 @@ function SortableSidebarBoardItem({
   index,
   group,
   isCurrentPage,
-  copiedBoardId,
   onNavigate,
   onTogglePin,
   onEdit,
@@ -397,6 +400,11 @@ function SortableSidebarBoardItem({
           <div className="flex items-center gap-2 truncate">
             <span>{item.icon}</span>
             <span className="truncate">{item.title}</span>
+            {item.role && item.role !== 'owner' && (
+              <span className="text-[9px] px-1 py-0.2 rounded bg-muted text-muted-foreground font-medium capitalize shrink-0">
+                {item.role}
+              </span>
+            )}
           </div>
           <span
             ref={handleRef}
@@ -428,31 +436,28 @@ function SortableSidebarBoardItem({
           )}
         </ContextMenuItem>
 
-        <ContextMenuItem onClick={onEdit}>
-          <PencilIcon className="text-muted-foreground" />
-          <span>Edit Board</span>
-        </ContextMenuItem>
+        {(!item.role || item.role === 'owner' || item.role === 'edit') && (
+          <ContextMenuItem onClick={onEdit}>
+            <PencilIcon className="text-muted-foreground" />
+            <span>Edit Board</span>
+          </ContextMenuItem>
+        )}
 
-        <ContextMenuItem onClick={onShare}>
-          {copiedBoardId === item.id ? (
-            <>
-              <CheckIcon className="text-emerald-500" />
-              <span className="text-emerald-500">Link Copied!</span>
-            </>
-          ) : (
-            <>
+        {(!item.role || item.role === 'owner') && (
+          <>
+            <ContextMenuItem onClick={onShare}>
               <ShareIcon className="text-muted-foreground" />
-              <span>Share Link</span>
-            </>
-          )}
-        </ContextMenuItem>
+              <span>Share Board</span>
+            </ContextMenuItem>
 
-        <ContextMenuSeparator />
+            <ContextMenuSeparator />
 
-        <ContextMenuItem variant="destructive" onClick={onDelete}>
-          <Trash2Icon />
-          <span>Delete Board</span>
-        </ContextMenuItem>
+            <ContextMenuItem variant="destructive" onClick={onDelete}>
+              <Trash2Icon />
+              <span>Delete Board</span>
+            </ContextMenuItem>
+          </>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   )

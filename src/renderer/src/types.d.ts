@@ -9,6 +9,29 @@ type Board = {
   background?: string | null
   owner?: string | null
   order?: number
+  role?: 'owner' | 'edit' | 'view'
+}
+
+type BoardInvite = {
+  id: number
+  board_id: number | null
+  code: string | null
+  permission: 'view' | 'edit' | null
+  max_uses: number | null
+  use_count: number
+  revoked: boolean
+  created_by: string | null
+  expires_at?: string | null
+  created_at: string
+}
+
+type BoardMember = {
+  id: number
+  board_id: number | null
+  user_id: string | null
+  permission: 'view' | 'edit' | 'owner' | null
+  created_at: string
+  updated_at?: string | null
 }
 
 type Lane = {

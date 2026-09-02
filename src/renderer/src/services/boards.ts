@@ -1,20 +1,79 @@
 import { supabase } from '@/lib/supabase'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
-// 1. Fetch all boards (optionally filtered by owner)
-export async function getBoards(owner?: string): Promise<Board[]> {
-  let query = supabase.from('boards').select('*').order('order', { ascending: true })
-
-  if (owner) {
-    query = query.eq('owner', owner)
+// 1. Fetch all boards (owned and shared for current user)
+export async function getBoards(userId?: string): Promise<Board[]> {
+  if (!userId) {
+    const { data, error } = await supabase.from('boards').select('*').order('order', { ascending: true })
+    if (error) {
+      console.error('Error fetching boards:', error)
+      return []
+    }
+    return (data as Board[]).map((b) => ({ ...b, role: 'owner' as const }))
   }
 
-  const { data, error } = await query
-  if (error) {
-    console.error('Error fetching boards:', error)
-    return []
+  // 1. Fetch owned boards
+  const { data: ownedBoards, error: ownedErr } = await supabase
+    .from('boards')
+    .select('*')
+    .eq('owner', userId)
+
+  if (ownedErr) {
+    console.error('Error fetching owned boards:', ownedErr)
   }
-  return data as Board[]
+
+  // 2. Fetch member memberships
+  const { data: memberships, error: memberErr } = await supabase
+    .from('board_members')
+    .select('board_id, permission')
+    .eq('user_id', userId)
+
+  if (memberErr) {
+    console.error('Error fetching board memberships:', memberErr)
+  }
+
+  const memberBoardIds = (memberships || [])
+    .map((m) => m.board_id)
+    .filter((id): id is number => id !== null && id !== undefined)
+
+  const memberPermissionMap = new Map<number, 'edit' | 'view' | 'owner'>(
+    (memberships || []).map((m) => [m.board_id, (m.permission as any) || 'view'])
+  )
+
+  let sharedBoards: Board[] = []
+  if (memberBoardIds.length > 0) {
+    const ownedIds = new Set((ownedBoards || []).map((b) => b.id))
+    const idsToFetch = memberBoardIds.filter((id) => !ownedIds.has(id))
+
+    if (idsToFetch.length > 0) {
+      const { data: fetchedShared, error: sharedErr } = await supabase
+        .from('boards')
+        .select('*')
+        .in('id', idsToFetch)
+
+      if (sharedErr) {
+        console.error('Error fetching shared boards:', sharedErr)
+      } else if (fetchedShared) {
+        sharedBoards = fetchedShared as Board[]
+      }
+    }
+  }
+
+  const ownedList: Board[] = (ownedBoards || []).map((b) => ({
+    ...b,
+    role: 'owner' as const
+  }))
+
+  const sharedList: Board[] = sharedBoards.map((b) => ({
+    ...b,
+    role: (memberPermissionMap.get(b.id!) || 'view') as 'edit' | 'view'
+  }))
+
+  const allBoards = [...ownedList, ...sharedList].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  )
+
+  return allBoards
 }
 
 // 2. Fetch paginated boards (optionally filtered by owner)
@@ -156,7 +215,13 @@ export function subscribeBoards(onPayload?: (payload: unknown) => void): Realtim
   const boardsChannel = supabase
     .channel(channelName)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, (payload) => {
-      console.log('Change received!', payload)
+      console.log('Boards change received!', payload)
+      if (onPayload) {
+        onPayload(payload)
+      }
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'board_members' }, (payload) => {
+      console.log('Board members change received!', payload)
       if (onPayload) {
         onPayload(payload)
       }

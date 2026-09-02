@@ -131,10 +131,14 @@ export function SortableGridBoardCard({
                   <FolderOpen className="size-3.5 text-muted-foreground" />
                   <span>Open Board</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onEdit}>
-                  <Pencil className="size-3.5 text-muted-foreground" />
-                  <span>Edit Details</span>
-                </DropdownMenuItem>
+
+                {(!board.role || board.role === 'owner' || board.role === 'edit') && (
+                  <DropdownMenuItem onClick={onEdit}>
+                    <Pencil className="size-3.5 text-muted-foreground" />
+                    <span>Edit Details</span>
+                  </DropdownMenuItem>
+                )}
+
                 <DropdownMenuItem onClick={onTogglePin}>
                   {isPinned ? (
                     <>
@@ -148,24 +152,31 @@ export function SortableGridBoardCard({
                     </>
                   )}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onShare}>
-                  {copiedId === board.id ? (
-                    <>
-                      <Check className="size-3.5 text-emerald-500" />
-                      <span className="text-emerald-500 font-medium">Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="size-3.5 text-muted-foreground" />
-                      <span>Share Link</span>
-                    </>
-                  )}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                  <Trash2 className="size-3.5" />
-                  <span>Delete</span>
-                </DropdownMenuItem>
+
+                {(!board.role || board.role === 'owner') && (
+                  <>
+                    <DropdownMenuItem onClick={onShare}>
+                      {copiedId === board.id ? (
+                        <>
+                          <Check className="size-3.5 text-emerald-500" />
+                          <span className="text-emerald-500 font-medium">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="size-3.5 text-muted-foreground" />
+                          <span>Share Board</span>
+                        </>
+                      )}
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                      <Trash2 className="size-3.5" />
+                      <span>Delete</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -179,9 +190,25 @@ export function SortableGridBoardCard({
           </div>
 
           <div className="min-w-0 flex-1">
-            <h3 className="text-xs font-semibold tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
-              {board.title || 'Untitled Board'}
-            </h3>
+            <div className="flex items-center gap-1.5 justify-between">
+              <h3 className="text-xs font-semibold tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
+                {board.title || 'Untitled Board'}
+              </h3>
+              {board.role && (
+                <span
+                  className={cn(
+                    'text-[9px] font-semibold px-1.5 py-0.5 rounded-full capitalize shrink-0',
+                    board.role === 'owner'
+                      ? 'bg-primary/10 text-primary'
+                      : board.role === 'edit'
+                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                        : 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {board.role}
+                </span>
+              )}
+            </div>
             <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-1">
               {board.description || 'No description'}
             </p>
@@ -217,10 +244,14 @@ export function SortableGridBoardCard({
           <FolderOpen className="size-3.5 text-muted-foreground" />
           <span>Open Board</span>
         </ContextMenuItem>
-        <ContextMenuItem onClick={onEdit}>
-          <Pencil className="size-3.5 text-muted-foreground" />
-          <span>Edit Details</span>
-        </ContextMenuItem>
+
+        {(!board.role || board.role === 'owner' || board.role === 'edit') && (
+          <ContextMenuItem onClick={onEdit}>
+            <Pencil className="size-3.5 text-muted-foreground" />
+            <span>Edit Details</span>
+          </ContextMenuItem>
+        )}
+
         <ContextMenuItem onClick={onTogglePin}>
           {isPinned ? (
             <>
@@ -234,24 +265,29 @@ export function SortableGridBoardCard({
             </>
           )}
         </ContextMenuItem>
-        <ContextMenuItem onClick={onShare}>
-          {copiedId === board.id ? (
-            <>
-              <Check className="size-3.5 text-emerald-500" />
-              <span className="text-emerald-500 font-medium">Link Copied!</span>
-            </>
-          ) : (
-            <>
-              <Share2 className="size-3.5 text-muted-foreground" />
-              <span>Share Link</span>
-            </>
-          )}
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem variant="destructive" onClick={onDelete}>
-          <Trash2 className="size-3.5" />
-          <span>Delete Board</span>
-        </ContextMenuItem>
+
+        {(!board.role || board.role === 'owner') && (
+          <>
+            <ContextMenuItem onClick={onShare}>
+              {copiedId === board.id ? (
+                <>
+                  <Check className="size-3.5 text-emerald-500" />
+                  <span className="text-emerald-500 font-medium">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="size-3.5 text-muted-foreground" />
+                  <span>Share Board</span>
+                </>
+              )}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem variant="destructive" onClick={onDelete}>
+              <Trash2 className="size-3.5" />
+              <span>Delete Board</span>
+            </ContextMenuItem>
+          </>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   )

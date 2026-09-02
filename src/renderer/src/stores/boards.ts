@@ -10,6 +10,7 @@ type BoardsState = {
 
   // Actions
   init: (owner: string) => Promise<void>
+  refresh: () => Promise<void>
   cleanup: () => void
 
   // Optimistic mutations
@@ -54,6 +55,13 @@ export const useBoardsStore = create<BoardsState>()(
       }
     },
 
+    refresh: async () => {
+      const currentOwner = get().owner
+      if (!currentOwner) return
+      const data = await boardsService.getBoards(currentOwner)
+      set({ boards: data })
+    },
+
     cleanup: () => {
       realtimeCleanup?.()
       realtimeCleanup = null
@@ -75,6 +83,7 @@ export const useBoardsStore = create<BoardsState>()(
         background: draft.background ?? null,
         owner: draft.owner ?? null,
         order,
+        role: 'owner',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
@@ -90,11 +99,12 @@ export const useBoardsStore = create<BoardsState>()(
         return null
       }
 
+      const withRole = { ...result, role: 'owner' as const }
       // Replace temp with real
       set((s) => ({
-        boards: s.boards.map((b) => (b.id === tempId ? result : b))
+        boards: s.boards.map((b) => (b.id === tempId ? withRole : b))
       }))
-      return result
+      return withRole
     },
 
     // ── Optimistic update ──────────────────────────────────────
@@ -119,11 +129,12 @@ export const useBoardsStore = create<BoardsState>()(
         return null
       }
 
+      const withRole = { ...result, role: prev.role }
       // Reconcile with server truth
       set((s) => ({
-        boards: s.boards.map((b) => (b.id === id ? result : b))
+        boards: s.boards.map((b) => (b.id === id ? withRole : b))
       }))
-      return result
+      return withRole
     },
 
     // ── Optimistic delete ──────────────────────────────────────
@@ -175,6 +186,10 @@ export const useBoardsStore = create<BoardsState>()(
 
 // ── Derived selectors (stable references) ──────────────────────
 export const selectBoards = (s: BoardsState) => s.boards
+export const selectOwnedBoards = (s: BoardsState) =>
+  s.boards.filter((b) => !b.role || b.role === 'owner' || b.owner === s.owner)
+export const selectSharedBoards = (s: BoardsState) =>
+  s.boards.filter((b) => b.role === 'edit' || b.role === 'view')
 export const selectPinnedBoards = (s: BoardsState) =>
   s.boards.filter((b) => Boolean(b.pinned)).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 export const selectUnpinnedBoards = (s: BoardsState) =>

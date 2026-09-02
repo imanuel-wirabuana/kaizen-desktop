@@ -217,9 +217,10 @@ function OtherBoardMoveGroupContext({
 type TaskCardProps = {
   item: KanbanItem
   index: number
+  readOnly?: boolean
 }
 
-export function TaskCard({ item, index }: TaskCardProps) {
+export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [title, setTitle] = useState(item.title || '')
   const [icon, setIcon] = useState<string | null>(item.icon || null)
@@ -240,6 +241,7 @@ export function TaskCard({ item, index }: TaskCardProps) {
   const otherBoards = boards.filter((b) => String(b.id) !== String(item.board_id))
 
   const handleMoveTo = async (targetBoardId: number, targetLaneId: number | null) => {
+    if (readOnly) return
     await updateItem(item.id, { board_id: targetBoardId, lane_id: targetLaneId })
   }
 
@@ -250,7 +252,7 @@ export function TaskCard({ item, index }: TaskCardProps) {
     accept: 'item',
     group: item.lane_id !== null ? String(item.lane_id) : 'draft',
     data: { type: 'item', laneId: item.lane_id, item },
-    disabled: isEditing
+    disabled: isEditing || readOnly
   })
 
   const handleSave = async () => {
@@ -432,17 +434,19 @@ export function TaskCard({ item, index }: TaskCardProps) {
               <div className="space-y-1.5">
                 <div className="flex items-start justify-between gap-1.5 min-w-0">
                   <div className="flex items-start gap-1.5 min-w-0 flex-1">
-                    <span
-                      ref={handleRef}
-                      className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-colors p-0.5 rounded touch-none shrink-0 mt-0.5"
-                      title="Drag to reorder task"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <GripVertical className="size-3.5" />
-                    </span>
+                    {!readOnly && (
+                      <span
+                        ref={handleRef}
+                        className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-colors p-0.5 rounded touch-none shrink-0 mt-0.5"
+                        title="Drag to reorder task"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <GripVertical className="size-3.5" />
+                      </span>
+                    )}
                     <div
-                      className="flex items-start gap-1.5 min-w-0 flex-1 cursor-pointer"
-                      onDoubleClick={() => setIsEditing(true)}
+                      className={cn("flex items-start gap-1.5 min-w-0 flex-1", !readOnly && "cursor-pointer")}
+                      onDoubleClick={() => !readOnly && setIsEditing(true)}
                     >
                       {item.icon && <span className="text-sm shrink-0 leading-tight">{item.icon}</span>}
                       <span className="text-xs font-medium tracking-tight text-foreground/90 break-words flex-1">
@@ -452,24 +456,25 @@ export function TaskCard({ item, index }: TaskCardProps) {
                   </div>
 
                   {/* Card Options Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-5 rounded-md text-muted-foreground/60 hover:text-foreground opacity-0 group-hover/card:opacity-100 transition-opacity shrink-0"
-                          title="Task options"
-                        >
-                          <MoreHorizontal className="size-3" />
-                        </Button>
-                      }
-                    />
-                    <DropdownMenuContent align="end" className="w-48 text-xs shadow-lg">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                        <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-                        <span>Edit Task</span>
-                      </DropdownMenuItem>
+                  {!readOnly && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-5 rounded-md text-muted-foreground/60 hover:text-foreground opacity-0 group-hover/card:opacity-100 transition-opacity shrink-0"
+                            title="Task options"
+                          >
+                            <MoreHorizontal className="size-3" />
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent align="end" className="w-48 text-xs shadow-lg">
+                        <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                          <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+                          <span>Edit Task</span>
+                        </DropdownMenuItem>
 
                       {/* Move to Submenu */}
                       <DropdownMenuSub>
@@ -569,7 +574,8 @@ export function TaskCard({ item, index }: TaskCardProps) {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
+                )}
+              </div>
 
                 {/* Description */}
                 {item.description ? (

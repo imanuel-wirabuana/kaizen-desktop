@@ -16,7 +16,10 @@ if (typeof window !== 'undefined') {
   }
 
   const originalInsertBefore = Node.prototype.insertBefore
-  Node.prototype.insertBefore = function <T extends Node>(newNode: T, referenceNode: Node | null): T {
+  Node.prototype.insertBefore = function <T extends Node>(
+    newNode: T,
+    referenceNode: Node | null
+  ): T {
     if (referenceNode && referenceNode.parentNode !== this) {
       if (referenceNode.parentNode) {
         return referenceNode.parentNode.insertBefore(newNode, referenceNode) as T
@@ -35,7 +38,14 @@ if (!PUBLISHABLE_KEY) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY || ''} appearance={clerkAppearance}>
+    <ClerkProvider
+      publishableKey={PUBLISHABLE_KEY || ''}
+      appearance={clerkAppearance}
+      allowedRedirectOrigins={[
+        'http://localhost',
+        'http://localhost:5173'
+      ]}
+    >
       <App />
     </ClerkProvider>
   </StrictMode>

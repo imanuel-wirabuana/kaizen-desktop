@@ -49,9 +49,10 @@ type LaneColumnProps = {
   lane: Lane
   index: number
   totalLanes: number
+  readOnly?: boolean
 }
 
-export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
+export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneColumnProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [targetBoardForMove, setTargetBoardForMove] = useState<Board | null>(null)
@@ -77,7 +78,7 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
     type: 'lane',
     accept: 'lane',
     group: 'lanes',
-    disabled: isEditing || isVirtual
+    disabled: isEditing || isVirtual || readOnly
   })
 
   // Attach droppable ref for task items dropping into this column (especially when empty)
@@ -85,7 +86,8 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
     id: `lane-drop-target-${lane.id}`,
     type: 'item',
     accept: 'item',
-    data: { type: 'lane', laneId: lane.id }
+    data: { type: 'lane', laneId: lane.id },
+    disabled: readOnly
   })
 
   // Filter items belonging to this lane
@@ -97,7 +99,7 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
   const hasCustomBackground = Boolean(lane.background && lane.background.trim())
 
   const handleBackgroundChange = (newBg: string) => {
-    if (isVirtual || lane.id === null) return
+    if (isVirtual || lane.id === null || readOnly) return
     updateLane(lane.id, { background: newBg || null })
   }
 
@@ -128,7 +130,7 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
                     <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0" title="Virtual Draft Lane">
                       <Inbox className="size-3.5" />
                     </div>
-                  ) : (
+                  ) : !readOnly ? (
                     <span
                       ref={handleRef}
                       className="flex size-6 items-center justify-center rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-background/50 transition-colors cursor-grab active:cursor-grabbing touch-none shrink-0"
@@ -137,6 +139,8 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
                     >
                       <GripVertical className="size-4" />
                     </span>
+                  ) : (
+                    <span className="size-2 rounded-full bg-primary/40 shrink-0" />
                   )}
 
                   {/* Header Title */}
@@ -164,7 +168,7 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
                   </span>
 
                   {/* Options Dropdown Menu Trigger */}
-                  {!isVirtual && (
+                  {!isVirtual && !readOnly && (
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
@@ -263,12 +267,12 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
                 ref={columnDropRef}
                 className={cn(
                   'flex-1 min-h-[40px] overflow-y-auto p-2.5 space-y-2 transition-all rounded-xl',
-                  isDropTarget ? 'bg-primary/10 ring-2 ring-primary/40 border-2 border-dashed border-primary/50' : ''
+                  isDropTarget && !readOnly ? 'bg-primary/10 ring-2 ring-primary/40 border-2 border-dashed border-primary/50' : ''
                 )}
               >
                 {columnItems.length > 0 ? (
                   columnItems.map((item, idx) => (
-                    <TaskCard key={item.id} item={item} index={idx} />
+                    <TaskCard key={item.id} item={item} index={idx} readOnly={readOnly} />
                   ))
                 ) : (
                   /* Ultra-Compact Empty State Placeholder */
@@ -280,9 +284,11 @@ export function LaneColumn({ lane, index, totalLanes }: LaneColumnProps) {
               </div>
 
               {/* Footer Inline Create Task Button */}
-              <div className="p-2 border-t border-border/50 bg-muted/20 backdrop-blur-xs">
-                <InlineCreateTask laneId={lane.id} />
-              </div>
+              {!readOnly && (
+                <div className="p-2 border-t border-border/50 bg-muted/20 backdrop-blur-xs">
+                  <InlineCreateTask laneId={lane.id} />
+                </div>
+              )}
             </div>
           }
         />
