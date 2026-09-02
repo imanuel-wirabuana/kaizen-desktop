@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useShallow } from 'zustand/shallow'
-import { useUser } from '@clerk/clerk-react'
+import { useUser } from '@/providers/auth-provider'
 import {
   useBoardsStore,
   selectBoards,

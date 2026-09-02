@@ -200,38 +200,6 @@
   ::-webkit-scrollbar-corner {
     background: transparent;
   }
-
-  :root {
-    --clerk-color-background: var(--background);
-    --clerk-color-foreground: var(--foreground);
-    --clerk-color-primary: var(--primary);
-    --clerk-color-primary-foreground: var(--primary-foreground);
-    --clerk-color-input: var(--input);
-    --clerk-color-input-foreground: var(--foreground);
-    --clerk-color-muted: var(--muted);
-    --clerk-color-muted-foreground: var(--muted-foreground);
-    --clerk-color-border: var(--border);
-    --clerk-color-ring: var(--ring);
-    --clerk-color-destructive: var(--destructive);
-    --clerk-color-destructive-foreground: var(--destructive-foreground);
-    --clerk-color-neutral: var(--foreground);
-    --clerk-color-text: var(--foreground);
-    --clerk-color-text-secondary: var(--muted-foreground);
-    --clerk-color-popover-background: var(--popover);
-    --clerk-color-popover-foreground: var(--popover-foreground);
-    --clerk-color-shimmer: var(--muted);
-    --clerk-color-success: var(--chart-2);
-    --clerk-color-warning: var(--accent);
-    --clerk-color-shadow: var(--shadow-color);
-    --clerk-radius: var(--radius);
-    --clerk-font-family: var(--font-sans);
-    --clerk-font-sans: var(--font-sans);
-  }
-
-  .clerk-modal-content,
-  .clerk-card {
-    border-radius: var(--radius);
-  }
 }
 
 @utility no-scrollbar {

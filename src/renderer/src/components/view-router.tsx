@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@/providers/auth-provider'
 import { useNavigationStore } from '@/stores/navigation'
 import { LandingPage } from '@/pages/landing-page'
 import { BoardsPage } from '@/pages/boards-page'

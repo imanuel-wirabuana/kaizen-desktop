@@ -12,7 +12,7 @@ import { ShareBoardModal } from '@/components/boards/share-board-modal'
 import { LaneColumn, InlineCreateLane } from '@/components/lanes'
 import { DraftSidebar } from '@/components/items'
 import { getUserBoardPermission } from '@/services/members'
-import { useUser } from '@clerk/clerk-react'
+import { useUser } from '@/providers/auth-provider'
 import {
   ContextMenu,
   ContextMenuContent,

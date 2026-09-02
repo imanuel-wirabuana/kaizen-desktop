@@ -19,7 +19,7 @@ import {
   updateMemberPermission,
   removeMember
 } from '@/services/members'
-import { useUser } from '@clerk/clerk-react'
+import { useUser } from '@/providers/auth-provider'
 import {
   Copy,
   Check,

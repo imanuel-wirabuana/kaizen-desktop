@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { redeemInviteCode } from '@/services/invites'
 import { useBoardsStore } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
-import { useUser } from '@clerk/clerk-react'
+import { useUser } from '@/providers/auth-provider'
 import { LogIn, Loader2, CheckCircle2, AlertCircle, Info } from 'lucide-react'
 
 type JoinBoardModalProps = {
