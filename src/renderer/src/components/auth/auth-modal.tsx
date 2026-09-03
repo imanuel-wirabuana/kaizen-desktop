@@ -125,7 +125,10 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
-          skipBrowserRedirect: isElectron
+          skipBrowserRedirect: isElectron,
+          queryParams: {
+            prompt: 'select_account'
+          }
         }
       })
 
