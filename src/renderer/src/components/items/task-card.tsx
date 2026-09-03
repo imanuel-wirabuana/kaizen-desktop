@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
+import { ClickableEmoji } from '@/components/ui/clickable-emoji'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { DateTimePicker } from '@/components/ui/date-picker'
 import {
@@ -309,7 +310,15 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                       className={cn("flex items-start gap-1.5 min-w-0 flex-1", !readOnly && "cursor-pointer")}
                       onDoubleClick={() => !readOnly && setIsEditing(true)}
                     >
-                      {item.icon && <span className="text-sm shrink-0 leading-tight">{item.icon}</span>}
+                      <ClickableEmoji
+                        emoji={item.icon}
+                        fallback="📝"
+                        size="xs"
+                        disabled={readOnly}
+                        onEmojiSelect={(newEmoji) => {
+                          useItemsStore.getState().updateItem(item.id, { icon: newEmoji })
+                        }}
+                      />
                       <span className="text-xs font-medium tracking-tight text-foreground/90 break-words flex-1">
                         {item.title || 'Untitled Task'}
                       </span>

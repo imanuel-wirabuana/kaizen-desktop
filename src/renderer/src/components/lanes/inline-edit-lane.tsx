@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
+import { ClickableEmoji } from '@/components/ui/clickable-emoji'
 import { Check, X } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 
@@ -153,7 +154,14 @@ export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditL
       className="group flex-1 min-w-0 cursor-pointer select-none flex items-center gap-1.5"
       title="Double-click to edit title"
     >
-      {lane.icon && <span className="text-sm shrink-0">{lane.icon}</span>}
+      <ClickableEmoji
+        emoji={lane.icon}
+        fallback="📌"
+        size="sm"
+        onEmojiSelect={(newEmoji) => {
+          useLanesStore.getState().updateLane(lane.id, { icon: newEmoji })
+        }}
+      />
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-xs font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">
           {lane.title || 'Untitled Lane'}

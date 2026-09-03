@@ -38,10 +38,10 @@ export function DraftSidebar() {
   return (
     <aside
       className={cn(
-        'flex h-full flex-col rounded-2xl bg-card/95 backdrop-blur-md text-card-foreground shadow-md transition-all duration-300 ease-in-out overflow-hidden relative select-none z-10 shrink-0 border border-border/80',
+        'flex h-full flex-col rounded-2xl bg-card/95 backdrop-blur-md text-card-foreground shadow-md overflow-hidden relative select-none z-10 shrink-0 border border-border/80',
         isOpen
-          ? 'w-80 opacity-100 translate-x-0'
-          : 'w-0 opacity-0 translate-x-6 border-0 shadow-none pointer-events-none -ml-3'
+          ? 'w-80 opacity-100'
+          : 'hidden w-0 opacity-0 border-0 shadow-none pointer-events-none'
       )}
     >
       <div className="w-80 flex h-full flex-col min-w-[320px]">

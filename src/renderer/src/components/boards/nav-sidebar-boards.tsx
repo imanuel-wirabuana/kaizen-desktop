@@ -35,10 +35,11 @@ import {
   CopyPlusIcon,
   LayersIcon
 } from 'lucide-react'
-import { EditBoardDrawer } from './edit-board-drawer'
-import { DeleteBoardDrawer } from './delete-board-drawer'
-import { ShareBoardModal } from './share-board-modal'
+import { EditBoardDrawer } from '@/components/boards/edit-board-drawer'
+import { DeleteBoardDrawer } from '@/components/boards/delete-board-drawer'
+import { ShareBoardModal } from '@/components/boards/share-board-modal'
 import { BoardMenuContent } from '@/components/menus/board-menu-content'
+import { ClickableEmoji } from '@/components/ui/clickable-emoji'
 import { useBoardsStore, selectLoading } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { usePinnedBoards, useUnpinnedBoards } from '@/hooks/use-boards'
@@ -409,7 +410,16 @@ function SortableSidebarBoardItem({
           onClick={onNavigate}
         >
           <div className="flex items-center gap-2 truncate">
-            <span>{item.icon}</span>
+            <ClickableEmoji
+              emoji={item.icon}
+              fallback="📋"
+              size="xs"
+              onEmojiSelect={(newEmoji) => {
+                if (item.id) {
+                  useBoardsStore.getState().updateBoard(item.id, { icon: newEmoji })
+                }
+              }}
+            />
             <span className="truncate">{item.title}</span>
             {item.role && item.role !== 'owner' && (
               <span className="text-[9px] px-1 py-0.2 rounded bg-muted text-muted-foreground font-medium capitalize shrink-0">
