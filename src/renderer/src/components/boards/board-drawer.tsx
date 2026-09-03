@@ -167,7 +167,7 @@ export function BoardDrawer({
     >
       {activeTrigger ? <DrawerTrigger render={activeTrigger} /> : null}
       <DrawerContent>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <DrawerHeader>
             <DrawerTitle>{isEdit ? 'Edit Board' : 'Create New Board'}</DrawerTitle>
             <DrawerDescription>
@@ -177,7 +177,7 @@ export function BoardDrawer({
             </DrawerDescription>
           </DrawerHeader>
 
-          <div className="space-y-4 p-4">
+          <div className="flex-1 space-y-4 p-4 overflow-y-auto custom-scrollbar">
             {error && (
               <div className="rounded-md bg-destructive/15 p-3 text-xs font-medium text-destructive">
                 {error}
@@ -312,7 +312,7 @@ export function BoardDrawer({
             )}
           </div>
 
-          <DrawerFooter className="flex-row justify-end gap-2">
+          <DrawerFooter className="flex-row justify-end gap-2 pt-2">
             <DrawerClose
               render={
                 <Button type="button" variant="outline" disabled={isSubmitting}>

@@ -109,7 +109,7 @@ export function InlineCreateTask({ laneId }: InlineCreateTaskProps) {
         'rounded-xl border border-primary/40 bg-background p-2.5 shadow-md space-y-2 ring-1 ring-primary/20 transition-all overflow-hidden',
         hasCustomBackground ? bgProps.className : ''
       )}
-      style={hasCustomBackground ? { background } : undefined}
+      style={hasCustomBackground ? bgProps.style : undefined}
     >
       <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-2">
         {/* Emoji Icon & Title */}

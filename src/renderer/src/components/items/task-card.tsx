@@ -322,7 +322,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
               isDragSource ? 'opacity-30 ring-2 ring-primary/40 shadow-md scale-[0.98]' : '',
               hasCustomBackground ? bgProps.className : ''
             )}
-            style={hasCustomBackground ? { background: item.background! } : undefined}
+            style={hasCustomBackground ? bgProps.style : undefined}
           >
             {isEditing ? (
               <div className="space-y-2.5" onKeyDown={handleKeyDown}>
@@ -735,7 +735,7 @@ export function TaskCardPreview({ item }: { item: KanbanItem }) {
         'flex flex-col rounded-xl border border-primary/50 bg-background p-3 shadow-xl ring-2 ring-primary/30 opacity-95 pointer-events-none select-none overflow-hidden',
         hasCustomBackground ? bgProps.className : ''
       )}
-      style={hasCustomBackground ? { background: item.background! } : undefined}
+      style={hasCustomBackground ? bgProps.style : undefined}
     >
       <div className="flex items-start gap-1.5 min-w-0">
         <GripVertical className="size-3.5 text-primary shrink-0 mt-0.5" />

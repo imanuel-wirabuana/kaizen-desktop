@@ -119,12 +119,16 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
               {/* Column Header */}
               <div
                 className={cn(
-                  'flex items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200',
+                  'flex items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200 relative overflow-hidden',
                   hasCustomBackground ? bgProps.className : isVirtual ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 backdrop-blur-md'
                 )}
-                style={hasCustomBackground ? { background: lane.background! } : undefined}
+                style={hasCustomBackground ? bgProps.style : undefined}
               >
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                {/* Overlay for header background images */}
+                {bgProps.isImage && (
+                  <div className="absolute inset-0 bg-background/50 pointer-events-none" />
+                )}
+                <div className="flex items-center gap-1.5 min-w-0 flex-1 relative z-10">
                   {/* Drag Handle Icon or Virtual Inbox Badge */}
                   {isVirtual ? (
                     <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0" title="Virtual Draft Lane">
@@ -161,7 +165,7 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
                 </div>
 
                 {/* Controls Area */}
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1 shrink-0 relative z-10">
                   {/* Item Count Pill Badge */}
                   <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-background/80 border text-[10px] font-bold text-muted-foreground shadow-2xs backdrop-blur-xs">
                     {columnItems.length}
@@ -409,11 +413,14 @@ export function LaneColumnPreview({ lane }: { lane: Lane }) {
       {/* Column Header */}
       <div
         className={cn(
-          'flex items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200',
+          'flex items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200 relative overflow-hidden',
           hasCustomBackground ? bgProps.className : isVirtual ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 backdrop-blur-md'
         )}
-        style={hasCustomBackground ? { background: lane.background! } : undefined}
+        style={hasCustomBackground ? bgProps.style : undefined}
       >
+        {bgProps.isImage && (
+          <div className="absolute inset-0 bg-background/50 pointer-events-none" />
+        )}
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <GripVertical className="size-4 text-primary shrink-0" />
           <span className="text-xs font-semibold text-foreground truncate">{lane.title || 'Untitled Lane'}</span>

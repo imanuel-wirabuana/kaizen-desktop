@@ -425,7 +425,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         >
           {/* Overlay for background images */}
           {bgProps.isImage && (
-            <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] pointer-events-none rounded-2xl" />
+            <div className="absolute inset-0 bg-background/30 pointer-events-none rounded-2xl" />
           )}
 
           {lanesLoading ? (
