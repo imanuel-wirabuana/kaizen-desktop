@@ -37,6 +37,7 @@ type LanesState = {
   moveLane: (id: number | string | null, direction: 'left' | 'right') => Promise<void>
   moveLaneToBoard: (laneId: number | string, targetBoardId: number | string) => Promise<boolean>
   reorderLanes: (reordered: Lane[]) => Promise<void>
+  duplicateLane: (laneId: number | string, includeItems?: boolean) => Promise<Lane | null>
 }
 
 let realtimeCleanup: (() => void) | null = null
@@ -288,6 +289,53 @@ export const useLanesStore = create<LanesState>()(
       } finally {
         suppressRealtimeRefetch = false
       }
+    },
+
+    // ── Duplicate Lane ──────────────────────────────────────
+    duplicateLane: async (laneId, includeItems = false) => {
+      if (laneId === null || String(laneId) === 'null') return null
+
+      const target = get().lanes.find((l) => String(l.id) === String(laneId))
+      if (!target || target.id === null) return null
+
+      const realLanes = get().lanes.filter((l) => l.id !== null)
+      const order = realLanes.length + 1
+      const copyTitle = target.title ? `${target.title} (Copy)` : 'Untitled Lane (Copy)'
+
+      const newLane = await get().addLane({
+        board_id: target.board_id,
+        title: copyTitle,
+        icon: target.icon,
+        description: target.description,
+        background: target.background,
+        owner: target.owner,
+        order
+      })
+
+      if (newLane && newLane.id && includeItems) {
+        const itemsToCopy = useItemsStore.getState().items.filter(
+          (i) => String(i.lane_id) === String(target.id)
+        )
+
+        for (let idx = 0; idx < itemsToCopy.length; idx++) {
+          const item = itemsToCopy[idx]
+          await useItemsStore.getState().addItem({
+            board_id: newLane.board_id ? Number(newLane.board_id) : undefined,
+            lane_id: Number(newLane.id),
+            title: item.title,
+            icon: item.icon,
+            description: item.description,
+            priority: item.priority,
+            due_date: item.due_date,
+            background: item.background,
+            owner: item.owner,
+            order: idx + 1
+          })
+        }
+      }
+
+      broadcastSyncEvent('lanes')
+      return newLane
     }
   }))
 )

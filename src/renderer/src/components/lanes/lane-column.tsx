@@ -32,7 +32,9 @@ import {
   Palette,
   Inbox,
   Sparkles,
-  FolderInput
+  FolderInput,
+  Copy,
+  CopyPlus
 } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
@@ -65,6 +67,7 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
 
   const updateLane = useLanesStore((s) => s.updateLane)
   const moveLane = useLanesStore((s) => s.moveLane)
+  const duplicateLane = useLanesStore((s) => s.duplicateLane)
   const boards = useBoardsStore((s) => s.boards)
   const otherBoards = boards.filter((b) => String(b.id) !== String(lane.board_id))
   const allItems = useItemsStore((s) => s.items)
@@ -192,6 +195,26 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
                           <span>Edit Title & Description</span>
                         </DropdownMenuItem>
 
+                        {/* Duplicate Submenu */}
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <Copy className="mr-2 size-3.5 text-muted-foreground" />
+                            <span>Duplicate</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-52 text-xs shadow-xl">
+                            <DropdownMenuItem onClick={() => duplicateLane(lane.id!, false)}>
+                              <Copy className="mr-2 size-3.5 text-muted-foreground" />
+                              <span>Duplicate Lane</span>
+                            </DropdownMenuItem>
+                            {columnItems.length > 0 && (
+                              <DropdownMenuItem onClick={() => duplicateLane(lane.id!, true)}>
+                                <CopyPlus className="mr-2 size-3.5 text-muted-foreground" />
+                                <span>Duplicate Lane with Items</span>
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
                         {/* Move to Board Submenu */}
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>
@@ -304,6 +327,26 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
               <Pencil className="mr-2 size-3.5 text-muted-foreground" />
               <span>Edit Title & Description</span>
             </ContextMenuItem>
+
+            {/* Duplicate Submenu */}
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>
+                <Copy className="mr-2 size-3.5 text-muted-foreground" />
+                <span>Duplicate</span>
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-52 text-xs shadow-xl">
+                <ContextMenuItem onClick={() => duplicateLane(lane.id!, false)}>
+                  <Copy className="mr-2 size-3.5 text-muted-foreground" />
+                  <span>Duplicate Lane</span>
+                </ContextMenuItem>
+                {columnItems.length > 0 && (
+                  <ContextMenuItem onClick={() => duplicateLane(lane.id!, true)}>
+                    <CopyPlus className="mr-2 size-3.5 text-muted-foreground" />
+                    <span>Duplicate Lane with Items</span>
+                  </ContextMenuItem>
+                )}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
 
             {/* Move to Board Submenu */}
             <ContextMenuSub>

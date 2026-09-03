@@ -222,7 +222,10 @@ export const useItemsStore = create<ItemsState>()(
       const target = get().items.find((i) => String(i.id) === String(id))
       if (!target) return null
 
-      const order = (target.order ?? 0) + 1
+      const sameLaneItems = get().items.filter(
+        (i) => (target.lane_id === null && i.lane_id === null) || (target.lane_id !== null && String(i.lane_id) === String(target.lane_id))
+      )
+      const order = sameLaneItems.length + 1
       const copyTitle = target.title ? `${target.title} (Copy)` : 'Untitled Task (Copy)'
 
       return get().addItem({
