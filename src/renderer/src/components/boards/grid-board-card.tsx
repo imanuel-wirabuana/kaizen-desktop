@@ -27,6 +27,7 @@ import {
   GripVertical,
   Plus
 } from 'lucide-react'
+import { useUser } from '@/providers/auth-provider'
 import { cn } from '@/lib/utils'
 import { BoardMenuContent } from '@/components/menus/board-menu-content'
 
@@ -53,6 +54,13 @@ export function SortableGridBoardCard({
   onShare,
   onDelete
 }: SortableGridBoardCardProps) {
+  const { user } = useUser()
+  const isOwner =
+    board.role === 'owner' ||
+    Boolean(user?.id && board.owner === user.id) ||
+    (!board.role && !board.owner)
+  const canEdit = isOwner || board.role === 'edit'
+
   const { ref, handleRef, isDragSource } = useSortable({
     id: board.id!,
     index,
@@ -63,7 +71,7 @@ export function SortableGridBoardCard({
 
   const bgProps = getBoardBackgroundStyleAndClass(board.background)
   const isPinned = Boolean(board.pinned)
-  const hasBackground = bgProps.isImage || bgProps.className
+  const isCopied = copiedId === board.id
 
   return (
     <ContextMenu key={board.id}>
@@ -82,20 +90,27 @@ export function SortableGridBoardCard({
             }}
             className={cn(
               'group relative flex min-h-[160px] flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 cursor-pointer select-none',
-              isDragSource ? 'opacity-40 ring-2 ring-primary/30' : ''
+              isDragSource ? 'opacity-50 ring-2 ring-primary/40' : ''
             )}
           />
         }
       >
-        {/* Background Hero Banner */}
+        {/* Banner Section */}
         <div
           className={cn(
             'relative h-20 w-full overflow-hidden shrink-0',
-            hasBackground ? '' : 'bg-gradient-to-br from-muted/60 via-muted/30 to-muted/50',
+            bgProps.isImage || bgProps.className
+              ? ''
+              : 'bg-gradient-to-br from-muted/80 via-muted/40 to-muted/60',
             bgProps.className
           )}
           style={bgProps.style}
         >
+          {/* Overlay for banner images */}
+          {bgProps.isImage && (
+            <div className="absolute inset-0 bg-background/20 pointer-events-none" />
+          )}
+
           {/* Subtle bottom gradient fade for text readability */}
           <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card/80 to-transparent" />
 
@@ -134,7 +149,7 @@ export function SortableGridBoardCard({
                   <span>Open Board</span>
                 </DropdownMenuItem>
 
-                {(!board.role || board.role === 'owner' || board.role === 'edit') && (
+                {canEdit && (
                   <DropdownMenuItem onClick={onEdit}>
                     <Pencil className="size-3.5 text-muted-foreground" />
                     <span>Edit Details</span>
@@ -155,7 +170,7 @@ export function SortableGridBoardCard({
                   )}
                 </DropdownMenuItem>
 
-                {(!board.role || board.role === 'owner') && (
+                {isOwner && (
                   <>
                     <DropdownMenuSeparator />
 

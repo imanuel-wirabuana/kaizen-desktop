@@ -179,10 +179,23 @@ export const useBoardsStore = create<BoardsState>()(
       const target = prev.find((b) => String(b.id) === String(id))
       if (!target) return false
 
+      const { data: sessionData } = await supabase.auth.getSession()
+      const currentUserId = sessionData?.session?.user?.id
+
+      // Only owner can delete the board
+      const isOwner =
+        target.role === 'owner' ||
+        (currentUserId && target.owner === currentUserId)
+
+      if (!isOwner) {
+        console.warn('Cannot delete board: User is not the owner')
+        return false
+      }
+
       set((s) => ({ boards: s.boards.filter((b) => String(b.id) !== String(id)) }))
       broadcastSyncEvent('boards')
 
-      const ok = await boardsService.deleteBoard(id)
+      const ok = await boardsService.deleteBoard(id, currentUserId)
 
       if (!ok) {
         set({ boards: prev })

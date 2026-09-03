@@ -43,6 +43,63 @@ import { useBoardsStore, selectLoading } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { usePinnedBoards, useUnpinnedBoards } from '@/hooks/use-boards'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+
+function TruncatedText({ text, className }: { text: string; className?: string }) {
+  const textRef = useRef<HTMLSpanElement>(null)
+  const [isTruncated, setIsTruncated] = useState(false)
+
+  const checkTruncation = () => {
+    if (textRef.current) {
+      setIsTruncated(textRef.current.scrollWidth > textRef.current.clientWidth)
+    }
+  }
+
+  useEffect(() => {
+    checkTruncation()
+    window.addEventListener('resize', checkTruncation)
+    return () => window.removeEventListener('resize', checkTruncation)
+  }, [text])
+
+  if (isTruncated) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span
+                ref={textRef}
+                onMouseEnter={checkTruncation}
+                className={cn('truncate', className)}
+              >
+                {text}
+              </span>
+            }
+          />
+          <TooltipContent side="right" className="text-xs max-w-xs">
+            {text}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+
+  return (
+    <span
+      ref={textRef}
+      onMouseEnter={checkTruncation}
+      className={cn('truncate', className)}
+    >
+      {text}
+    </span>
+  )
+}
 
 export function NavSidebarBoards({
   pinnedBoards: propsPinnedBoards,
@@ -192,6 +249,17 @@ export function NavSidebarBoards({
           onDelete={setActiveBoardForDelete}
         />
 
+        {/* ── Drag Overlay for Sidebar Board Items ── */}
+        <DragOverlay dropAnimation={null}>
+          {(source) => {
+            if (!source || source.type !== 'board') return null
+            const allBoards = [...items.pinned, ...items.unpinned]
+            const activeBoard = allBoards.find((b) => String(b.id) === String(source.id))
+            if (!activeBoard) return null
+
+            return <BoardDragPreview item={activeBoard} />
+          }}
+        </DragOverlay>
       </DragDropProvider>
 
       {/* Edit Drawer */}
@@ -404,26 +472,31 @@ function SortableSidebarBoardItem({
         render={<SidebarMenuItem ref={ref} className={isDragSource ? 'opacity-50' : ''} />}
       >
         <SidebarMenuButton
-          className="cursor-pointer flex justify-between"
+          className="cursor-pointer flex items-center justify-start gap-1.5 w-full group/item"
           isActive={isCurrentPage}
           onClick={onNavigate}
         >
-          <div className="flex items-center gap-2 truncate">
-            <span>{item.icon}</span>
-            <span className="truncate">{item.title}</span>
-            {item.role && item.role !== 'owner' && (
-              <span className="text-[9px] px-1 py-0.2 rounded bg-muted text-muted-foreground font-medium capitalize shrink-0">
-                {item.role}
-              </span>
-            )}
-          </div>
           <span
             ref={handleRef}
-            className="cursor-grab touch-none active:cursor-grabbing"
+            className="cursor-grab touch-none active:cursor-grabbing text-muted-foreground/40 hover:text-foreground shrink-0 opacity-70 group-hover/item:opacity-100 transition-opacity"
             onClick={(e) => e.stopPropagation()}
+            title="Drag to reorder"
           >
-            <GripVerticalIcon />
+            <GripVerticalIcon className="size-3.5" />
           </span>
+
+          <span className="shrink-0 text-xs">{item.icon || '📋'}</span>
+
+          <TruncatedText
+            text={item.title || 'Untitled Board'}
+            className="text-xs font-medium min-w-0 flex-1"
+          />
+
+          {item.role && item.role !== 'owner' && (
+            <span className="text-[9px] px-1 py-0.2 rounded bg-muted text-muted-foreground font-medium capitalize shrink-0 ml-auto">
+              {item.role}
+            </span>
+          )}
         </SidebarMenuButton>
       </ContextMenuTrigger>
 
@@ -444,15 +517,13 @@ export function BoardDragPreview({ item }: { item: Board }) {
   return (
     <div className="w-full pointer-events-none select-none list-none">
       <SidebarMenuButton
-        className="flex w-full items-center justify-between border border-primary/40 bg-sidebar-accent text-sidebar-accent-foreground shadow-xl ring-1 ring-primary/30 rounded-md"
+        className="flex w-full items-center justify-start gap-1.5 border border-primary/40 bg-sidebar-accent text-sidebar-accent-foreground shadow-xl ring-1 ring-primary/30 rounded-md"
       >
-        <div className="flex items-center gap-2 truncate">
-          <span>{item.icon}</span>
-          <span className="truncate text-xs font-medium">{item.title}</span>
-        </div>
-        <span className="text-primary cursor-grabbing">
-          <GripVerticalIcon className="size-4" />
+        <span className="text-primary cursor-grabbing shrink-0">
+          <GripVerticalIcon className="size-3.5" />
         </span>
+        <span className="shrink-0 text-xs">{item.icon || '📋'}</span>
+        <span className="truncate text-xs font-medium flex-1 min-w-0">{item.title}</span>
       </SidebarMenuButton>
     </div>
   )

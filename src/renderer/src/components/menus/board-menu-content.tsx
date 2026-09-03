@@ -17,6 +17,7 @@ import {
   LayersIcon
 } from 'lucide-react'
 import { useBoardsStore } from '@/stores/boards'
+import { useUser } from '@/providers/auth-provider'
 
 export type BoardMenuContentProps = {
   board: Board
@@ -41,9 +42,14 @@ export function BoardMenuContent({
 }: BoardMenuContentProps) {
   const updateBoard = useBoardsStore((s) => s.updateBoard)
   const duplicateBoard = useBoardsStore((s) => s.duplicateBoard)
+  const { user } = useUser()
 
   const isOwner =
-    propIsOwner ?? (!permissionRole || permissionRole === 'owner' || board.role === 'owner')
+    propIsOwner ??
+    (permissionRole === 'owner' ||
+      board.role === 'owner' ||
+      Boolean(user?.id && board.owner === user.id) ||
+      (!permissionRole && !board.role && !board.owner))
   const canEdit =
     propCanEdit ?? (isOwner || permissionRole === 'edit' || board.role === 'edit')
 

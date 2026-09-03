@@ -222,8 +222,13 @@ export async function touchBoardActivity(boardId: number | string): Promise<void
 }
 
 // 8. Delete board by ID
-export async function deleteBoard(id: number | string): Promise<boolean> {
-  const { error } = await supabase.from('boards').delete().eq('id', id)
+export async function deleteBoard(id: number | string, userId?: string): Promise<boolean> {
+  let query = supabase.from('boards').delete().eq('id', id)
+  if (userId) {
+    query = query.eq('owner', userId)
+  }
+
+  const { error } = await query
 
   if (error) {
     console.error('Error deleting board:', error)
