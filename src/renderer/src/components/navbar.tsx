@@ -18,11 +18,10 @@ export function Navbar() {
           <button
             type="button"
             onClick={() => navigate({ name: 'landing' })}
-            className="cursor-pointer inline-block text-left"
+            className="cursor-pointer flex items-center gap-2 text-left"
           >
-            <h1 className="text-xl font-semibold">
-              <span className="text-primary">改善</span> · Kaizen
-            </h1>
+            <img src="/icon.ico" alt="Kaizen" className="size-6 object-contain rounded-md shadow-sm" />
+            <h1 className="text-xl font-semibold">Kaizen</h1>
           </button>
         </div>
         <div className="flex items-center gap-2">

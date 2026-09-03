@@ -27,11 +27,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <button
               type="button"
               onClick={() => navigate({ name: 'landing' })}
-              className="flex w-full cursor-pointer items-center gap-1.5 text-left"
+              className="flex w-full cursor-pointer items-center gap-2 text-left"
             >
-              <span className="flex size-6 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
-                改
-              </span>
+              <img src="/icon.ico" alt="Kaizen" className="size-6 object-contain rounded-md shadow-sm" />
               <span className="text-sm font-semibold tracking-tight">Kaizen</span>
             </button>
           </SidebarMenuItem>

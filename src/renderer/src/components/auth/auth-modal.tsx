@@ -151,8 +151,11 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-sm p-6">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold tracking-tight text-center">
+        <DialogHeader className="items-center text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-muted/60 p-2 shadow-inner border border-border/40">
+            <img src="/icon.ico" alt="Kaizen Icon" className="h-8 w-8 object-contain" />
+          </div>
+          <DialogTitle className="text-xl font-bold tracking-tight text-center mt-2">
             {tab === 'signin' ? 'Welcome back' : 'Create an account'}
           </DialogTitle>
           <DialogDescription className="text-center text-xs text-muted-foreground">

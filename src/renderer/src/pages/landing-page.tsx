@@ -15,6 +15,10 @@ export function LandingPage() {
       <Navbar />
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 sm:px-12">
         <div className="flex flex-col items-center gap-6 text-center">
+          <div className="flex items-center justify-center rounded-2xl bg-card/60 p-4 shadow-xl backdrop-blur-md border border-border/40 ring-1 ring-border/20">
+            <img src="/icon.ico" alt="Kaizen Logo" className="h-16 w-16 sm:h-20 sm:w-20 object-contain drop-shadow-md" />
+          </div>
+
           <div className="max-w-lg space-y-3 sm:max-w-xl">
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
               Small moves. Steady ship.
