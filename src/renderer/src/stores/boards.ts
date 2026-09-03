@@ -109,13 +109,13 @@ export const useBoardsStore = create<BoardsState>()(
 
     // ── Optimistic update ──────────────────────────────────────
     updateBoard: async (id, updates) => {
-      const prev = get().boards.find((b) => b.id === id)
+      const prev = get().boards.find((b) => String(b.id) === String(id))
       if (!prev) return null
 
       // Apply optimistically
       set((s) => ({
         boards: s.boards.map((b) =>
-          b.id === id ? { ...b, ...updates, updated_at: new Date().toISOString() } : b
+          String(b.id) === String(id) ? { ...b, ...updates, updated_at: new Date().toISOString() } : b
         )
       }))
 
@@ -124,7 +124,7 @@ export const useBoardsStore = create<BoardsState>()(
       if (!result) {
         // Rollback
         set((s) => ({
-          boards: s.boards.map((b) => (b.id === id ? prev : b))
+          boards: s.boards.map((b) => (String(b.id) === String(id) ? prev : b))
         }))
         return null
       }
@@ -132,7 +132,7 @@ export const useBoardsStore = create<BoardsState>()(
       const withRole = { ...result, role: prev.role }
       // Reconcile with server truth
       set((s) => ({
-        boards: s.boards.map((b) => (b.id === id ? withRole : b))
+        boards: s.boards.map((b) => (String(b.id) === String(id) ? withRole : b))
       }))
       return withRole
     },
@@ -140,11 +140,11 @@ export const useBoardsStore = create<BoardsState>()(
     // ── Optimistic delete ──────────────────────────────────────
     removeBoard: async (id) => {
       const prev = get().boards
-      const target = prev.find((b) => b.id === id)
+      const target = prev.find((b) => String(b.id) === String(id))
       if (!target) return false
 
       // Apply optimistically
-      set((s) => ({ boards: s.boards.filter((b) => b.id !== id) }))
+      set((s) => ({ boards: s.boards.filter((b) => String(b.id) !== String(id)) }))
 
       const ok = await boardsService.deleteBoard(id)
 
@@ -163,11 +163,11 @@ export const useBoardsStore = create<BoardsState>()(
 
       // Build full new list with updated order index and pinned status
       const withOrder = reordered.map((b, i) => ({ ...b, order: i, pinned: Boolean(b.pinned) }))
-      const updatesMap = new Map(withOrder.map((b) => [b.id, { order: b.order, pinned: b.pinned }]))
+      const updatesMap = new Map(withOrder.map((b) => [String(b.id), { order: b.order, pinned: b.pinned }]))
 
       // Apply locally
       set((s) => ({
-        boards: s.boards.map((b) => (updatesMap.has(b.id) ? { ...b, ...updatesMap.get(b.id) } : b))
+        boards: s.boards.map((b) => (updatesMap.has(String(b.id)) ? { ...b, ...updatesMap.get(String(b.id)) } : b))
       }))
 
       // Persist all changed orders and pinned state to DB

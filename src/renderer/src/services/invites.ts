@@ -254,7 +254,6 @@ export function subscribeBoardInvites(
   onPayload?: (payload: unknown) => void
 ): RealtimeChannel {
   const channelName = `invites-board-${boardId}-${Math.random().toString(36).substring(2, 9)}`
-  const targetBoardId = String(boardId)
   const channel = supabase
     .channel(channelName)
     .on(
@@ -265,18 +264,8 @@ export function subscribeBoardInvites(
         table: 'board_invites'
       },
       (payload: any) => {
-        const newBoardId = payload.new?.board_id ? String(payload.new.board_id) : null
-        const oldBoardId = payload.old?.board_id ? String(payload.old.board_id) : null
-
-        if (
-          (!newBoardId && !oldBoardId) ||
-          newBoardId === targetBoardId ||
-          oldBoardId === targetBoardId ||
-          payload.eventType === 'DELETE'
-        ) {
-          if (onPayload) {
-            onPayload(payload)
-          }
+        if (onPayload) {
+          onPayload(payload)
         }
       }
     )

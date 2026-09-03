@@ -60,12 +60,12 @@ export async function createItem(
 }
 
 export async function updateItem(
-  id: number,
+  id: number | string,
   updates: Partial<KanbanItem>
 ): Promise<KanbanItem | null> {
   const payload: Record<string, any> = { ...updates, updated_at: new Date().toISOString() }
   if (payload.lane_id !== undefined) {
-    payload.lane_id = payload.lane_id !== null ? Number(payload.lane_id) : null
+    payload.lane_id = payload.lane_id !== null ? (typeof payload.lane_id === 'number' || !isNaN(Number(payload.lane_id)) ? Number(payload.lane_id) : payload.lane_id) : null
   }
 
   const { data, error } = await supabase
@@ -82,7 +82,7 @@ export async function updateItem(
   return data?.[0] as KanbanItem
 }
 
-export async function deleteItem(id: number): Promise<boolean> {
+export async function deleteItem(id: number | string): Promise<boolean> {
   const { error } = await supabase
     .from('items')
     .delete()
@@ -101,7 +101,6 @@ export function subscribeItems(
   onPayload?: (payload: unknown) => void
 ) {
   const channelName = `items-board-${boardId}-${Math.random().toString(36).substring(2, 9)}`
-  const targetBoardId = String(boardId)
   const channel = supabase
     .channel(channelName)
     .on(
@@ -112,18 +111,8 @@ export function subscribeItems(
         table: 'items'
       },
       (payload: any) => {
-        const newBoardId = payload.new?.board_id ? String(payload.new.board_id) : null
-        const oldBoardId = payload.old?.board_id ? String(payload.old.board_id) : null
-
-        if (
-          (!newBoardId && !oldBoardId) ||
-          newBoardId === targetBoardId ||
-          oldBoardId === targetBoardId ||
-          payload.eventType === 'DELETE'
-        ) {
-          if (onPayload) {
-            onPayload(payload)
-          }
+        if (onPayload) {
+          onPayload(payload)
         }
       }
     )

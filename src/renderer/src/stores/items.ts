@@ -16,9 +16,9 @@ type ItemsState = {
   addItem: (
     draft: Partial<Omit<KanbanItem, 'id' | 'created_at' | 'updated_at'>>
   ) => Promise<KanbanItem | null>
-  updateItem: (id: number, updates: Partial<KanbanItem>) => Promise<KanbanItem | null>
-  removeItem: (id: number) => Promise<boolean>
-  moveItem: (id: number, targetLaneId: number | null, newOrder: number) => Promise<void>
+  updateItem: (id: number | string, updates: Partial<KanbanItem>) => Promise<KanbanItem | null>
+  removeItem: (id: number | string) => Promise<boolean>
+  moveItem: (id: number | string, targetLaneId: number | string | null, newOrder: number) => Promise<void>
 }
 
 let realtimeCleanup: (() => void) | null = null
@@ -67,9 +67,9 @@ export const useItemsStore = create<ItemsState>()(
       const currentBoardId = get().boardId
       if (!currentBoardId) return null
 
-      const laneId = draft.lane_id !== undefined && draft.lane_id !== null ? Number(draft.lane_id) : null
+      const laneId = draft.lane_id !== undefined && draft.lane_id !== null ? (typeof draft.lane_id === 'number' || !isNaN(Number(draft.lane_id)) ? Number(draft.lane_id) : draft.lane_id) : null
       const sameLaneItems = get().items.filter(
-        (i) => (i.lane_id === null && laneId === null) || (i.lane_id !== null && i.lane_id === laneId)
+        (i) => (i.lane_id === null && laneId === null) || (i.lane_id !== null && String(i.lane_id) === String(laneId))
       )
 
       const maxOrder = sameLaneItems.length > 0 ? Math.max(...sameLaneItems.map((i) => i.order ?? 0)) : 0
@@ -103,41 +103,41 @@ export const useItemsStore = create<ItemsState>()(
 
       if (!result) {
         console.error('addItem: database insert failed, reverting optimistic item')
-        set((s) => ({ items: s.items.filter((i) => i.id !== tempId) }))
+        set((s) => ({ items: s.items.filter((i) => String(i.id) !== String(tempId)) }))
         return null
       }
 
       set((s) => ({
-        items: s.items.map((i) => (i.id === tempId ? result : i))
+        items: s.items.map((i) => (String(i.id) === String(tempId) ? result : i))
       }))
       return result
     },
 
     // ── Optimistic Update Item ──────────────────────────────
     updateItem: async (id, updates) => {
-      const prevItem = get().items.find((i) => i.id === id)
+      const prevItem = get().items.find((i) => String(i.id) === String(id))
       if (!prevItem) return null
 
       set((s) => ({
         items: s.items.map((i) =>
-          i.id === id ? { ...i, ...updates, updated_at: new Date().toISOString() } : i
+          String(i.id) === String(id) ? { ...i, ...updates, updated_at: new Date().toISOString() } : i
         )
       }))
 
-      if (id < 0) return prevItem
+      if (typeof id === 'number' && id < 0) return prevItem
 
       const result = await itemsService.updateItem(id, updates)
 
       if (!result) {
         console.error(`updateItem: database update failed for item ${id}, reverting`)
         set((s) => ({
-          items: s.items.map((i) => (i.id === id ? prevItem : i))
+          items: s.items.map((i) => (String(i.id) === String(id) ? prevItem : i))
         }))
         return null
       }
 
       set((s) => ({
-        items: s.items.map((i) => (i.id === id ? result : i))
+        items: s.items.map((i) => (String(i.id) === String(id) ? result : i))
       }))
       return result
     },
@@ -145,12 +145,12 @@ export const useItemsStore = create<ItemsState>()(
     // ── Optimistic Delete Item ──────────────────────────────
     removeItem: async (id) => {
       const prevItems = get().items
-      const target = prevItems.find((i) => i.id === id)
+      const target = prevItems.find((i) => String(i.id) === String(id))
       if (!target) return false
 
-      set((s) => ({ items: s.items.filter((i) => i.id !== id) }))
+      set((s) => ({ items: s.items.filter((i) => String(i.id) !== String(id)) }))
 
-      if (id < 0) return true
+      if (typeof id === 'number' && id < 0) return true
 
       const ok = await itemsService.deleteItem(id)
 
@@ -166,17 +166,17 @@ export const useItemsStore = create<ItemsState>()(
     // ── Move item between lanes / reorder ───────────────────
     moveItem: async (id, targetLaneId, newOrder) => {
       const prevItems = get().items
-      const normalizedTargetLane = targetLaneId !== null ? Number(targetLaneId) : null
+      const normalizedTargetLane = targetLaneId !== null && !isNaN(Number(targetLaneId)) ? Number(targetLaneId) : null
 
       set((s) => ({
         items: s.items.map((i) =>
-          i.id === id
+          String(i.id) === String(id)
             ? { ...i, lane_id: normalizedTargetLane, order: newOrder, updated_at: new Date().toISOString() }
             : i
         )
       }))
 
-      if (id < 0) return
+      if (typeof id === 'number' && id < 0) return
 
       // Suppress realtime refetch during DB update to prevent DOM conflicts with dnd-kit
       suppressRealtimeRefetch = true

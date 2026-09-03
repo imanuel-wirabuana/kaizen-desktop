@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import * as lanesService from '@/services/lanes'
 import { useItemsStore } from '@/stores/items'
+import { useBoardsStore } from '@/stores/boards'
 import { supabase } from '@/lib/supabase'
 
 export function createVirtualDraftLane(boardId: number | string): Lane {
@@ -217,6 +218,8 @@ export const useLanesStore = create<LanesState>()(
         useItemsStore.setState({ items: prevItems })
         return false
       }
+
+      useBoardsStore.getState().refresh()
       return true
     },
 

@@ -72,11 +72,14 @@ export async function deleteLane(id: number | string): Promise<boolean> {
 
 // 6. Move lane and all its items to another board
 export async function moveLaneToBoard(laneId: number | string, targetBoardId: number | string): Promise<boolean> {
+  const parsedBoardId = typeof targetBoardId === 'number' || !isNaN(Number(targetBoardId)) ? Number(targetBoardId) : targetBoardId
+  const parsedLaneId = typeof laneId === 'number' || !isNaN(Number(laneId)) ? Number(laneId) : laneId
+
   // 1. Update board_id of all items belonging to this lane FIRST so items move WITH the lane
   const { error: itemsError } = await supabase
     .from('items')
-    .update({ board_id: Number(targetBoardId), updated_at: new Date().toISOString() })
-    .eq('lane_id', Number(laneId))
+    .update({ board_id: parsedBoardId, updated_at: new Date().toISOString() })
+    .eq('lane_id', parsedLaneId)
 
   if (itemsError) {
     console.error('Error updating items board_id for moved lane:', itemsError)
@@ -85,8 +88,8 @@ export async function moveLaneToBoard(laneId: number | string, targetBoardId: nu
   // 2. Update lane board_id
   const { error: laneError } = await supabase
     .from('lanes')
-    .update({ board_id: Number(targetBoardId), updated_at: new Date().toISOString() })
-    .eq('id', Number(laneId))
+    .update({ board_id: parsedBoardId, updated_at: new Date().toISOString() })
+    .eq('id', parsedLaneId)
 
   if (laneError) {
     console.error('Error moving lane to target board:', laneError)
@@ -96,13 +99,12 @@ export async function moveLaneToBoard(laneId: number | string, targetBoardId: nu
   return true
 }
 
-// 6. Realtime subscription for lanes table on a specific board
+// 7. Realtime subscription for lanes table on a specific board
 export function subscribeLanes(
   boardId: number | string,
   onPayload?: (payload: unknown) => void
 ): RealtimeChannel {
   const channelName = `lanes-board-${boardId}-${Math.random().toString(36).substring(2, 9)}`
-  const targetBoardId = String(boardId)
   const channel = supabase
     .channel(channelName)
     .on(
@@ -113,18 +115,8 @@ export function subscribeLanes(
         table: 'lanes'
       },
       (payload: any) => {
-        const newBoardId = payload.new?.board_id ? String(payload.new.board_id) : null
-        const oldBoardId = payload.old?.board_id ? String(payload.old.board_id) : null
-
-        if (
-          (!newBoardId && !oldBoardId) ||
-          newBoardId === targetBoardId ||
-          oldBoardId === targetBoardId ||
-          payload.eventType === 'DELETE'
-        ) {
-          if (onPayload) {
-            onPayload(payload)
-          }
+        if (onPayload) {
+          onPayload(payload)
         }
       }
     )
