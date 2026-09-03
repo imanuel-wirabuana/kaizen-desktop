@@ -1,10 +1,38 @@
-import { app, shell, BrowserWindow } from 'electron'
-import { join } from 'path'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+
+let mainWindow: BrowserWindow | null = null
+
+// Register custom protocol for deep linking
+if (process.defaultApp || is.dev) {
+  app.setAsDefaultProtocolClient('kaizen', process.execPath, [resolve(process.cwd())])
+} else {
+  app.setAsDefaultProtocolClient('kaizen')
+}
+
+// Ensure single instance lock for deep links
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (_event, commandLine) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+
+      const url = commandLine.find((arg) => arg.startsWith('kaizen://'))
+      if (url) {
+        mainWindow.webContents.send('auth-callback', url)
+      }
+    }
+  })
+}
 
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 840,
     minWidth: 900,
@@ -19,8 +47,18 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.maximize()
-    mainWindow.show()
+    mainWindow?.maximize()
+    mainWindow?.show()
+
+    // Handle deep link if app launched with protocol URL on Windows
+    const url = process.argv.find((arg) => arg.startsWith('kaizen://'))
+    if (url && mainWindow) {
+      mainWindow.webContents.send('auth-callback', url)
+    }
+  })
+
+  mainWindow.on('closed', () => {
+    mainWindow = null
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -36,6 +74,23 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
+
+// IPC handler to open external URLs from renderer
+ipcMain.on('open-external-url', (_event, url: string) => {
+  if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+    shell.openExternal(url)
+  }
+})
+
+// macOS deep link handler
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+    mainWindow.webContents.send('auth-callback', url)
+  }
+})
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -64,3 +119,4 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+

@@ -13,8 +13,12 @@ export function ViewRouter() {
   const { isLoaded, isSignedIn } = useAuth()
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn && currentView.name !== 'landing') {
-      navigate({ name: 'landing' })
+    if (isLoaded) {
+      if (!isSignedIn && currentView.name !== 'landing') {
+        navigate({ name: 'landing' })
+      } else if (isSignedIn && currentView.name === 'landing') {
+        navigate({ name: 'boards' })
+      }
     }
   }, [isLoaded, isSignedIn, currentView.name, navigate])
 

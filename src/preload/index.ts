@@ -3,7 +3,17 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  platform: process.platform
+  platform: process.platform,
+  onAuthCallback: (callback: (url: string) => void) => {
+    const subscription = (_event: any, url: string) => callback(url)
+    electronAPI.ipcRenderer.on('auth-callback', subscription)
+    return () => {
+      electronAPI.ipcRenderer.removeListener('auth-callback', subscription)
+    }
+  },
+  openExternalUrl: (url: string) => {
+    electronAPI.ipcRenderer.send('open-external-url', url)
+  }
 }
 
 // Use contextBridge APIs to expose Electron APIs to

@@ -73,8 +73,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
+    // Listen for Electron deep link protocol auth callbacks (kaizen://auth/callback)
+    const handleDeepLink = async (rawUrl: string) => {
+      try {
+        let access_token: string | null = null
+        let refresh_token: string | null = null
+        let code: string | null = null
+
+        if (rawUrl.includes('#')) {
+          const hash = rawUrl.split('#')[1]
+          const params = new URLSearchParams(hash)
+          access_token = params.get('access_token')
+          refresh_token = params.get('refresh_token')
+        } else if (rawUrl.includes('?')) {
+          const search = rawUrl.split('?')[1]
+          const params = new URLSearchParams(search)
+          code = params.get('code')
+          access_token = params.get('access_token')
+          refresh_token = params.get('refresh_token')
+        }
+
+        if (access_token && refresh_token) {
+          const { data, error } = await supabase.auth.setSession({ access_token, refresh_token })
+          if (!error && data.session) {
+            setSession(data.session)
+            setUser(formatAppUser(data.session.user))
+            useNavigationStore.getState().navigate({ name: 'boards' })
+          }
+        } else if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+          if (!error && data.session) {
+            setSession(data.session)
+            setUser(formatAppUser(data.session.user))
+            useNavigationStore.getState().navigate({ name: 'boards' })
+          }
+        }
+      } catch (err) {
+        console.error('Error processing auth callback deep link:', err)
+      }
+    }
+
+    const unsubDeepLink = window.api?.onAuthCallback
+      ? window.api.onAuthCallback(handleDeepLink)
+      : undefined
+
     return () => {
       subscription.unsubscribe()
+      if (unsubDeepLink) unsubDeepLink()
     }
   }, [])
 
