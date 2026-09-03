@@ -97,9 +97,7 @@ export function LaneMenuContent({
               </MenuItem>
             ))
           ) : (
-            <div className="p-2 text-center text-[10px] text-muted-foreground">
-              No other boards
-            </div>
+            <div className="p-2 text-center text-[10px] text-muted-foreground">No other boards</div>
           )}
         </MenuSubContent>
       </MenuSub>
@@ -111,10 +109,7 @@ export function LaneMenuContent({
           <span>Change Color Accent</span>
         </MenuSubTrigger>
         <MenuSubContent className="w-[240px] p-2">
-          <BackgroundPickerContent
-            value={lane.background}
-            onChange={onBackgroundChange}
-          />
+          <BackgroundPickerContent value={lane.background} onChange={onBackgroundChange} />
         </MenuSubContent>
       </MenuSub>
 
@@ -133,7 +128,7 @@ export function LaneMenuContent({
 
       <MenuItem destructive onClick={onDelete}>
         <Trash2 className="mr-2 size-3.5" />
-        <span>Delete Column</span>
+        <span>Delete Lane</span>
       </MenuItem>
     </MenuProvider>
   )

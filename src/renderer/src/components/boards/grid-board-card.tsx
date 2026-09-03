@@ -63,6 +63,7 @@ export function SortableGridBoardCard({
 
   const bgProps = getBoardBackgroundStyleAndClass(board.background)
   const isPinned = Boolean(board.pinned)
+  const hasBackground = bgProps.isImage || bgProps.className
 
   return (
     <ContextMenu key={board.id}>
@@ -80,26 +81,26 @@ export function SortableGridBoardCard({
               }
             }}
             className={cn(
-              'group relative flex min-h-[105px] flex-col justify-between overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 cursor-pointer select-none',
+              'group relative flex min-h-[160px] flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 cursor-pointer select-none',
               isDragSource ? 'opacity-40 ring-2 ring-primary/30' : ''
             )}
           />
         }
       >
-        {/* Compact Wallpaper Strip */}
+        {/* Background Hero Banner */}
         <div
           className={cn(
-            'relative h-6 w-full border-b bg-muted/40 overflow-hidden',
+            'relative h-20 w-full overflow-hidden shrink-0',
+            hasBackground ? '' : 'bg-gradient-to-br from-muted/60 via-muted/30 to-muted/50',
             bgProps.className
           )}
           style={bgProps.style}
         >
-          {bgProps.isImage && (
-            <div className="absolute inset-0 bg-background/30 backdrop-blur-[1px]" />
-          )}
+          {/* Subtle bottom gradient fade for text readability */}
+          <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card/80 to-transparent" />
 
           {/* Quick Action Top Right */}
-          <div className="absolute right-1.5 top-1 z-10 flex items-center gap-1">
+          <div className="absolute right-1.5 top-1.5 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             <button
               type="button"
               onClick={onTogglePin}
@@ -107,8 +108,8 @@ export function SortableGridBoardCard({
               className={cn(
                 'flex size-5 items-center justify-center rounded-md border text-[10px] shadow-xs transition-all backdrop-blur-md cursor-pointer',
                 isPinned
-                  ? 'border-primary/40 bg-primary text-primary-foreground'
-                  : 'border-background/40 bg-background/80 text-muted-foreground hover:bg-background hover:text-foreground opacity-80 group-hover:opacity-100'
+                  ? 'border-primary/40 bg-primary text-primary-foreground opacity-100'
+                  : 'border-white/30 bg-black/30 text-white hover:bg-black/50'
               )}
             >
               {isPinned ? <Pin className="size-2.5 fill-current" /> : <Pin className="size-2.5" />}
@@ -121,7 +122,7 @@ export function SortableGridBoardCard({
                     type="button"
                     onClick={(e) => e.stopPropagation()}
                     title="Board options"
-                    className="flex size-5 items-center justify-center rounded-md border border-background/40 bg-background/80 text-muted-foreground hover:bg-background hover:text-foreground shadow-xs transition-all backdrop-blur-md opacity-80 group-hover:opacity-100 cursor-pointer"
+                    className="flex size-5 items-center justify-center rounded-md border border-white/30 bg-black/30 text-white hover:bg-black/50 shadow-xs transition-all backdrop-blur-md cursor-pointer"
                   >
                     <MoreVertical className="size-2.5" />
                   </button>
@@ -167,16 +168,23 @@ export function SortableGridBoardCard({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          {/* Pinned indicator always visible */}
+          {isPinned && (
+            <div className="absolute left-1.5 top-1.5 z-10 flex size-5 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-xs group-hover:opacity-0 transition-opacity duration-200">
+              <Pin className="size-2.5 fill-current" />
+            </div>
+          )}
         </div>
 
         {/* Card Main Body */}
-        <div className="flex flex-1 items-start gap-2.5 p-2.5">
-          {/* Emoji Badge */}
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border bg-background text-sm shadow-2xs">
+        <div className="flex flex-1 items-start gap-2.5 p-2.5 -mt-3 relative z-[1]">
+          {/* Emoji Badge - overlapping the banner */}
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border-2 border-card bg-background text-sm shadow-sm">
             {board.icon || '📋'}
           </div>
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 pt-0.5">
             <div className="flex items-center gap-1.5 justify-between">
               <h3 className="text-xs font-semibold tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
                 {board.title || 'Untitled Board'}
@@ -203,7 +211,7 @@ export function SortableGridBoardCard({
         </div>
 
         {/* Card Footer / Metadata & Drag Handle */}
-        <div className="flex items-center justify-between border-t bg-muted/10 px-2.5 py-1 text-[10px] text-muted-foreground">
+        <div className="flex items-center justify-between border-t bg-muted/10 px-2.5 py-1 text-[10px] text-muted-foreground mt-auto">
           <span className="truncate">
             {board.last_activity
               ? `Active ${new Date(board.last_activity).toLocaleDateString(undefined, {
@@ -247,25 +255,32 @@ export function SortableGridBoardCard({
 // ── Drag Overlay Preview Component ──
 export function BoardCardPreview({ board }: { board: Board }) {
   const bgProps = getBoardBackgroundStyleAndClass(board.background)
+  const hasBackground = bgProps.isImage || bgProps.className
 
   return (
-    <div className="flex min-h-[105px] w-full flex-col justify-between overflow-hidden rounded-2xl border border-primary/50 bg-card text-card-foreground shadow-2xl ring-2 ring-primary/30 opacity-95 pointer-events-none select-none">
+    <div className="flex min-h-[160px] w-full flex-col overflow-hidden rounded-2xl border border-primary/50 bg-card text-card-foreground shadow-2xl ring-2 ring-primary/30 opacity-95 pointer-events-none select-none">
       <div
-        className={cn('h-6 w-full border-b bg-muted/40 overflow-hidden', bgProps.className)}
+        className={cn(
+          'relative h-20 w-full overflow-hidden shrink-0',
+          hasBackground ? '' : 'bg-gradient-to-br from-muted/60 via-muted/30 to-muted/50',
+          bgProps.className
+        )}
         style={bgProps.style}
-      />
-      <div className="flex items-start gap-2.5 p-3">
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border bg-background text-sm shadow-2xs">
+      >
+        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card/80 to-transparent" />
+      </div>
+      <div className="flex items-start gap-2.5 p-2.5 -mt-3 relative z-[1]">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border-2 border-card bg-background text-sm shadow-sm">
           {board.icon || '📋'}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 pt-0.5">
           <h3 className="text-xs font-semibold text-foreground truncate">{board.title}</h3>
           <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-1">
             {board.description || 'No description'}
           </p>
         </div>
       </div>
-      <div className="flex items-center justify-between border-t bg-muted/20 px-3 py-1.5 text-[10px] text-muted-foreground">
+      <div className="flex items-center justify-between border-t bg-muted/20 px-2.5 py-1 text-[10px] text-muted-foreground mt-auto">
         <span>Moving board...</span>
         <GripVertical className="size-3 text-primary" />
       </div>

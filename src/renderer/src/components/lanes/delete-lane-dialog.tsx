@@ -45,7 +45,8 @@ export function DeleteLaneDialog({ lane, open, onOpenChange }: DeleteLaneDialogP
           </div>
           <DialogDescription className="pt-2 text-xs space-y-1">
             <span>
-              Are you sure you want to delete <span className="font-semibold text-foreground">"{lane.title}"</span>?
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-foreground">"{lane.title}"</span>?
             </span>
             <span className="block text-muted-foreground font-medium pt-1">
               Items in this lane will automatically be moved to Draft.
@@ -71,7 +72,7 @@ export function DeleteLaneDialog({ lane, open, onOpenChange }: DeleteLaneDialogP
             disabled={isDeleting}
           >
             {isDeleting ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
-            Delete Column
+            Delete Lane
           </Button>
         </DialogFooter>
       </DialogContent>

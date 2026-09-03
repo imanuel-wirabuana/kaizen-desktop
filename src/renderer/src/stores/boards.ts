@@ -222,6 +222,7 @@ export const useBoardsStore = create<BoardsState>()(
       const target = get().boards.find((b) => String(b.id) === String(boardId))
       if (!target || !target.id) return null
 
+      const currentUser = get().owner
       const { includeLanes = false, includeItems = false } = options
       const copyTitle = target.title ? `${target.title} (Copy)` : 'Untitled Board (Copy)'
 
@@ -231,7 +232,7 @@ export const useBoardsStore = create<BoardsState>()(
         icon: target.icon,
         pinned: target.pinned,
         background: target.background,
-        owner: target.owner
+        owner: currentUser ?? target.owner
       })
 
       if (!newBoard || !newBoard.id) return null
@@ -248,7 +249,7 @@ export const useBoardsStore = create<BoardsState>()(
             icon: lane.icon,
             description: lane.description,
             background: lane.background,
-            owner: lane.owner,
+            owner: currentUser ?? lane.owner,
             order: idx + 1
           })
 
@@ -267,7 +268,7 @@ export const useBoardsStore = create<BoardsState>()(
                 priority: item.priority,
                 due_date: item.due_date,
                 background: item.background,
-                owner: item.owner,
+                owner: currentUser ?? item.owner,
                 order: itemIdx + 1
               })
             }
@@ -290,7 +291,7 @@ export const useBoardsStore = create<BoardsState>()(
             priority: item.priority,
             due_date: item.due_date,
             background: item.background,
-            owner: item.owner,
+            owner: currentUser ?? item.owner,
             order: draftIdx + 1
           })
         }
