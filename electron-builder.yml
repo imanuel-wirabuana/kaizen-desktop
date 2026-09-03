@@ -12,6 +12,7 @@ files:
 asarUnpack:
   - resources/**
 win:
+  icon: build/icon.ico
   executableName: kaizen-desktop
 nsis:
   artifactName: ${name}-${version}-setup.${ext}

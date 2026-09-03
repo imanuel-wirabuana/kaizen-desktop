@@ -34,6 +34,8 @@ if (!gotTheLock) {
 }
 
 function createWindow(): void {
+  const iconPath = resolve(process.cwd(), 'resources/icon.ico')
+
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -43,6 +45,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     title: 'Kaizen',
+    icon: iconPath,
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false
