@@ -5,6 +5,7 @@ import * as lanesService from '@/services/lanes'
 import * as itemsService from '@/services/items'
 import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
+import { isBoardPinned, setBoardPinned } from '@/lib/pinned-boards'
 
 type BoardsState = {
   boards: Board[]
@@ -23,6 +24,7 @@ type BoardsState = {
   updateBoard: (id: number | string, updates: Partial<Board>) => Promise<Board | null>
   removeBoard: (id: number | string) => Promise<boolean>
   reorderBoards: (reordered: Board[]) => Promise<void>
+  touchBoardActivity: (boardId: number | string) => Promise<void>
   duplicateBoard: (
     boardId: number | string,
     options?: { includeLanes?: boolean; includeItems?: boolean }
@@ -48,12 +50,13 @@ export const useBoardsStore = create<BoardsState>()(
       set({ owner, loading: true })
 
       const data = await boardsService.getBoards(owner)
-      set({ boards: data, loading: false })
+      const mapped = data.map((b) => ({ ...b, pinned: isBoardPinned(b.id) }))
+      set({ boards: mapped, loading: false })
 
       // 1. Realtime postgres changes channel listener
       const channel = boardsService.subscribeBoards(() => {
         boardsService.getBoards(owner).then((fresh) => {
-          set({ boards: fresh })
+          set({ boards: fresh.map((b) => ({ ...b, pinned: isBoardPinned(b.id) })) })
         })
       })
 
@@ -61,7 +64,7 @@ export const useBoardsStore = create<BoardsState>()(
       const unsubBroadcast = onSyncEvent((event) => {
         if (event === 'boards') {
           boardsService.getBoards(owner).then((fresh) => {
-            set({ boards: fresh })
+            set({ boards: fresh.map((b) => ({ ...b, pinned: isBoardPinned(b.id) })) })
           })
         }
       })
@@ -73,10 +76,9 @@ export const useBoardsStore = create<BoardsState>()(
     },
 
     refresh: async () => {
-      const currentOwner = get().owner
-      if (!currentOwner) return
-      const data = await boardsService.getBoards(currentOwner)
-      set({ boards: data })
+      const owner = get().owner
+      const fresh = await boardsService.getBoards(owner)
+      set({ boards: fresh.map((b) => ({ ...b, pinned: isBoardPinned(b.id) })) })
     },
 
     cleanup: () => {
@@ -127,6 +129,10 @@ export const useBoardsStore = create<BoardsState>()(
       const prev = get().boards.find((b) => String(b.id) === String(id))
       if (!prev) return null
 
+      if (updates.pinned !== undefined) {
+        setBoardPinned(id, Boolean(updates.pinned))
+      }
+
       set((s) => ({
         boards: s.boards.map((b) =>
           String(b.id) === String(id) ? { ...b, ...updates, updated_at: new Date().toISOString() } : b
@@ -138,6 +144,9 @@ export const useBoardsStore = create<BoardsState>()(
       const result = await boardsService.updateBoard(id, updates)
 
       if (!result) {
+        if (updates.pinned !== undefined) {
+          setBoardPinned(id, Boolean(prev.pinned))
+        }
         set((s) => ({
           boards: s.boards.map((b) => (String(b.id) === String(id) ? prev : b))
         }))
@@ -145,11 +154,23 @@ export const useBoardsStore = create<BoardsState>()(
         return null
       }
 
-      const withRole = { ...result, role: prev.role }
+      const withRole = { ...result, pinned: isBoardPinned(result.id), role: prev.role }
       set((s) => ({
         boards: s.boards.map((b) => (String(b.id) === String(id) ? withRole : b))
       }))
       return withRole
+    },
+
+    touchBoardActivity: async (boardId) => {
+      if (!boardId) return
+      const now = new Date().toISOString()
+      set((s) => ({
+        boards: s.boards.map((b) =>
+          String(b.id) === String(boardId) ? { ...b, last_activity: now, updated_at: now } : b
+        )
+      }))
+      broadcastSyncEvent('boards')
+      await boardsService.touchBoardActivity(boardId)
     },
 
     // ── Optimistic delete ──────────────────────────────────────

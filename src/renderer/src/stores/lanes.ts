@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import * as lanesService from '@/services/lanes'
+import * as boardsService from '@/services/boards'
 import { useItemsStore } from '@/stores/items'
 import { useBoardsStore } from '@/stores/boards'
 import { supabase } from '@/lib/supabase'
@@ -130,6 +131,7 @@ export const useLanesStore = create<LanesState>()(
         lanes: s.lanes.map((l) => (l.id === tempId ? result : l))
       }))
       broadcastSyncEvent('lanes')
+      if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
       return result
     },
 
@@ -163,6 +165,7 @@ export const useLanesStore = create<LanesState>()(
       set((s) => ({
         lanes: s.lanes.map((l) => (String(l.id) === String(id) ? result : l))
       }))
+      if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
       return result
     },
 
@@ -185,6 +188,7 @@ export const useLanesStore = create<LanesState>()(
         return false
       }
 
+      if (target?.board_id) useBoardsStore.getState().touchBoardActivity(target.board_id)
       return true
     },
 

@@ -9,6 +9,7 @@ type Board = {
   background?: string | null
   owner?: string | null
   order?: number
+  last_activity?: string | null
   role?: 'owner' | 'edit' | 'view'
 }
 

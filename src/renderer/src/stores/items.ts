@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import * as itemsService from '@/services/items'
+import { useBoardsStore } from '@/stores/boards'
 import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 
@@ -124,6 +125,7 @@ export const useItemsStore = create<ItemsState>()(
         items: s.items.map((i) => (String(i.id) === String(tempId) ? result : i))
       }))
       broadcastSyncEvent('items')
+      if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
       return result
     },
 
@@ -156,6 +158,7 @@ export const useItemsStore = create<ItemsState>()(
       set((s) => ({
         items: s.items.map((i) => (String(i.id) === String(id) ? result : i))
       }))
+      if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
       return result
     },
 
@@ -179,6 +182,7 @@ export const useItemsStore = create<ItemsState>()(
         return false
       }
 
+      if (target?.board_id) useBoardsStore.getState().touchBoardActivity(target.board_id)
       return true
     },
 

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { touchBoardActivity } from './boards'
 
 export async function getItemsByBoardId(boardId: number | string): Promise<KanbanItem[]> {
   const { data, error } = await supabase
@@ -56,6 +57,9 @@ export async function createItem(
     return null
   }
 
+  if (data?.[0]?.board_id) {
+    touchBoardActivity(data[0].board_id)
+  }
   return data?.[0] as KanbanItem
 }
 
@@ -79,6 +83,9 @@ export async function updateItem(
     return null
   }
 
+  if (data?.[0]?.board_id) {
+    touchBoardActivity(data[0].board_id)
+  }
   return data?.[0] as KanbanItem
 }
 

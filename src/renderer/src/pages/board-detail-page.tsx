@@ -47,7 +47,8 @@ import {
   UserCheck,
   Copy,
   CopyPlus,
-  Layers
+  Layers,
+  Clock
 } from 'lucide-react'
 import { BoardMenuContent } from '@/components/menus/board-menu-content'
 import { useNavigationStore } from '@/stores/navigation'
@@ -55,6 +56,23 @@ import { onSyncEvent } from '@/lib/realtime'
 import { supabase } from '@/lib/supabase'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
+
+function formatLastActivity(dateStr?: string | null): string {
+  if (!dateStr) return 'No recent activity'
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return 'No recent activity'
+  const diffMs = Date.now() - date.getTime()
+  const diffSecs = Math.floor(diffMs / 1000)
+  if (diffSecs < 15) return 'Just now'
+  if (diffSecs < 60) return `${diffSecs}s ago`
+  const diffMins = Math.floor(diffSecs / 60)
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
 
 export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const navigate = useNavigationStore((s) => s.navigate)
@@ -305,11 +323,21 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                       </span>
                     )}
                   </div>
-                  {board.description && (
-                    <p className="text-[11px] text-muted-foreground line-clamp-1">
-                      {board.description}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {board.description && (
+                      <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-[280px]">
+                        {board.description}
+                      </p>
+                    )}
+                    {board.description && <span className="size-1 rounded-full bg-muted-foreground/30 shrink-0" />}
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground/80 shrink-0 bg-muted/40 px-1.5 py-0.2 rounded-md border border-border/40"
+                      title={board.last_activity ? `Last activity: ${new Date(board.last_activity).toLocaleString()}` : 'No activity recorded'}
+                    >
+                      <Clock className="size-2.5 text-muted-foreground/70" />
+                      <span>{formatLastActivity(board.last_activity || board.updated_at)}</span>
+                    </span>
+                  </div>
                 </div>
               </div>
 

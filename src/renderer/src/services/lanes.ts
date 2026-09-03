@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import { touchBoardActivity } from './boards'
 
 // 1. Fetch all lanes for a specific board, ordered by 'order' ascending
 export async function getLanesByBoardId(boardId: number | string): Promise<Lane[]> {
@@ -37,6 +38,9 @@ export async function createLane(
     console.error('Error creating lane:', error)
     return null
   }
+  if (data?.[0]?.board_id) {
+    touchBoardActivity(data[0].board_id)
+  }
   return data?.[0] as Lane
 }
 
@@ -55,6 +59,9 @@ export async function updateLane(
   if (error) {
     console.error('Error updating lane:', error)
     return null
+  }
+  if (data?.[0]?.board_id) {
+    touchBoardActivity(data[0].board_id)
   }
   return data?.[0] as Lane
 }

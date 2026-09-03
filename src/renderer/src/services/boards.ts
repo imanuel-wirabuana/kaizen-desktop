@@ -141,7 +141,15 @@ export async function getBoardById(id: number | string): Promise<Board | null> {
 export async function createBoard(
   board: Partial<Omit<Board, 'id' | 'created_at' | 'updated_at'>>
 ): Promise<Board | null> {
-  const { data, error } = await supabase.from('boards').insert([board]).select()
+  const { id, pinned, role, created_at, updated_at, ...cleanBoard } = board as any
+  const now = new Date().toISOString()
+  const payload = {
+    ...cleanBoard,
+    last_activity: now,
+    created_at: now,
+    updated_at: now
+  }
+  const { data, error } = await supabase.from('boards').insert([payload]).select()
 
   if (error) {
     console.error('Error creating board:', error)
@@ -154,7 +162,12 @@ export async function createBoard(
 export async function createMultipleBoards(
   boards: Partial<Omit<Board, 'id' | 'created_at' | 'updated_at'>>[]
 ): Promise<Board[]> {
-  const { data, error } = await supabase.from('boards').insert(boards).select()
+  const now = new Date().toISOString()
+  const cleanBoards = boards.map((b) => {
+    const { id, pinned, role, created_at, updated_at, ...rest } = b as any
+    return { ...rest, last_activity: now, created_at: now, updated_at: now }
+  })
+  const { data, error } = await supabase.from('boards').insert(cleanBoards).select()
 
   if (error) {
     console.error('Error creating multiple boards:', error)
@@ -168,18 +181,44 @@ export async function updateBoard(
   id: number | string,
   updates: Partial<Board>
 ): Promise<Board | null> {
+  const numId = Number(id)
+  if (isNaN(numId) || numId < 0) return null
+
+  const { id: _ignoreId, pinned, role, created_at, ...dbUpdates } = updates as any
+  const now = new Date().toISOString()
   const payload = {
-    ...updates,
-    updated_at: new Date().toISOString()
+    ...dbUpdates,
+    last_activity: now,
+    updated_at: now
   }
 
-  const { data, error } = await supabase.from('boards').update(payload).eq('id', id).select()
+  const { data, error } = await supabase.from('boards').update(payload).eq('id', numId).select()
 
   if (error) {
     console.error('Error updating board:', error)
     return null
   }
   return data?.[0] as Board
+}
+
+// 7b. Touch board last activity timestamp
+export async function touchBoardActivity(boardId: number | string): Promise<void> {
+  const numId = Number(boardId)
+  if (!numId || isNaN(numId) || numId < 0) return
+  try {
+    const now = new Date().toISOString()
+    const { data, error } = await supabase
+      .from('boards')
+      .update({ last_activity: now, updated_at: now })
+      .eq('id', numId)
+      .select()
+
+    if (error) {
+      console.error(`Error updating board ${numId} last_activity in DB:`, error)
+    }
+  } catch (err) {
+    console.error('Error touching board activity:', err)
+  }
 }
 
 // 8. Delete board by ID

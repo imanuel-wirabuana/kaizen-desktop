@@ -205,7 +205,12 @@ export function SortableGridBoardCard({
         {/* Card Footer / Metadata & Drag Handle */}
         <div className="flex items-center justify-between border-t bg-muted/10 px-2.5 py-1 text-[10px] text-muted-foreground">
           <span className="truncate">
-            {board.updated_at
+            {board.last_activity
+              ? `Active ${new Date(board.last_activity).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric'
+                })}`
+              : board.updated_at
               ? `Updated ${new Date(board.updated_at).toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric'
