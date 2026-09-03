@@ -4,6 +4,9 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 let mainWindow: BrowserWindow | null = null
 
+// Set explicit application name
+app.setName('Kaizen')
+
 // Register custom protocol for deep linking
 if (process.defaultApp || is.dev) {
   app.setAsDefaultProtocolClient('kaizen', process.execPath, [resolve(process.cwd())])

@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: kaizen-desktop
+appId: com.kaizen.app
+productName: Kaizen
 directories:
   buildResources: build
 files:
