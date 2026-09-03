@@ -435,7 +435,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         {/* Main Kanban Canvas */}
         <div
           className={cn(
-            'relative flex-1 min-h-0 w-full overflow-hidden rounded-2xl border bg-muted/20 p-2 transition-all flex gap-3',
+            'relative flex-1 min-h-0 w-full overflow-hidden rounded-2xl border bg-muted/20 p-2 transition-colors flex gap-3',
             bgProps.className
           )}
           style={bgProps.style}
