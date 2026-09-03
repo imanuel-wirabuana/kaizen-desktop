@@ -29,8 +29,6 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BoardMenuContent } from '@/components/menus/board-menu-content'
-import { ClickableEmoji } from '@/components/ui/clickable-emoji'
-import { useBoardsStore } from '@/stores/boards'
 
 export type SortableGridBoardCardProps = {
   board: Board
@@ -182,17 +180,9 @@ export function SortableGridBoardCard({
         {/* Card Main Body */}
         <div className="flex flex-1 items-start gap-2.5 p-2.5 -mt-3 relative z-[1]">
           {/* Emoji Badge - overlapping the banner */}
-          <ClickableEmoji
-            emoji={board.icon}
-            fallback="📋"
-            size="lg"
-            className="size-8 rounded-xl border-2 border-card shadow-sm"
-            onEmojiSelect={(newEmoji) => {
-              if (board.id) {
-                useBoardsStore.getState().updateBoard(board.id, { icon: newEmoji })
-              }
-            }}
-          />
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border-2 border-card bg-background text-sm shadow-sm">
+            {board.icon || '📋'}
+          </div>
 
           <div className="min-w-0 flex-1 pt-0.5">
             <div className="flex items-center gap-1.5 justify-between">

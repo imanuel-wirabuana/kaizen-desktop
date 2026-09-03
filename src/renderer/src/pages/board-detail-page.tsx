@@ -13,7 +13,6 @@ import { LaneColumn, InlineCreateLane } from '@/components/lanes'
 import { DraftSidebar } from '@/components/items'
 import { getUserBoardPermission, subscribeBoardMembers } from '@/services/members'
 import { useUser } from '@/providers/auth-provider'
-import { ClickableEmoji } from '@/components/ui/clickable-emoji'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -315,18 +314,9 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
           render={
             <div className="flex items-center justify-between gap-3 px-1 py-0.5 select-none">
               <div className="flex items-center gap-2.5 min-w-0">
-                <ClickableEmoji
-                  emoji={board.icon}
-                  fallback="📋"
-                  size="md"
-                  disabled={isReadOnly}
-                  className="size-8 rounded-xl border shadow-2xs"
-                  onEmojiSelect={(newEmoji) => {
-                    if (board.id) {
-                      updateBoard(board.id, { icon: newEmoji })
-                    }
-                  }}
-                />
+                <div className="flex size-8 items-center justify-center rounded-xl border bg-background text-base shadow-2xs shrink-0">
+                  {board.icon || '📋'}
+                </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h1 className="text-sm font-bold tracking-tight text-foreground truncate">
