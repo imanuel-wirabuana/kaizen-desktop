@@ -16,6 +16,20 @@ export async function getItemsByBoardId(boardId: number | string): Promise<Kanba
   return data as KanbanItem[]
 }
 
+export async function getAllItems(): Promise<KanbanItem[]> {
+  const { data, error } = await supabase
+    .from('items')
+    .select('*')
+    .order('order', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching all items:', error)
+    return []
+  }
+
+  return (data as KanbanItem[]) || []
+}
+
 export async function getItemById(id: number): Promise<KanbanItem | null> {
   const { data, error } = await supabase
     .from('items')

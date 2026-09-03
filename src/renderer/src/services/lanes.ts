@@ -17,6 +17,20 @@ export async function getLanesByBoardId(boardId: number | string): Promise<Lane[
   return data as Lane[]
 }
 
+// 1b. Fetch all lanes across all boards
+export async function getAllLanes(): Promise<Lane[]> {
+  const { data, error } = await supabase
+    .from('lanes')
+    .select('*')
+    .order('order', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching all lanes:', error)
+    return []
+  }
+  return (data as Lane[]) || []
+}
+
 // 2. Fetch single lane by ID
 export async function getLaneById(id: number | string): Promise<Lane | null> {
   const { data, error } = await supabase.from('lanes').select('*').eq('id', id).single()
