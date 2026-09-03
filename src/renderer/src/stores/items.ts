@@ -20,6 +20,7 @@ type ItemsState = {
   updateItem: (id: number | string, updates: Partial<KanbanItem>) => Promise<KanbanItem | null>
   removeItem: (id: number | string) => Promise<boolean>
   moveItem: (id: number | string, targetLaneId: number | string | null, newOrder: number) => Promise<void>
+  duplicateItem: (id: number | string) => Promise<KanbanItem | null>
 }
 
 let realtimeCleanup: (() => void) | null = null
@@ -214,6 +215,27 @@ export const useItemsStore = create<ItemsState>()(
       } finally {
         suppressRealtimeRefetch = false
       }
+    },
+
+    // ── Duplicate Item ──────────────────────────────────────
+    duplicateItem: async (id) => {
+      const target = get().items.find((i) => String(i.id) === String(id))
+      if (!target) return null
+
+      const order = (target.order ?? 0) + 1
+      const copyTitle = target.title ? `${target.title} (Copy)` : 'Untitled Task (Copy)'
+
+      return get().addItem({
+        title: copyTitle,
+        lane_id: target.lane_id,
+        icon: target.icon,
+        description: target.description,
+        priority: target.priority,
+        due_date: target.due_date,
+        background: target.background,
+        owner: target.owner,
+        order
+      })
     }
   }))
 )

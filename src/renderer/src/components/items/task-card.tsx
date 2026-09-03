@@ -38,7 +38,8 @@ import {
   Palette,
   ArrowRight,
   Inbox,
-  FolderInput
+  FolderInput,
+  CopyPlus
 } from 'lucide-react'
 import { useItemsStore } from '@/stores/items'
 import { useLanesStore } from '@/stores/lanes'
@@ -235,6 +236,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const updateItem = useItemsStore((s) => s.updateItem)
   const removeItem = useItemsStore((s) => s.removeItem)
   const moveItem = useItemsStore((s) => s.moveItem)
+  const duplicateItem = useItemsStore((s) => s.duplicateItem)
   const lanes = useLanesStore((s) => s.lanes)
   const boards = useBoardsStore((s) => s.boards)
   const currentBoard = boards.find((b) => Number(b.id) === Number(item.board_id))
@@ -476,6 +478,11 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                           <span>Edit Task</span>
                         </DropdownMenuItem>
 
+                        <DropdownMenuItem onClick={() => duplicateItem(item.id)}>
+                          <CopyPlus className="mr-2 size-3.5 text-muted-foreground" />
+                          <span>Duplicate Task</span>
+                        </DropdownMenuItem>
+
                       {/* Move to Submenu */}
                       <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
@@ -618,6 +625,11 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
         <ContextMenuItem onClick={() => setIsEditing(true)}>
           <Pencil className="mr-2 size-3.5 text-muted-foreground" />
           <span>Edit Task</span>
+        </ContextMenuItem>
+
+        <ContextMenuItem onClick={() => duplicateItem(item.id)}>
+          <CopyPlus className="mr-2 size-3.5 text-muted-foreground" />
+          <span>Duplicate Task</span>
         </ContextMenuItem>
 
         {/* Move to Submenu */}
