@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
@@ -74,6 +75,8 @@ function formatDueDate(dueDateStr: string | null | undefined) {
 
 
 
+import { TaskForm, TaskFormValues } from './task-form'
+
 type TaskCardProps = {
   item: KanbanItem
   index: number
@@ -82,15 +85,6 @@ type TaskCardProps = {
 
 export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [title, setTitle] = useState(item.title || '')
-  const [icon, setIcon] = useState<string | null>(item.icon || null)
-  const [description, setDescription] = useState(item.description || '')
-  const [priority, setPriority] = useState<number>(item.priority ?? 0)
-  const [dueDate, setDueDate] = useState<string>(
-    item.due_date ? item.due_date : ''
-  )
-  const [background, setBackground] = useState<string>(item.background || '')
-  const [popoverOpen, setPopoverOpen] = useState(false)
 
   const updateItem = useItemsStore((s) => s.updateItem)
   const removeItem = useItemsStore((s) => s.removeItem)
@@ -116,43 +110,16 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
     disabled: isEditing || readOnly
   })
 
-  const handleSave = async () => {
-    if (!title.trim()) {
-      setTitle(item.title || '')
-      setIcon(item.icon || null)
-      setIsEditing(false)
-      return
-    }
-
+  const handleSave = async (values: TaskFormValues) => {
     setIsEditing(false)
     await updateItem(item.id, {
-      title: title.trim(),
-      icon: icon || null,
-      description: description.trim() || null,
-      priority,
-      due_date: dueDate ? new Date(dueDate).toISOString() : null,
-      background: background || null
+      title: values.title.trim(),
+      icon: values.icon || null,
+      description: values.description.trim() || null,
+      priority: values.priority,
+      due_date: values.dueDate ? new Date(values.dueDate).toISOString() : null,
+      background: values.background || null
     })
-  }
-
-  const handleCancel = () => {
-    setTitle(item.title || '')
-    setIcon(item.icon || null)
-    setDescription(item.description || '')
-    setPriority(item.priority ?? 0)
-    setDueDate(item.due_date ? item.due_date : '')
-    setBackground(item.background || '')
-    setIsEditing(false)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSave()
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      handleCancel()
-    }
   }
 
   const handleMoveToLane = (targetLaneId: number | null) => {
@@ -186,111 +153,19 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
             style={hasCustomBackground ? bgProps.style : undefined}
           >
             {isEditing ? (
-              <div className="space-y-2.5" onKeyDown={handleKeyDown}>
-                {/* Icon & Title */}
-                <div className="flex items-center gap-1.5">
-                  <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                    <PopoverTrigger
-                      render={
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="size-7 shrink-0 text-base p-0 rounded-md"
-                          title="Choose Icon"
-                        >
-                          {icon || '😀'}
-                        </Button>
-                      }
-                    />
-                    <PopoverContent align="start" className="w-[300px] border-none bg-transparent p-0 shadow-none z-50">
-                      <EmojiPicker
-                        className="h-[300px] w-full rounded-lg border shadow-md"
-                        onEmojiSelect={({ emoji }) => {
-                          setIcon(emoji)
-                          setPopoverOpen(false)
-                        }}
-                      >
-                        <EmojiPickerSearch />
-                        <EmojiPickerContent />
-                      </EmojiPicker>
-                    </PopoverContent>
-                  </Popover>
-
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    autoFocus
-                    className="h-7 text-xs font-medium bg-background flex-1"
-                    placeholder="Task title..."
-                  />
-                </div>
-
-                {/* Description */}
-                <Input
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="h-6 text-[11px] text-muted-foreground bg-background"
-                  placeholder="Description (optional)..."
-                />
-
-                {/* Priority Selector */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-medium text-muted-foreground">Priority:</label>
-                  <div className="flex items-center gap-1">
-                    {([0, 1, 2, 3] as const).map((p) => {
-                      const pCfg = PRIORITY_CONFIG[p]
-                      return (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => setPriority(p)}
-                          className={cn(
-                            'flex-1 py-1 rounded-md text-[10px] font-medium border transition-all cursor-pointer',
-                            priority === p ? 'ring-2 ring-primary border-primary font-bold' : 'opacity-70 hover:opacity-100',
-                            pCfg.badge
-                          )}
-                        >
-                          {pCfg.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Due Date Picker */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-medium text-muted-foreground">Due Date:</label>
-                  <DateTimePicker
-                    value={dueDate}
-                    onChange={(val) => setDueDate(val || '')}
-                    placeholder="Pick due date & time..."
-                    className="h-7 text-xs"
-                  />
-                </div>
-
-                {/* Action controls */}
-                <div className="flex items-center justify-end gap-1 pt-1 border-t">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleCancel}
-                    className="size-6 text-muted-foreground rounded-md hover:bg-muted"
-                  >
-                    <X className="size-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    onClick={handleSave}
-                    disabled={!title.trim()}
-                    className="size-6 rounded-md bg-primary text-primary-foreground shadow-2xs"
-                  >
-                    <Check className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
+              <TaskForm
+                initialValues={{
+                  title: item.title || '',
+                  icon: item.icon || null,
+                  description: item.description || '',
+                  priority: item.priority ?? 0,
+                  dueDate: item.due_date ? item.due_date : '',
+                  background: item.background || ''
+                }}
+                onSubmit={handleSave}
+                onCancel={() => setIsEditing(false)}
+                submitLabel="Save"
+              />
             ) : (
               <div className="space-y-1.5">
                 <div className="flex items-start justify-between gap-1.5 min-w-0">
