@@ -117,7 +117,10 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     setError(null)
     try {
       const isElectron = Boolean(window.api)
-      const redirectUrl = isElectron ? 'kaizen://auth/callback' : window.location.origin
+      const redirectUrl = isElectron
+        ? 'https://kaizen33.vercel.app/success'
+        : window.location.origin
+
       const { data, error: err } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

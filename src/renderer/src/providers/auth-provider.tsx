@@ -70,10 +70,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!session) {
         useNavigationStore.getState().navigate({ name: 'landing' })
+      } else {
+        const currentView = useNavigationStore.getState().currentView
+        if (currentView.name === 'landing') {
+          useNavigationStore.getState().navigate({ name: 'boards' })
+        }
       }
     })
 
-    // Listen for Electron deep link protocol auth callbacks (kaizen://auth/callback)
+    // Listen for Electron deep link protocol auth callbacks or Web URL callbacks
     const handleDeepLink = async (rawUrl: string) => {
       try {
         let access_token: string | null = null
@@ -108,8 +113,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             useNavigationStore.getState().navigate({ name: 'boards' })
           }
         }
+
+        if (typeof window !== 'undefined' && !window.api && (access_token || code)) {
+          window.history.replaceState({}, '', window.location.pathname)
+        }
       } catch (err) {
-        console.error('Error processing auth callback deep link:', err)
+        console.error('Error processing auth callback link:', err)
+      }
+    }
+
+    // Check for web URL auth parameters on mount
+    if (typeof window !== 'undefined' && !window.api) {
+      const currentUrl = window.location.href
+      if (currentUrl.includes('#access_token') || currentUrl.includes('?code=') || currentUrl.includes('&code=')) {
+        handleDeepLink(currentUrl)
       }
     }
 

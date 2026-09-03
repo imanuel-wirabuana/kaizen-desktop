@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 
 export type View =
   | { name: 'landing' }
+  | { name: 'success' }
   | { name: 'boards' }
   | { name: 'board-detail'; boardId: number | string }
 

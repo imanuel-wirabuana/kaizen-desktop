@@ -4,6 +4,7 @@ import { useNavigationStore } from '@/stores/navigation'
 import { LandingPage } from '@/pages/landing-page'
 import { BoardsPage } from '@/pages/boards-page'
 import { BoardDetailPage } from '@/pages/board-detail-page'
+import { AuthSuccessPage } from '@/pages/auth-success-page'
 import { BoardsLayout } from '@/layouts/boards-layout'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -12,7 +13,13 @@ export function ViewRouter() {
   const navigate = useNavigationStore((s) => s.navigate)
   const { isLoaded, isSignedIn } = useAuth()
 
+  const isSuccessRoute =
+    typeof window !== 'undefined' &&
+    (window.location.pathname === '/success' || window.location.pathname.startsWith('/success'))
+
   useEffect(() => {
+    if (isSuccessRoute) return
+
     if (isLoaded) {
       if (!isSignedIn && currentView.name !== 'landing') {
         navigate({ name: 'landing' })
@@ -20,7 +27,11 @@ export function ViewRouter() {
         navigate({ name: 'boards' })
       }
     }
-  }, [isLoaded, isSignedIn, currentView.name, navigate])
+  }, [isLoaded, isSignedIn, currentView.name, navigate, isSuccessRoute])
+
+  if (isSuccessRoute || currentView.name === 'success') {
+    return <AuthSuccessPage />
+  }
 
   if (!isLoaded && currentView.name !== 'landing') {
     return (
