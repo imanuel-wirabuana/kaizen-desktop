@@ -21,8 +21,14 @@ export const useNavigationStore = create<NavigationState>()(
       history: [],
       navigate: (view: View) => {
         const current = get().currentView
+        if (
+          current.name === view.name &&
+          (current as any).boardId === (view as any).boardId
+        ) {
+          return
+        }
         set((state) => ({
-          history: [...state.history, current],
+          history: [...state.history.slice(-20), current],
           currentView: view
         }))
       },

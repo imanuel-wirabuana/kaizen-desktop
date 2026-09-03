@@ -71,9 +71,11 @@ export function BoardsPage() {
   const hasBoards = totalBoardsCount > 0
   const hasSearchResults = filteredPinned.length > 0 || filteredUnpinned.length > 0
 
-  const handleTogglePin = async (e: React.MouseEvent, board: Board) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleTogglePin = async (e: any, board: Board) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault()
+      e.stopPropagation()
+    }
     if (board.id === undefined) return
     await useBoardsStore.getState().updateBoard(board.id, { pinned: !board.pinned })
   }

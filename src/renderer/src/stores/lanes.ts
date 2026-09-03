@@ -57,7 +57,7 @@ export const useLanesStore = create<LanesState>()(
       realtimeCleanup?.()
       realtimeCleanup = null
 
-      set({ boardId, loading: true })
+      set({ boardId, lanes: [createVirtualDraftLane(boardId)], loading: true })
 
       const userLanes = await lanesService.getLanesByBoardId(boardId)
       const virtualDraft = createVirtualDraftLane(boardId)

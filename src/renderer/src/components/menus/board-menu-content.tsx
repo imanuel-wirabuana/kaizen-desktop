@@ -47,9 +47,9 @@ export function BoardMenuContent({
   const canEdit =
     propCanEdit ?? (isOwner || permissionRole === 'edit' || board.role === 'edit')
 
-  const handleTogglePin = () => {
+  const handleTogglePin = (e?: any) => {
     if (onTogglePin) {
-      onTogglePin()
+      onTogglePin(e)
     } else if (board.id) {
       updateBoard(board.id, { pinned: !board.pinned })
     }

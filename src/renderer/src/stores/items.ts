@@ -40,7 +40,7 @@ export const useItemsStore = create<ItemsState>()(
       realtimeCleanup?.()
       realtimeCleanup = null
 
-      set({ boardId, loading: true })
+      set({ boardId, items: [], loading: true })
 
       const data = await itemsService.getItemsByBoardId(boardId)
       set({ items: data, loading: false })

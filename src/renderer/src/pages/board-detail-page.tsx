@@ -99,9 +99,19 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const closeDraftSidebar = useDraftSidebarStore((s) => s.close)
 
   // Lanes and Items stores
-  const lanes = useLanesStore(selectLanes)
+  const allLanes = useLanesStore(selectLanes)
   const lanesLoading = useLanesStore(selectLanesLoading)
-  const items = useItemsStore(selectItems)
+  const allItems = useItemsStore(selectItems)
+
+  // Strictly scope lanes and items to current boardId to prevent cross-board leaks
+  const lanes = useMemo(
+    () => allLanes.filter((l) => String(l.board_id) === String(boardId)),
+    [allLanes, boardId]
+  )
+  const items = useMemo(
+    () => allItems.filter((i) => String(i.board_id) === String(boardId)),
+    [allItems, boardId]
+  )
 
   // Filter canvas lanes (real user lanes with non-null id)
   const canvasLanes = useMemo(() => lanes.filter((l) => l.id !== null), [lanes])

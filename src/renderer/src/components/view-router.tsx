@@ -60,7 +60,7 @@ export function ViewRouter() {
     case 'board-detail':
       return (
         <BoardsLayout>
-          <BoardDetailPage boardId={currentView.boardId} />
+          <BoardDetailPage key={currentView.boardId} boardId={currentView.boardId} />
         </BoardsLayout>
       )
     default:

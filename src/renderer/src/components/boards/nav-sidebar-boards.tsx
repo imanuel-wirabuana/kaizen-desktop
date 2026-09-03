@@ -82,9 +82,11 @@ export function NavSidebarBoards({
   const [activeBoardForDelete, setActiveBoardForDelete] = useState<Board | null>(null)
   const [activeBoardForShare, setActiveBoardForShare] = useState<Board | null>(null)
 
-  const handleTogglePin = async (e: React.MouseEvent, item: Board) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleTogglePin = async (e: any, item: Board) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault()
+      e.stopPropagation()
+    }
     if (item.id === undefined) return
     await useBoardsStore.getState().updateBoard(item.id, { pinned: !item.pinned })
   }
