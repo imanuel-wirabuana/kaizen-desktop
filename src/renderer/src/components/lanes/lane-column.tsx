@@ -39,6 +39,7 @@ import {
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
 import { useBoardsStore } from '@/stores/boards'
+import { LaneMenuContent } from '@/components/menus/lane-menu-content'
 import { InlineEditLane } from './inline-edit-lane'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { DeleteLaneDialog } from './delete-lane-dialog'
@@ -190,99 +191,17 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
                         }
                       />
                       <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
-                        <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                          <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Edit Title & Description</span>
-                        </DropdownMenuItem>
-
-                        {/* Duplicate Submenu */}
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <Copy className="mr-2 size-3.5 text-muted-foreground" />
-                            <span>Duplicate</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="w-52 text-xs shadow-xl">
-                            <DropdownMenuItem onClick={() => duplicateLane(lane.id!, false)}>
-                              <Copy className="mr-2 size-3.5 text-muted-foreground" />
-                              <span>Duplicate Lane</span>
-                            </DropdownMenuItem>
-                            {columnItems.length > 0 && (
-                              <DropdownMenuItem onClick={() => duplicateLane(lane.id!, true)}>
-                                <CopyPlus className="mr-2 size-3.5 text-muted-foreground" />
-                                <span>Duplicate Lane with Items</span>
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-
-                        {/* Move to Board Submenu */}
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <FolderInput className="mr-2 size-3.5 text-muted-foreground" />
-                            <span>Move to</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="w-48 text-xs shadow-xl">
-                            {otherBoards.length > 0 ? (
-                              otherBoards.map((b) => (
-                                <DropdownMenuItem
-                                  key={b.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleRequestMoveToBoard(b)
-                                  }}
-                                >
-                                  <span className="mr-2 text-xs shrink-0">{b.icon || '📋'}</span>
-                                  <span className="truncate flex-1 font-medium">{b.title || 'Untitled Board'}</span>
-                                </DropdownMenuItem>
-                              ))
-                            ) : (
-                              <div className="p-2 text-center text-[10px] text-muted-foreground">
-                                No other boards
-                              </div>
-                            )}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-
-                        {/* Color Accent Submenu */}
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <Palette className="mr-2 size-3.5 text-muted-foreground" />
-                            <span>Change Color Accent</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="w-[240px] p-2">
-                            <BackgroundPickerContent
-                              value={lane.background}
-                              onChange={handleBackgroundChange}
-                            />
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem
-                          disabled={index === 0}
-                          onClick={() => moveLane(lane.id!, 'left')}
-                        >
-                          <ArrowLeft className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Move Left</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={index === totalLanes - 1}
-                          onClick={() => moveLane(lane.id!, 'right')}
-                        >
-                          <ArrowRight className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Move Right</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem
-                          onClick={() => setIsDeleteOpen(true)}
-                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 size-3.5" />
-                          <span>Delete Column</span>
-                        </DropdownMenuItem>
+                        <LaneMenuContent
+                          lane={lane}
+                          index={index}
+                          totalLanes={totalLanes}
+                          columnItemsCount={columnItems.length}
+                          variant="dropdown"
+                          onEditTitle={() => setIsEditing(true)}
+                          onDelete={() => setIsDeleteOpen(true)}
+                          onRequestMoveToBoard={handleRequestMoveToBoard}
+                          onBackgroundChange={handleBackgroundChange}
+                        />
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
@@ -323,99 +242,17 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
         {/* Right-click Context Menu */}
         {!isVirtual && (
           <ContextMenuContent className="w-48 text-xs shadow-xl">
-            <ContextMenuItem onClick={() => setIsEditing(true)}>
-              <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-              <span>Edit Title & Description</span>
-            </ContextMenuItem>
-
-            {/* Duplicate Submenu */}
-            <ContextMenuSub>
-              <ContextMenuSubTrigger>
-                <Copy className="mr-2 size-3.5 text-muted-foreground" />
-                <span>Duplicate</span>
-              </ContextMenuSubTrigger>
-              <ContextMenuSubContent className="w-52 text-xs shadow-xl">
-                <ContextMenuItem onClick={() => duplicateLane(lane.id!, false)}>
-                  <Copy className="mr-2 size-3.5 text-muted-foreground" />
-                  <span>Duplicate Lane</span>
-                </ContextMenuItem>
-                {columnItems.length > 0 && (
-                  <ContextMenuItem onClick={() => duplicateLane(lane.id!, true)}>
-                    <CopyPlus className="mr-2 size-3.5 text-muted-foreground" />
-                    <span>Duplicate Lane with Items</span>
-                  </ContextMenuItem>
-                )}
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-
-            {/* Move to Board Submenu */}
-            <ContextMenuSub>
-              <ContextMenuSubTrigger>
-                <FolderInput className="mr-2 size-3.5 text-muted-foreground" />
-                <span>Move to</span>
-              </ContextMenuSubTrigger>
-              <ContextMenuSubContent className="w-48 text-xs shadow-xl">
-                {otherBoards.length > 0 ? (
-                  otherBoards.map((b) => (
-                    <ContextMenuItem
-                      key={b.id}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleRequestMoveToBoard(b)
-                      }}
-                    >
-                      <span className="mr-2 text-xs shrink-0">{b.icon || '📋'}</span>
-                      <span className="truncate flex-1 font-medium">{b.title || 'Untitled Board'}</span>
-                    </ContextMenuItem>
-                  ))
-                ) : (
-                  <div className="p-2 text-center text-[10px] text-muted-foreground">
-                    No other boards
-                  </div>
-                )}
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-
-            {/* Color Accent Submenu */}
-            <ContextMenuSub>
-              <ContextMenuSubTrigger>
-                <Palette className="mr-2 size-3.5 text-muted-foreground" />
-                <span>Change Color Accent</span>
-              </ContextMenuSubTrigger>
-              <ContextMenuSubContent className="w-[240px] p-2">
-                <BackgroundPickerContent
-                  value={lane.background}
-                  onChange={handleBackgroundChange}
-                />
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-
-            <ContextMenuSeparator />
-
-            <ContextMenuItem
-              disabled={index === 0}
-              onClick={() => moveLane(lane.id!, 'left')}
-            >
-              <ArrowLeft className="mr-2 size-3.5 text-muted-foreground" />
-              <span>Move Left</span>
-            </ContextMenuItem>
-            <ContextMenuItem
-              disabled={index === totalLanes - 1}
-              onClick={() => moveLane(lane.id!, 'right')}
-            >
-              <ArrowRight className="mr-2 size-3.5 text-muted-foreground" />
-              <span>Move Right</span>
-            </ContextMenuItem>
-
-            <ContextMenuSeparator />
-
-            <ContextMenuItem
-              variant="destructive"
-              onClick={() => setIsDeleteOpen(true)}
-            >
-              <Trash2 className="mr-2 size-3.5" />
-              <span>Delete Column</span>
-            </ContextMenuItem>
+            <LaneMenuContent
+              lane={lane}
+              index={index}
+              totalLanes={totalLanes}
+              columnItemsCount={columnItems.length}
+              variant="context"
+              onEditTitle={() => setIsEditing(true)}
+              onDelete={() => setIsDeleteOpen(true)}
+              onRequestMoveToBoard={handleRequestMoveToBoard}
+              onBackgroundChange={handleBackgroundChange}
+            />
           </ContextMenuContent>
         )}
       </ContextMenu>

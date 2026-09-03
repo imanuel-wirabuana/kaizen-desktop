@@ -9,7 +9,10 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
-  ContextMenuTrigger
+  ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent
 } from '@/components/ui/context-menu'
 import {
   SidebarGroup,
@@ -27,11 +30,15 @@ import {
   CheckIcon,
   PinIcon,
   PinOffIcon,
-  GripVerticalIcon
+  GripVerticalIcon,
+  CopyIcon,
+  CopyPlusIcon,
+  LayersIcon
 } from 'lucide-react'
 import { EditBoardDrawer } from './edit-board-drawer'
 import { DeleteBoardDrawer } from './delete-board-drawer'
 import { ShareBoardModal } from './share-board-modal'
+import { BoardMenuContent } from '@/components/menus/board-menu-content'
 import { useBoardsStore, selectLoading } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { usePinnedBoards, useUnpinnedBoards } from '@/hooks/use-boards'
@@ -419,37 +426,13 @@ function SortableSidebarBoardItem({
       </ContextMenuTrigger>
 
       <ContextMenuContent>
-        <ContextMenuItem onClick={onTogglePin}>
-          {pinned ? (
-            <>
-              <PinOffIcon className="text-muted-foreground" />
-              <span>Unpin Board</span>
-            </>
-          ) : (
-            <>
-              <PinIcon className="text-muted-foreground" />
-              <span>Pin Board</span>
-            </>
-          )}
-        </ContextMenuItem>
-
-        {(!item.role || item.role === 'owner' || item.role === 'edit') && (
-          <ContextMenuItem onClick={onEdit}>
-            <PencilIcon className="text-muted-foreground" />
-            <span>Edit Board</span>
-          </ContextMenuItem>
-        )}
-
-        {(!item.role || item.role === 'owner') && (
-          <>
-            <ContextMenuSeparator />
-
-            <ContextMenuItem variant="destructive" onClick={onDelete}>
-              <Trash2Icon />
-              <span>Delete Board</span>
-            </ContextMenuItem>
-          </>
-        )}
+        <BoardMenuContent
+          board={item}
+          variant="context"
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onTogglePin={onTogglePin}
+        />
       </ContextMenuContent>
     </ContextMenu>
   )

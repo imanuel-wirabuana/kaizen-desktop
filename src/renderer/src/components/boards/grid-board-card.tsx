@@ -28,6 +28,7 @@ import {
   Plus
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { BoardMenuContent } from '@/components/menus/board-menu-content'
 
 export type SortableGridBoardCardProps = {
   board: Board
@@ -225,37 +226,14 @@ export function SortableGridBoardCard({
         </div>
       </ContextMenuTrigger>
 
-      <ContextMenuContent className="w-40">
-        {(!board.role || board.role === 'owner' || board.role === 'edit') && (
-          <ContextMenuItem onClick={onEdit}>
-            <Pencil className="size-3.5 text-muted-foreground" />
-            <span>Edit Details</span>
-          </ContextMenuItem>
-        )}
-
-        <ContextMenuItem onClick={onTogglePin}>
-          {isPinned ? (
-            <>
-              <PinOff className="size-3.5 text-muted-foreground" />
-              <span>Unpin Board</span>
-            </>
-          ) : (
-            <>
-              <Pin className="size-3.5 text-muted-foreground" />
-              <span>Pin Board</span>
-            </>
-          )}
-        </ContextMenuItem>
-
-        {(!board.role || board.role === 'owner') && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem variant="destructive" onClick={onDelete}>
-              <Trash2 className="size-3.5" />
-              <span>Delete Board</span>
-            </ContextMenuItem>
-          </>
-        )}
+      <ContextMenuContent className="w-48 text-xs shadow-xl">
+        <BoardMenuContent
+          board={board}
+          variant="context"
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onTogglePin={onTogglePin}
+        />
       </ContextMenuContent>
     </ContextMenu>
   )

@@ -41,6 +41,7 @@ import {
   FolderInput,
   CopyPlus
 } from 'lucide-react'
+import { ItemMenuContent } from '@/components/menus/item-menu-content'
 import { useItemsStore } from '@/stores/items'
 import { useLanesStore } from '@/stores/lanes'
 import { useBoardsStore } from '@/stores/boards'
@@ -71,149 +72,7 @@ function formatDueDate(dueDateStr: string | null | undefined) {
   }
 }
 
-function OtherBoardMoveGroupDropdown({
-  board,
-  onMove
-}: {
-  board: Board
-  onMove: (boardId: number, laneId: number | null) => Promise<void>
-}) {
-  const [lanes, setLanes] = useState<Lane[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const boardId = board.id
-    if (!boardId) return
-
-    const loadLanes = () => {
-      getLanesByBoardId(boardId).then((data) => {
-        setLanes(data.filter((l) => l.id !== null))
-        setLoading(false)
-      })
-    }
-
-    loadLanes()
-
-    // Realtime subscription for other board's lanes
-    const channel = subscribeLanes(boardId, () => {
-      loadLanes()
-    })
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [board.id])
-
-  return (
-    <>
-      <DropdownMenuSeparator />
-
-      {/* Board Item -> Clicking moves item to Draft of this board */}
-      <DropdownMenuItem
-        onClick={() => onMove(Number(board.id), null)}
-        className="font-bold text-foreground flex items-center justify-between"
-      >
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-xs shrink-0">{board.icon || '📋'}</span>
-          <span className="truncate">{board.title || 'Untitled Board'}</span>
-        </div>
-        <span className="text-[9px] text-primary/80 font-normal">➔ Draft</span>
-      </DropdownMenuItem>
-
-      {/* Lanes under this board */}
-      {loading ? (
-        <div className="pl-6 py-1 text-[10px] text-muted-foreground">Loading lanes...</div>
-      ) : (
-        lanes.map((lane) => (
-          <DropdownMenuItem
-            key={lane.id}
-            onClick={() => onMove(Number(board.id), lane.id)}
-            className="pl-6 text-muted-foreground hover:text-foreground"
-          >
-            {lane.icon ? (
-              <span className="mr-2 text-xs shrink-0">{lane.icon}</span>
-            ) : (
-              <span className="mr-2 size-2 rounded-full bg-primary/40 shrink-0" />
-            )}
-            <span className="truncate flex-1">{lane.title || 'Untitled Lane'}</span>
-          </DropdownMenuItem>
-        ))
-      )}
-    </>
-  )
-}
-
-function OtherBoardMoveGroupContext({
-  board,
-  onMove
-}: {
-  board: Board
-  onMove: (boardId: number, laneId: number | null) => Promise<void>
-}) {
-  const [lanes, setLanes] = useState<Lane[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const boardId = board.id
-    if (!boardId) return
-
-    const loadLanes = () => {
-      getLanesByBoardId(boardId).then((data) => {
-        setLanes(data.filter((l) => l.id !== null))
-        setLoading(false)
-      })
-    }
-
-    loadLanes()
-
-    // Realtime subscription for other board's lanes
-    const channel = subscribeLanes(boardId, () => {
-      loadLanes()
-    })
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [board.id])
-
-  return (
-    <>
-      <ContextMenuSeparator />
-
-      {/* Board Item -> Clicking moves item to Draft of this board */}
-      <ContextMenuItem
-        onClick={() => onMove(Number(board.id), null)}
-        className="font-bold text-foreground flex items-center justify-between"
-      >
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-xs shrink-0">{board.icon || '📋'}</span>
-          <span className="truncate">{board.title || 'Untitled Board'}</span>
-        </div>
-        <span className="text-[9px] text-primary/80 font-normal">➔ Draft</span>
-      </ContextMenuItem>
-
-      {/* Lanes under this board */}
-      {loading ? (
-        <div className="pl-6 py-1 text-[10px] text-muted-foreground">Loading lanes...</div>
-      ) : (
-        lanes.map((lane) => (
-          <ContextMenuItem
-            key={lane.id}
-            onClick={() => onMove(Number(board.id), lane.id)}
-            className="pl-6 text-muted-foreground hover:text-foreground"
-          >
-            {lane.icon ? (
-              <span className="mr-2 text-xs shrink-0">{lane.icon}</span>
-            ) : (
-              <span className="mr-2 size-2 rounded-full bg-primary/40 shrink-0" />
-            )}
-            <span className="truncate flex-1">{lane.title || 'Untitled Lane'}</span>
-          </ContextMenuItem>
-        ))
-      )}
-    </>
-  )
-}
 
 type TaskCardProps = {
   item: KanbanItem
@@ -472,117 +331,16 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                           </Button>
                         }
                       />
-                      <DropdownMenuContent align="end" className="w-48 text-xs shadow-lg">
-                        <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                          <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Edit Task</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem onClick={() => duplicateItem(item.id)}>
-                          <CopyPlus className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Duplicate Task</span>
-                        </DropdownMenuItem>
-
-                      {/* Move to Submenu */}
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <FolderInput className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Move to</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-56 text-xs shadow-xl max-h-80 overflow-y-auto">
-                          {/* Current Board Section */}
-                          <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 bg-muted/40 rounded-t-sm">
-                            <span>{currentBoard?.icon || '📋'}</span>
-                            <span className="truncate">{currentBoard?.title || 'Current Board'}</span>
-                            <span className="ml-auto text-[9px] font-medium text-primary">(Current)</span>
-                          </div>
-
-                          {/* Current Board: Draft */}
-                          <DropdownMenuItem
-                            disabled={item.lane_id === null}
-                            onClick={() => handleMoveTo(Number(item.board_id), null)}
-                            className="pl-4 font-medium"
-                          >
-                            <Inbox className="mr-2 size-3.5 text-primary shrink-0" />
-                            <span className="truncate flex-1">Draft</span>
-                            {item.lane_id === null && <Check className="ml-auto size-3 text-muted-foreground" />}
-                          </DropdownMenuItem>
-
-                          {/* Current Board: Lanes */}
-                          {lanes
-                            .filter((l) => l.id !== null)
-                            .map((lane) => {
-                              const isCurrent = item.lane_id === lane.id
-                              return (
-                                <DropdownMenuItem
-                                  key={lane.id}
-                                  disabled={isCurrent}
-                                  onClick={() => handleMoveTo(Number(item.board_id), lane.id)}
-                                  className="pl-6"
-                                >
-                                  {lane.icon ? (
-                                    <span className="mr-2 text-xs shrink-0">{lane.icon}</span>
-                                  ) : (
-                                    <span className="mr-2 size-2 rounded-full bg-primary/40 shrink-0" />
-                                  )}
-                                  <span className="truncate flex-1">{lane.title || 'Untitled Lane'}</span>
-                                  {isCurrent && <Check className="ml-auto size-3 text-muted-foreground" />}
-                                </DropdownMenuItem>
-                              )
-                            })}
-
-                          {/* Other Boards */}
-                          {otherBoards.map((b) => (
-                            <OtherBoardMoveGroupDropdown key={b.id} board={b} onMove={handleMoveTo} />
-                          ))}
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-
-                      {/* Priority Submenu */}
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Flag className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Priority</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-36">
-                          {([0, 1, 2, 3] as const).map((p) => (
-                            <DropdownMenuItem
-                              key={p}
-                              onClick={() => updateItem(item.id, { priority: p })}
-                            >
-                              <span className={cn('size-2 rounded-full mr-2', PRIORITY_CONFIG[p].dot)} />
-                              <span>{PRIORITY_CONFIG[p].label}</span>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-
-                      {/* Color Accent Submenu */}
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Palette className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Color Accent</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-[240px] p-2">
-                          <BackgroundPickerContent
-                            value={item.background}
-                            onChange={(newBg) => updateItem(item.id, { background: newBg || null })}
-                          />
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => removeItem(item.id)}
-                        className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 size-3.5" />
-                        <span>Delete Task</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
+                      <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
+                        <ItemMenuContent
+                          item={item}
+                          variant="dropdown"
+                          onEdit={() => setIsEditing(true)}
+                        />
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
 
                 {/* Description */}
                 {item.description ? (
@@ -622,113 +380,11 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
 
       {/* Right-click Context Menu */}
       <ContextMenuContent className="w-48 text-xs shadow-xl">
-        <ContextMenuItem onClick={() => setIsEditing(true)}>
-          <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-          <span>Edit Task</span>
-        </ContextMenuItem>
-
-        <ContextMenuItem onClick={() => duplicateItem(item.id)}>
-          <CopyPlus className="mr-2 size-3.5 text-muted-foreground" />
-          <span>Duplicate Task</span>
-        </ContextMenuItem>
-
-        {/* Move to Submenu */}
-        <ContextMenuSub>
-          <ContextMenuSubTrigger>
-            <FolderInput className="mr-2 size-3.5 text-muted-foreground" />
-            <span>Move to</span>
-          </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="w-56 text-xs shadow-xl max-h-80 overflow-y-auto">
-            {/* Current Board Section */}
-            <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 bg-muted/40 rounded-t-sm">
-              <span>{currentBoard?.icon || '📋'}</span>
-              <span className="truncate">{currentBoard?.title || 'Current Board'}</span>
-              <span className="ml-auto text-[9px] font-medium text-primary">(Current)</span>
-            </div>
-
-            {/* Current Board: Draft */}
-            <ContextMenuItem
-              disabled={item.lane_id === null}
-              onClick={() => handleMoveTo(Number(item.board_id), null)}
-              className="pl-4 font-medium"
-            >
-              <Inbox className="mr-2 size-3.5 text-primary shrink-0" />
-              <span className="truncate flex-1">Draft</span>
-              {item.lane_id === null && <Check className="ml-auto size-3 text-muted-foreground" />}
-            </ContextMenuItem>
-
-            {/* Current Board: Lanes */}
-            {lanes
-              .filter((l) => l.id !== null)
-              .map((lane) => {
-                const isCurrent = item.lane_id === lane.id
-                return (
-                  <ContextMenuItem
-                    key={lane.id}
-                    disabled={isCurrent}
-                    onClick={() => handleMoveTo(Number(item.board_id), lane.id)}
-                    className="pl-6"
-                  >
-                    {lane.icon ? (
-                      <span className="mr-2 text-xs shrink-0">{lane.icon}</span>
-                    ) : (
-                      <span className="mr-2 size-2 rounded-full bg-primary/40 shrink-0" />
-                    )}
-                    <span className="truncate flex-1">{lane.title || 'Untitled Lane'}</span>
-                    {isCurrent && <Check className="ml-auto size-3 text-muted-foreground" />}
-                  </ContextMenuItem>
-                )
-              })}
-
-            {/* Other Boards */}
-            {otherBoards.map((b) => (
-              <OtherBoardMoveGroupContext key={b.id} board={b} onMove={handleMoveTo} />
-            ))}
-          </ContextMenuSubContent>
-        </ContextMenuSub>
-
-        {/* Priority Submenu */}
-        <ContextMenuSub>
-          <ContextMenuSubTrigger>
-            <Flag className="mr-2 size-3.5 text-muted-foreground" />
-            <span>Priority</span>
-          </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="w-36">
-            {([0, 1, 2, 3] as const).map((p) => (
-              <ContextMenuItem
-                key={p}
-                onClick={() => updateItem(item.id, { priority: p })}
-              >
-                <span className={cn('size-2 rounded-full mr-2', PRIORITY_CONFIG[p].dot)} />
-                <span>{PRIORITY_CONFIG[p].label}</span>
-              </ContextMenuItem>
-            ))}
-          </ContextMenuSubContent>
-        </ContextMenuSub>
-
-        {/* Color Accent Submenu */}
-        <ContextMenuSub>
-          <ContextMenuSubTrigger>
-            <Palette className="mr-2 size-3.5 text-muted-foreground" />
-            <span>Color Accent</span>
-          </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="w-[240px] p-2">
-            <BackgroundPickerContent
-              value={item.background}
-              onChange={(newBg) => updateItem(item.id, { background: newBg || null })}
-            />
-          </ContextMenuSubContent>
-        </ContextMenuSub>
-
-        <ContextMenuSeparator />
-
-        <ContextMenuItem
-          variant="destructive"
-          onClick={() => removeItem(item.id)}
-        >
-          <Trash2 className="mr-2 size-3.5" />
-          <span>Delete Task</span>
-        </ContextMenuItem>
+        <ItemMenuContent
+          item={item}
+          variant="context"
+          onEdit={() => setIsEditing(true)}
+        />
       </ContextMenuContent>
     </ContextMenu>
   )

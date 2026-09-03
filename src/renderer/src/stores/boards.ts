@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import * as boardsService from '@/services/boards'
+import * as lanesService from '@/services/lanes'
+import * as itemsService from '@/services/items'
 import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 
@@ -21,6 +23,10 @@ type BoardsState = {
   updateBoard: (id: number | string, updates: Partial<Board>) => Promise<Board | null>
   removeBoard: (id: number | string) => Promise<boolean>
   reorderBoards: (reordered: Board[]) => Promise<void>
+  duplicateBoard: (
+    boardId: number | string,
+    options?: { includeLanes?: boolean; includeItems?: boolean }
+  ) => Promise<Board | null>
 }
 
 let realtimeCleanup: (() => void) | null = null
@@ -188,6 +194,91 @@ export const useBoardsStore = create<BoardsState>()(
         set({ boards: prev })
         broadcastSyncEvent('boards')
       }
+    },
+
+    // ── Duplicate Board ──────────────────────────────────────
+    duplicateBoard: async (boardId, options = {}) => {
+      const target = get().boards.find((b) => String(b.id) === String(boardId))
+      if (!target || !target.id) return null
+
+      const { includeLanes = false, includeItems = false } = options
+      const copyTitle = target.title ? `${target.title} (Copy)` : 'Untitled Board (Copy)'
+
+      const newBoard = await get().addBoard({
+        title: copyTitle,
+        description: target.description,
+        icon: target.icon,
+        pinned: target.pinned,
+        background: target.background,
+        owner: target.owner
+      })
+
+      if (!newBoard || !newBoard.id) return null
+
+      if (includeLanes) {
+        const sourceLanes = await lanesService.getLanesByBoardId(boardId)
+        const realLanes = sourceLanes.filter((l) => l.id !== null)
+
+        for (let idx = 0; idx < realLanes.length; idx++) {
+          const lane = realLanes[idx]
+          const newLane = await lanesService.createLane({
+            board_id: Number(newBoard.id),
+            title: lane.title,
+            icon: lane.icon,
+            description: lane.description,
+            background: lane.background,
+            owner: lane.owner,
+            order: idx + 1
+          })
+
+          if (newLane && newLane.id && includeItems) {
+            const sourceItems = await itemsService.getItemsByBoardId(boardId)
+            const laneItems = sourceItems.filter((i) => String(i.lane_id) === String(lane.id))
+
+            for (let itemIdx = 0; itemIdx < laneItems.length; itemIdx++) {
+              const item = laneItems[itemIdx]
+              await itemsService.createItem({
+                board_id: Number(newBoard.id),
+                lane_id: Number(newLane.id),
+                title: item.title,
+                icon: item.icon,
+                description: item.description,
+                priority: item.priority,
+                due_date: item.due_date,
+                background: item.background,
+                owner: item.owner,
+                order: itemIdx + 1
+              })
+            }
+          }
+        }
+      }
+
+      if (includeItems) {
+        const sourceItems = await itemsService.getItemsByBoardId(boardId)
+        const draftItems = sourceItems.filter((i) => i.lane_id === null)
+
+        for (let draftIdx = 0; draftIdx < draftItems.length; draftIdx++) {
+          const item = draftItems[draftIdx]
+          await itemsService.createItem({
+            board_id: Number(newBoard.id),
+            lane_id: null,
+            title: item.title,
+            icon: item.icon,
+            description: item.description,
+            priority: item.priority,
+            due_date: item.due_date,
+            background: item.background,
+            owner: item.owner,
+            order: draftIdx + 1
+          })
+        }
+      }
+
+      broadcastSyncEvent('boards')
+      broadcastSyncEvent('lanes')
+      broadcastSyncEvent('items')
+      return newBoard
     }
   }))
 )

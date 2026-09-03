@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { ContextMenu as ContextMenuPrimitive } from '@base-ui/react/context-menu'
+import { ChevronRightIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -83,6 +84,7 @@ function ContextMenuSubTrigger({
       {...props}
     >
       {children}
+      <ChevronRightIcon className="ml-auto" />
     </ContextMenuPrimitive.SubmenuTrigger>
   )
 }

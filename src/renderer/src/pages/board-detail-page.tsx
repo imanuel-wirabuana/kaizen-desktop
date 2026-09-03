@@ -18,14 +18,20 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
-  ContextMenuTrigger
+  ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent
 } from '@/components/ui/context-menu'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu'
 import {
   AlertCircle,
@@ -38,8 +44,12 @@ import {
   Share2,
   Check,
   Eye,
-  UserCheck
+  UserCheck,
+  Copy,
+  CopyPlus,
+  Layers
 } from 'lucide-react'
+import { BoardMenuContent } from '@/components/menus/board-menu-content'
 import { useNavigationStore } from '@/stores/navigation'
 import { onSyncEvent } from '@/lib/realtime'
 import { supabase } from '@/lib/supabase'
@@ -332,41 +342,14 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                     }
                   />
                   <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
-                    <DropdownMenuItem
-                      onClick={() => updateBoard(board.id!, { pinned: !board.pinned })}
-                    >
-                      {board.pinned ? (
-                        <>
-                          <PinOff className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Unpin Board</span>
-                        </>
-                      ) : (
-                        <>
-                          <Pin className="mr-2 size-3.5 text-muted-foreground" />
-                          <span>Pin Board</span>
-                        </>
-                      )}
-                    </DropdownMenuItem>
-
-                    {canEdit && (
-                      <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
-                        <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-                        <span>Edit Board</span>
-                      </DropdownMenuItem>
-                    )}
-
-                    {isOwner && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => setIsDeleteOpen(true)}
-                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 size-3.5" />
-                          <span>Delete Board</span>
-                        </DropdownMenuItem>
-                      </>
-                    )}
+                    <BoardMenuContent
+                      board={board}
+                      variant="dropdown"
+                      isOwner={isOwner}
+                      canEdit={canEdit}
+                      onEdit={() => setIsEditOpen(true)}
+                      onDelete={() => setIsDeleteOpen(true)}
+                    />
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -398,38 +381,14 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
         {/* Right-click Context Menu */}
         <ContextMenuContent className="w-48 text-xs shadow-xl">
-          <ContextMenuItem onClick={() => updateBoard(board.id!, { pinned: !board.pinned })}>
-            {board.pinned ? (
-              <>
-                <PinOff className="mr-2 size-3.5 text-muted-foreground" />
-                <span>Unpin Board</span>
-              </>
-            ) : (
-              <>
-                <Pin className="mr-2 size-3.5 text-muted-foreground" />
-                <span>Pin Board</span>
-              </>
-            )}
-          </ContextMenuItem>
-
-          {canEdit && (
-            <ContextMenuItem onClick={() => setIsEditOpen(true)}>
-              <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-              <span>Edit Board</span>
-            </ContextMenuItem>
-          )}
-
-          <ContextMenuSeparator />
-
-          {isOwner && (
-            <ContextMenuItem
-              onClick={() => setIsDeleteOpen(true)}
-              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-            >
-              <Trash2 className="mr-2 size-3.5" />
-              <span>Delete Board</span>
-            </ContextMenuItem>
-          )}
+          <BoardMenuContent
+            board={board}
+            variant="context"
+            isOwner={isOwner}
+            canEdit={canEdit}
+            onEdit={() => setIsEditOpen(true)}
+            onDelete={() => setIsDeleteOpen(true)}
+          />
         </ContextMenuContent>
       </ContextMenu>
 
