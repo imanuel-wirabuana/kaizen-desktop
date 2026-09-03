@@ -101,6 +101,7 @@ export function subscribeItems(
   onPayload?: (payload: unknown) => void
 ) {
   const channelName = `items-board-${boardId}-${Math.random().toString(36).substring(2, 9)}`
+  const targetBoardId = String(boardId)
   const channel = supabase
     .channel(channelName)
     .on(
@@ -108,12 +109,21 @@ export function subscribeItems(
       {
         event: '*',
         schema: 'public',
-        table: 'items',
-        filter: `board_id=eq.${boardId}`
+        table: 'items'
       },
-      (payload) => {
-        if (onPayload) {
-          onPayload(payload)
+      (payload: any) => {
+        const newBoardId = payload.new?.board_id ? String(payload.new.board_id) : null
+        const oldBoardId = payload.old?.board_id ? String(payload.old.board_id) : null
+
+        if (
+          (!newBoardId && !oldBoardId) ||
+          newBoardId === targetBoardId ||
+          oldBoardId === targetBoardId ||
+          payload.eventType === 'DELETE'
+        ) {
+          if (onPayload) {
+            onPayload(payload)
+          }
         }
       }
     )

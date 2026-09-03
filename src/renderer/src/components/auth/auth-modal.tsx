@@ -127,7 +127,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
           redirectTo: redirectUrl,
           skipBrowserRedirect: isElectron,
           queryParams: {
-            prompt: 'select_account'
+            access_type: 'offline'
           }
         }
       })

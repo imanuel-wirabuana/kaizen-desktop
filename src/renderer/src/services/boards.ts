@@ -215,13 +215,16 @@ export function subscribeBoards(onPayload?: (payload: unknown) => void): Realtim
   const boardsChannel = supabase
     .channel(channelName)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, (payload) => {
-      console.log('Boards change received!', payload)
       if (onPayload) {
         onPayload(payload)
       }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'board_members' }, (payload) => {
-      console.log('Board members change received!', payload)
+      if (onPayload) {
+        onPayload(payload)
+      }
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'board_invites' }, (payload) => {
       if (onPayload) {
         onPayload(payload)
       }

@@ -11,11 +11,18 @@ import {
   createInvite,
   getInvitesByBoardId,
   revokeInvite,
+  subscribeBoardInvites,
   ExpirationOption,
   MaxUsesOption
 } from '@/services/invites'
-import { getBoardMembers, updateMemberPermission, removeMember } from '@/services/members'
+import {
+  getBoardMembers,
+  updateMemberPermission,
+  removeMember,
+  subscribeBoardMembers
+} from '@/services/members'
 import { useUser } from '@/providers/auth-provider'
+import { supabase } from '@/lib/supabase'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Copy, Check, Share2, Trash2, Users, KeyRound, Shield, Loader2 } from 'lucide-react'
 import {
@@ -66,9 +73,26 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
 
   useEffect(() => {
     if (open && board?.id) {
+      const boardId = board.id
       setGeneratedCode(null)
       fetchInvitesAndMembers()
+
+      const memChannel = subscribeBoardMembers(boardId, () => {
+        getBoardMembers(boardId).then(setMembers)
+      })
+
+      const invChannel = subscribeBoardInvites(boardId, () => {
+        getInvitesByBoardId(boardId).then((invList) => {
+          setInvites(invList.filter((i) => !i.revoked))
+        })
+      })
+
+      return () => {
+        supabase.removeChannel(memChannel)
+        supabase.removeChannel(invChannel)
+      }
     }
+    return undefined
   }, [open, board?.id])
 
   const handleGenerate = async () => {
