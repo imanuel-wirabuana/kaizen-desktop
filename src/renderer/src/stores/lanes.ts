@@ -4,6 +4,7 @@ import * as lanesService from '@/services/lanes'
 import { useItemsStore } from '@/stores/items'
 import { useBoardsStore } from '@/stores/boards'
 import { supabase } from '@/lib/supabase'
+import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 
 export function createVirtualDraftLane(boardId: number | string): Lane {
   return {
@@ -60,7 +61,7 @@ export const useLanesStore = create<LanesState>()(
       const virtualDraft = createVirtualDraftLane(boardId)
       set({ lanes: [virtualDraft, ...userLanes], loading: false })
 
-      // Realtime subscription — refetch on changes (unless suppressed during batch reorder)
+      // 1. Postgres changes subscription
       const channel = lanesService.subscribeLanes(boardId, () => {
         if (suppressRealtimeRefetch) return
         lanesService.getLanesByBoardId(boardId).then((fresh) => {
@@ -68,8 +69,20 @@ export const useLanesStore = create<LanesState>()(
         })
       })
 
+      // 2. Peer-to-peer broadcast subscription (<50ms delivery)
+      const unsubBroadcast = onSyncEvent((event) => {
+        if (event === 'lanes' || event === 'boards') {
+          const currentBoardId = get().boardId
+          if (!currentBoardId || suppressRealtimeRefetch) return
+          lanesService.getLanesByBoardId(currentBoardId).then((fresh) => {
+            set({ lanes: [createVirtualDraftLane(currentBoardId), ...fresh] })
+          })
+        }
+      })
+
       realtimeCleanup = () => {
         supabase.removeChannel(channel)
+        unsubBroadcast()
       }
     },
 
@@ -115,6 +128,7 @@ export const useLanesStore = create<LanesState>()(
       set((s) => ({
         lanes: s.lanes.map((l) => (l.id === tempId ? result : l))
       }))
+      broadcastSyncEvent('lanes')
       return result
     },
 
@@ -133,12 +147,15 @@ export const useLanesStore = create<LanesState>()(
         )
       }))
 
+      broadcastSyncEvent('lanes')
+
       const result = await lanesService.updateLane(id, updates)
 
       if (!result) {
         set((s) => ({
           lanes: s.lanes.map((l) => (String(l.id) === String(id) ? prevLane : l))
         }))
+        broadcastSyncEvent('lanes')
         return null
       }
 
@@ -157,11 +174,13 @@ export const useLanesStore = create<LanesState>()(
       if (!target) return false
 
       set((s) => ({ lanes: s.lanes.filter((l) => String(l.id) !== String(id)) }))
+      broadcastSyncEvent('lanes')
 
       const ok = await lanesService.deleteLane(id)
 
       if (!ok) {
         set({ lanes: prevLanes })
+        broadcastSyncEvent('lanes')
         return false
       }
 
@@ -206,6 +225,10 @@ export const useLanesStore = create<LanesState>()(
         items: prevItems.filter((i) => String(i.lane_id) !== String(laneId))
       })
 
+      broadcastSyncEvent('lanes')
+      broadcastSyncEvent('boards')
+      broadcastSyncEvent('items')
+
       const success = await lanesService.moveLaneToBoard(laneId, targetBoardId)
 
       setTimeout(() => {
@@ -216,6 +239,9 @@ export const useLanesStore = create<LanesState>()(
         // Rollback
         set({ lanes: prevLanes })
         useItemsStore.setState({ items: prevItems })
+        broadcastSyncEvent('lanes')
+        broadcastSyncEvent('boards')
+        broadcastSyncEvent('items')
         return false
       }
 
@@ -242,6 +268,7 @@ export const useLanesStore = create<LanesState>()(
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
       set({ lanes: draftLane ? [draftLane, ...updatedRealLanes] : updatedRealLanes })
+      broadcastSyncEvent('lanes')
 
       // Suppress realtime refetch during batch update to prevent race conditions
       suppressRealtimeRefetch = true
@@ -252,10 +279,12 @@ export const useLanesStore = create<LanesState>()(
         if (results.some((r) => r === null)) {
           console.error('reorderLanes: one or more lane database updates failed, reverting')
           set({ lanes: prevLanes })
+          broadcastSyncEvent('lanes')
         }
       } catch (err) {
         console.error('reorderLanes error:', err)
         set({ lanes: prevLanes })
+        broadcastSyncEvent('lanes')
       } finally {
         suppressRealtimeRefetch = false
       }

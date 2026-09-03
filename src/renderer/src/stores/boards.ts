@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import * as boardsService from '@/services/boards'
 import { supabase } from '@/lib/supabase'
+import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 
 type BoardsState = {
   boards: Board[]
@@ -43,15 +44,25 @@ export const useBoardsStore = create<BoardsState>()(
       const data = await boardsService.getBoards(owner)
       set({ boards: data, loading: false })
 
-      // Realtime sync — refetch on any server change to stay consistent
+      // 1. Realtime postgres changes channel listener
       const channel = boardsService.subscribeBoards(() => {
         boardsService.getBoards(owner).then((fresh) => {
           set({ boards: fresh })
         })
       })
 
+      // 2. Peer-to-peer real-time broadcast event listener (<50ms delivery)
+      const unsubBroadcast = onSyncEvent((event) => {
+        if (event === 'boards') {
+          boardsService.getBoards(owner).then((fresh) => {
+            set({ boards: fresh })
+          })
+        }
+      })
+
       realtimeCleanup = () => {
         supabase.removeChannel(channel)
+        unsubBroadcast()
       }
     },
 
@@ -73,7 +84,7 @@ export const useBoardsStore = create<BoardsState>()(
       const maxOrder = Math.max(0, ...get().boards.map((b) => b.order ?? 0))
       const order = maxOrder + 1
 
-      const tempId = -Date.now() // negative temp id, never collides with DB ids
+      const tempId = -Date.now()
       const optimistic: Board = {
         id: tempId,
         title: draft.title ?? null,
@@ -88,22 +99,20 @@ export const useBoardsStore = create<BoardsState>()(
         updated_at: new Date().toISOString()
       }
 
-      // Apply optimistically
       set((s) => ({ boards: [optimistic, ...s.boards] }))
 
       const result = await boardsService.createBoard({ ...draft, order })
 
       if (!result) {
-        // Rollback
         set((s) => ({ boards: s.boards.filter((b) => b.id !== tempId) }))
         return null
       }
 
       const withRole = { ...result, role: 'owner' as const }
-      // Replace temp with real
       set((s) => ({
         boards: s.boards.map((b) => (b.id === tempId ? withRole : b))
       }))
+      broadcastSyncEvent('boards')
       return withRole
     },
 
@@ -112,25 +121,25 @@ export const useBoardsStore = create<BoardsState>()(
       const prev = get().boards.find((b) => String(b.id) === String(id))
       if (!prev) return null
 
-      // Apply optimistically
       set((s) => ({
         boards: s.boards.map((b) =>
           String(b.id) === String(id) ? { ...b, ...updates, updated_at: new Date().toISOString() } : b
         )
       }))
 
+      broadcastSyncEvent('boards')
+
       const result = await boardsService.updateBoard(id, updates)
 
       if (!result) {
-        // Rollback
         set((s) => ({
           boards: s.boards.map((b) => (String(b.id) === String(id) ? prev : b))
         }))
+        broadcastSyncEvent('boards')
         return null
       }
 
       const withRole = { ...result, role: prev.role }
-      // Reconcile with server truth
       set((s) => ({
         boards: s.boards.map((b) => (String(b.id) === String(id) ? withRole : b))
       }))
@@ -143,14 +152,14 @@ export const useBoardsStore = create<BoardsState>()(
       const target = prev.find((b) => String(b.id) === String(id))
       if (!target) return false
 
-      // Apply optimistically
       set((s) => ({ boards: s.boards.filter((b) => String(b.id) !== String(id)) }))
+      broadcastSyncEvent('boards')
 
       const ok = await boardsService.deleteBoard(id)
 
       if (!ok) {
-        // Rollback — restore at original position
         set({ boards: prev })
+        broadcastSyncEvent('boards')
         return false
       }
 
@@ -161,24 +170,23 @@ export const useBoardsStore = create<BoardsState>()(
     reorderBoards: async (reordered: Board[]) => {
       const prev = get().boards
 
-      // Build full new list with updated order index and pinned status
       const withOrder = reordered.map((b, i) => ({ ...b, order: i, pinned: Boolean(b.pinned) }))
       const updatesMap = new Map(withOrder.map((b) => [String(b.id), { order: b.order, pinned: b.pinned }]))
 
-      // Apply locally
       set((s) => ({
         boards: s.boards.map((b) => (updatesMap.has(String(b.id)) ? { ...b, ...updatesMap.get(String(b.id)) } : b))
       }))
 
-      // Persist all changed orders and pinned state to DB
+      broadcastSyncEvent('boards')
+
       const updates = withOrder
         .filter((b) => b.id !== undefined && (typeof b.id === 'string' || b.id > 0))
         .map((b) => boardsService.updateBoard(b.id!, { order: b.order, pinned: b.pinned }))
 
       const results = await Promise.all(updates)
       if (results.some((r) => r === null)) {
-        // Partial failure — rollback to previous state
         set({ boards: prev })
+        broadcastSyncEvent('boards')
       }
     }
   }))

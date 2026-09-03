@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react'
 import { AppSidebar } from '@/components/app-sidebar'
 import { DynamicBreadcrumb } from '@/components/dynamic-breadcrumb'
@@ -12,9 +13,14 @@ import { DraftSidebar, TaskCardPreview } from '@/components/items'
 import { LaneColumnPreview } from '@/components/lanes'
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
+import { initGlobalRealtimeSync } from '@/lib/realtime'
 
 export function BoardsLayout({ children }: { children: React.ReactNode }) {
   useBoardsInit()
+
+  useEffect(() => {
+    initGlobalRealtimeSync()
+  }, [])
 
   const handleKanbanDragEnd = (event: any) => {
     const { source, target } = event.operation || {}

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import * as itemsService from '@/services/items'
 import { supabase } from '@/lib/supabase'
+import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 
 type ItemsState = {
   items: KanbanItem[]
@@ -42,8 +43,7 @@ export const useItemsStore = create<ItemsState>()(
       const data = await itemsService.getItemsByBoardId(boardId)
       set({ items: data, loading: false })
 
-      // Realtime subscription for items table matching current board_id
-      // Suppressed during drag-and-drop moves to prevent DOM conflicts with dnd-kit portals
+      // 1. Postgres changes subscription
       const channel = itemsService.subscribeItems(boardId, () => {
         if (suppressRealtimeRefetch) return
         itemsService.getItemsByBoardId(boardId).then((fresh) => {
@@ -51,8 +51,20 @@ export const useItemsStore = create<ItemsState>()(
         })
       })
 
+      // 2. Peer-to-peer broadcast subscription (<50ms delivery)
+      const unsubBroadcast = onSyncEvent((event) => {
+        if (event === 'items' || event === 'lanes') {
+          const currentBoardId = get().boardId
+          if (!currentBoardId || suppressRealtimeRefetch) return
+          itemsService.getItemsByBoardId(currentBoardId).then((fresh) => {
+            set({ items: fresh })
+          })
+        }
+      })
+
       realtimeCleanup = () => {
         supabase.removeChannel(channel)
+        unsubBroadcast()
       }
     },
 
@@ -110,6 +122,7 @@ export const useItemsStore = create<ItemsState>()(
       set((s) => ({
         items: s.items.map((i) => (String(i.id) === String(tempId) ? result : i))
       }))
+      broadcastSyncEvent('items')
       return result
     },
 
@@ -124,6 +137,8 @@ export const useItemsStore = create<ItemsState>()(
         )
       }))
 
+      broadcastSyncEvent('items')
+
       if (typeof id === 'number' && id < 0) return prevItem
 
       const result = await itemsService.updateItem(id, updates)
@@ -133,6 +148,7 @@ export const useItemsStore = create<ItemsState>()(
         set((s) => ({
           items: s.items.map((i) => (String(i.id) === String(id) ? prevItem : i))
         }))
+        broadcastSyncEvent('items')
         return null
       }
 
@@ -149,6 +165,7 @@ export const useItemsStore = create<ItemsState>()(
       if (!target) return false
 
       set((s) => ({ items: s.items.filter((i) => String(i.id) !== String(id)) }))
+      broadcastSyncEvent('items')
 
       if (typeof id === 'number' && id < 0) return true
 
@@ -157,6 +174,7 @@ export const useItemsStore = create<ItemsState>()(
       if (!ok) {
         console.error(`removeItem: database delete failed for item ${id}, reverting`)
         set({ items: prevItems })
+        broadcastSyncEvent('items')
         return false
       }
 
@@ -176,6 +194,8 @@ export const useItemsStore = create<ItemsState>()(
         )
       }))
 
+      broadcastSyncEvent('items')
+
       if (typeof id === 'number' && id < 0) return
 
       // Suppress realtime refetch during DB update to prevent DOM conflicts with dnd-kit
@@ -189,6 +209,7 @@ export const useItemsStore = create<ItemsState>()(
         if (!result) {
           console.error(`moveItem: database update failed for item ${id}, reverting`)
           set({ items: prevItems })
+          broadcastSyncEvent('items')
         }
       } finally {
         suppressRealtimeRefetch = false
