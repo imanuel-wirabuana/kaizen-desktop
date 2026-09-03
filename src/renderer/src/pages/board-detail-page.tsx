@@ -11,7 +11,7 @@ import { DeleteBoardDrawer } from '@/components/boards/delete-board-drawer'
 import { ShareBoardModal } from '@/components/boards/share-board-modal'
 import { LaneColumn, InlineCreateLane } from '@/components/lanes'
 import { DraftSidebar } from '@/components/items'
-import { getUserBoardPermission } from '@/services/members'
+import { getUserBoardPermission, subscribeBoardMembers } from '@/services/members'
 import { useUser } from '@/providers/auth-provider'
 import {
   ContextMenu,
@@ -41,6 +41,8 @@ import {
   UserCheck
 } from 'lucide-react'
 import { useNavigationStore } from '@/stores/navigation'
+import { onSyncEvent } from '@/lib/realtime'
+import { supabase } from '@/lib/supabase'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
 
@@ -49,7 +51,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const { user } = useUser()
 
   const [board, setBoard] = useState<Board | null>(null)
-  const [permissionRole, setPermissionRole] = useState<'owner' | 'edit' | 'view'>('owner')
+  const [permissionRole, setPermissionRole] = useState<'owner' | 'edit' | 'view' | null>('owner')
   const [loading, setLoading] = useState(true)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -120,14 +122,18 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       )
     }
 
-    // Also fetch exact user permission from DB if user present
-    if (user?.id) {
-      getUserBoardPermission(boardId, user.id).then((role) => {
-        if (!isCancelled && role) {
-          setPermissionRole(role)
-        }
-      })
+    const checkPermission = () => {
+      if (user?.id) {
+        getUserBoardPermission(boardId, user.id).then((role) => {
+          if (!isCancelled) {
+            setPermissionRole(role)
+          }
+        })
+      }
     }
+
+    // Also fetch exact user permission from DB if user present
+    checkPermission()
 
     // Initialize lanes and items stores for this board
     useLanesStore.getState().init(boardId)
@@ -145,9 +151,23 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       }
     )
 
+    // Real-time member table Postgres subscription
+    const memChannel = subscribeBoardMembers(boardId, () => {
+      checkPermission()
+    })
+
+    // Real-time broadcast sync event listener (<50ms delivery)
+    const unsubBroadcast = onSyncEvent((event) => {
+      if (event === 'members' || event === 'boards') {
+        checkPermission()
+      }
+    })
+
     return () => {
       isCancelled = true
       unsub()
+      supabase.removeChannel(memChannel)
+      unsubBroadcast()
       closeDraftSidebar()
       useLanesStore.getState().cleanup()
       useItemsStore.getState().cleanup()
@@ -231,13 +251,13 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     )
   }
 
-  if (!board) {
+  if (!board || permissionRole === null) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <AlertCircle className="size-10 text-muted-foreground" />
-        <h2 className="text-lg font-semibold">Board Not Found</h2>
-        <p className="text-xs text-muted-foreground">
-          The board you are looking for does not exist or has been deleted.
+        <AlertCircle className="size-10 text-destructive/80" />
+        <h2 className="text-lg font-semibold">Access Revoked or Board Not Found</h2>
+        <p className="text-xs text-muted-foreground max-w-sm">
+          You no longer have permission to access this board, or the board has been deleted by its owner.
         </p>
         <Button size="sm" onClick={() => navigate({ name: 'boards' })} className="mt-2">
           Back to Boards

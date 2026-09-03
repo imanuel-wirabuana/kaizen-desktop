@@ -23,6 +23,7 @@ import {
 } from '@/services/members'
 import { useUser } from '@/providers/auth-provider'
 import { supabase } from '@/lib/supabase'
+import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Copy, Check, Share2, Trash2, Users, KeyRound, Shield, Loader2 } from 'lucide-react'
 import {
@@ -87,9 +88,16 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
         })
       })
 
+      const unsubBroadcast = onSyncEvent((event) => {
+        if (event === 'members') {
+          getBoardMembers(boardId).then(setMembers)
+        }
+      })
+
       return () => {
         supabase.removeChannel(memChannel)
         supabase.removeChannel(invChannel)
+        unsubBroadcast()
       }
     }
     return undefined
@@ -136,6 +144,8 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
     const ok = await updateMemberPermission(memberId, newPerm)
     if (ok) {
       setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, permission: newPerm } : m)))
+      broadcastSyncEvent('members', { boardId: board?.id })
+      broadcastSyncEvent('boards')
     }
   }
 
@@ -143,6 +153,8 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
     const ok = await removeMember(memberId)
     if (ok) {
       setMembers((prev) => prev.filter((m) => m.id !== memberId))
+      broadcastSyncEvent('members', { boardId: board?.id })
+      broadcastSyncEvent('boards')
     }
   }
 

@@ -1,5 +1,6 @@
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { broadcastSyncEvent } from '@/lib/realtime'
 
 export async function getBoardMembers(boardId: number | string): Promise<BoardMember[]> {
   const { data, error } = await supabase
@@ -54,6 +55,8 @@ export async function updateMemberPermission(
     return false
   }
 
+  broadcastSyncEvent('members')
+  broadcastSyncEvent('boards')
   return true
 }
 
@@ -65,6 +68,8 @@ export async function removeMember(memberId: number): Promise<boolean> {
     return false
   }
 
+  broadcastSyncEvent('members')
+  broadcastSyncEvent('boards')
   return true
 }
 
