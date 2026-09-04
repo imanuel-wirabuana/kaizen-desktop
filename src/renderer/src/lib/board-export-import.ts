@@ -16,15 +16,19 @@ export type ParsedImportData = {
 /**
  * Export board, lanes, and items to formatted JSON string.
  */
-export function exportBoardToJson(board: Board, lanes: Lane[], items: KanbanItem[]): string {
+export function exportBoardToJson(_board: Board, lanes: Lane[], items: KanbanItem[]): string {
   const sortedLanes = [...lanes].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const lanesData = sortedLanes.map((lane) => {
     const laneItems = items
-      .filter((item) => Number(item.lane_id) === Number(lane.id))
+      .filter(
+        (item) =>
+          (lane.id === null && item.lane_id === null) ||
+          (lane.id !== null && Number(item.lane_id) === Number(lane.id))
+      )
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
     return {
-      lane: lane.title || 'Untitled Column',
+      lane: lane.title || (lane.id === null ? 'Draft' : 'Untitled Column'),
       items: laneItems.map((item) => ({
         item: item.title || 'Untitled Task'
       }))
@@ -32,7 +36,6 @@ export function exportBoardToJson(board: Board, lanes: Lane[], items: KanbanItem
   })
 
   const exportObj = {
-    board: board.title || 'Untitled Board',
     lanes: lanesData
   }
 
@@ -42,23 +45,26 @@ export function exportBoardToJson(board: Board, lanes: Lane[], items: KanbanItem
 /**
  * Export board, lanes, and items to semicolon-delimited CSV string.
  * Example format:
- * board;lane1;lane2;lane3;
- * board1;item1;item2;
- * board1;item3;
+ * lane1;lane2;lane3;
+ * item1;item2;;
+ * item3;;;
  */
-export function exportBoardToCsv(board: Board, lanes: Lane[], items: KanbanItem[]): string {
+export function exportBoardToCsv(_board: Board, lanes: Lane[], items: KanbanItem[]): string {
   const sortedLanes = [...lanes].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-  const laneTitles = sortedLanes.map((l) => l.title || 'Untitled Column')
+  const laneTitles = sortedLanes.map((l) => l.title || (l.id === null ? 'Draft' : 'Untitled Column'))
 
-  const headerLine = `board;${laneTitles.join(';')};`
+  const headerLine = `${laneTitles.join(';')};`
 
-  const laneItemsMap = new Map<number | string, string[]>()
+  const laneItemsMap = new Map<number | string | null, string[]>()
   let maxItems = 0
 
   for (const lane of sortedLanes) {
-    if (lane.id === undefined || lane.id === null) continue
     const laneItems = items
-      .filter((i) => Number(i.lane_id) === Number(lane.id))
+      .filter(
+        (i) =>
+          (lane.id === null && i.lane_id === null) ||
+          (lane.id !== null && Number(i.lane_id) === Number(lane.id))
+      )
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       .map((i) => i.title || '')
     laneItemsMap.set(lane.id, laneItems)
@@ -67,13 +73,12 @@ export function exportBoardToCsv(board: Board, lanes: Lane[], items: KanbanItem[
     }
   }
 
-  const boardTitle = board.title || 'Untitled Board'
   const rows: string[] = [headerLine]
 
   for (let r = 0; r < maxItems; r++) {
-    const rowCols: string[] = [boardTitle]
+    const rowCols: string[] = []
     for (const lane of sortedLanes) {
-      const laneItems = lane.id !== undefined && lane.id !== null ? laneItemsMap.get(lane.id) || [] : []
+      const laneItems = laneItemsMap.get(lane.id) || []
       rowCols.push(laneItems[r] || '')
     }
     rows.push(`${rowCols.join(';')};`)
@@ -126,28 +131,33 @@ export function parseBoardImportText(text: string): ParsedImportData {
   }
 
   const delimiter = lines[0].includes(';') ? ';' : ','
-  const headerCols = lines[0].split(delimiter).map((c) => c.trim())
+  const rawHeaderCols = lines[0].split(delimiter).map((c) => c.trim())
 
-  const laneTitles = headerCols.slice(1).filter((col, idx, arr) => {
+  // Check if first header column is legacy "board"
+  const hasBoardCol = rawHeaderCols[0]?.toLowerCase() === 'board'
+  const headerCols = hasBoardCol ? rawHeaderCols.slice(1) : rawHeaderCols
+
+  const laneTitles = headerCols.filter((col, idx, arr) => {
     if (idx === arr.length - 1 && col === '') return false
     return true
   })
 
   if (laneTitles.length === 0) {
-    throw new Error('CSV header line must specify at least one column (e.g. board;lane1;lane2;)')
+    throw new Error('CSV header line must specify at least one column (e.g. Draft;Belum;Bagus;)')
   }
 
   const laneItemsMap = laneTitles.map(() => [] as string[])
   let detectedBoardTitle: string | undefined
 
   for (let lineIdx = 1; lineIdx < lines.length; lineIdx++) {
-    const cols = lines[lineIdx].split(delimiter).map((c) => c.trim())
-    if (!detectedBoardTitle && cols[0]) {
-      detectedBoardTitle = cols[0]
+    const rawCols = lines[lineIdx].split(delimiter).map((c) => c.trim())
+    if (hasBoardCol && !detectedBoardTitle && rawCols[0]) {
+      detectedBoardTitle = rawCols[0]
     }
+    const cols = hasBoardCol ? rawCols.slice(1) : rawCols
 
     for (let colIdx = 0; colIdx < laneTitles.length; colIdx++) {
-      const itemVal = cols[colIdx + 1]
+      const itemVal = cols[colIdx]
       if (itemVal && itemVal.trim()) {
         laneItemsMap[colIdx].push(itemVal.trim())
       }

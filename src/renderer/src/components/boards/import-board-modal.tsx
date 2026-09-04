@@ -129,7 +129,7 @@ export function ImportBoardModal({
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder={`JSON format:\n{\n  "board": "my board",\n  "lanes": [\n    { "lane": "todo", "items": [{ "item": "task 1" }] }\n  ]\n}\n\nCSV format:\nboard;lane1;lane2;\nboard1;task1;task2;`}
+            placeholder={`JSON format:\n{\n  "lanes": [\n    {\n      "lane": "Draft",\n      "items": []\n    },\n    {\n      "lane": "Done",\n      "items": [\n        { "item": "task 1" }\n      ]\n    }\n  ]\n}\n\nCSV format:\nDraft;Belum;Bagus;Done;\n;;;task 1;`}
             className="w-full h-32 sm:h-36 p-3 font-mono text-xs rounded-xl border bg-card text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 custom-scrollbar shrink-0"
             disabled={isImporting}
           />
