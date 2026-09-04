@@ -81,7 +81,7 @@ export function SearchCommand() {
   const unpinnedBoards = useUnpinnedBoards()
   const storeItems = useItemsStore((s) => s.items)
   const storeLanes = useLanesStore((s) => s.lanes)
-  const { setTheme, resolvedTheme } = useTheme()
+  const { setTheme, setPreset, presets, preset, resolvedTheme } = useTheme()
 
   const [dbLanes, setDbLanes] = React.useState<Lane[]>([])
   const [dbItems, setDbItems] = React.useState<KanbanItem[]>([])

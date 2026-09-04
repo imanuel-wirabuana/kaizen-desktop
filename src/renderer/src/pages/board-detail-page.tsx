@@ -256,7 +256,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
             {[1, 2, 3, 4].map((col) => (
               <div
                 key={col}
-                className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border bg-card/90 p-3 space-y-3 shadow-2xs"
+                className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-lg border bg-card/90 p-3 space-y-3 shadow-2xs"
               >
                 {/* Column Header */}
                 <div className="flex h-14 shrink-0 items-center justify-between pb-2 border-b">
@@ -461,7 +461,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
               {[1, 2, 3].map((col) => (
                 <div
                   key={col}
-                  className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border bg-card/90 p-3 space-y-3 shadow-2xs"
+                  className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-lg border bg-card/90 p-3 space-y-3 shadow-2xs"
                 >
                   <div className="flex items-center justify-between pb-2 border-b">
                     <div className="flex items-center gap-2">

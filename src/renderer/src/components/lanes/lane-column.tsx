@@ -115,7 +115,7 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
             <div
               ref={ref}
               className={cn(
-                'group/column flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border border-border/70 bg-card/95 backdrop-blur-md shadow-xs hover:shadow-md transition-all duration-200 overflow-hidden relative select-none',
+                'group/column flex h-fit max-h-full w-72 shrink-0 flex-col rounded-lg border border-border/70 bg-card/95 backdrop-blur-md shadow-xs hover:shadow-md transition-all duration-200 overflow-hidden relative select-none',
                 isDragSource ? 'opacity-40 ring-2 ring-primary/50 shadow-xl scale-[0.99]' : 'hover:border-border',
                 isVirtual ? 'border-primary/30 bg-card/98 ring-1 ring-primary/10' : ''
               )}
@@ -289,7 +289,7 @@ export function LaneColumnPreview({ lane }: { lane: Lane }) {
   const isVirtual = Boolean(lane.isVirtual || lane.id === null)
 
   return (
-    <div className="flex h-fit max-h-full w-full shrink-0 flex-col rounded-2xl border border-primary/50 bg-card/95 backdrop-blur-md shadow-2xl overflow-hidden ring-2 ring-primary/40 opacity-95 pointer-events-none select-none">
+    <div className="flex h-fit max-h-full w-full shrink-0 flex-col rounded-lg border border-primary/50 bg-card/95 backdrop-blur-md shadow-2xl overflow-hidden ring-2 ring-primary/40 opacity-95 pointer-events-none select-none">
       {/* Column Header */}
       <div
         className={cn(

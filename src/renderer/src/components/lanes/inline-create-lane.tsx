@@ -79,7 +79,7 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
         <Button
           variant="outline"
           onClick={handleOpen}
-          className="h-14 w-full justify-start gap-2.5 rounded-2xl border-2 border-dashed bg-background/40 border-muted-foreground/25 px-4 text-xs font-medium text-muted-foreground hover:bg-background/80 hover:text-foreground hover:border-primary/50 shadow-2xs transition-all duration-200 cursor-pointer"
+          className="h-14 w-full justify-start gap-2.5 rounded-lg border-2 border-dashed bg-background/40 border-muted-foreground/25 px-4 text-xs font-medium text-muted-foreground hover:bg-background/80 hover:text-foreground hover:border-primary/50 shadow-2xs transition-all duration-200 cursor-pointer"
         >
           <div className="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Plus className="size-3.5" />
@@ -91,7 +91,7 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
   }
 
   return (
-    <div className="w-72 shrink-0 rounded-2xl border border-primary/40 bg-card p-3.5 shadow-xl transition-all space-y-3 ring-1 ring-primary/20 overflow-hidden">
+    <div className="w-72 shrink-0 rounded-lg border border-primary/40 bg-card p-3.5 shadow-xl transition-all space-y-3 ring-1 ring-primary/20 overflow-hidden">
       <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-3">
         {/* Header Title & Color Trigger */}
         <div className="flex items-center justify-between">
