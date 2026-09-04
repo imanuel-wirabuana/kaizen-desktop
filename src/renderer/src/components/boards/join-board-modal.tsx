@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -12,15 +12,23 @@ import { Input } from '@/components/ui/input'
 import { redeemInviteCode } from '@/services/invites'
 import { useBoardsStore } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
+import { useJoinModalStore } from '@/stores/join-modal'
 import { useUser } from '@/providers/auth-provider'
 import { LogIn, Loader2, CheckCircle2, AlertCircle, Info } from 'lucide-react'
 
 type JoinBoardModalProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function JoinBoardModal({ open, onOpenChange }: JoinBoardModalProps) {
+export function JoinBoardModal(props: JoinBoardModalProps) {
+  const storeIsOpen = useJoinModalStore((s) => s.isOpen)
+  const storeCode = useJoinModalStore((s) => s.inviteCode)
+  const closeModal = useJoinModalStore((s) => s.closeModal)
+
+  const isControlled = props.open !== undefined
+  const open = isControlled ? props.open! : storeIsOpen
+
   const { user } = useUser()
   const navigate = useNavigationStore((s) => s.navigate)
   const refreshBoards = useBoardsStore((s) => s.refresh)
@@ -32,17 +40,34 @@ export function JoinBoardModal({ open, onOpenChange }: JoinBoardModalProps) {
     message: string
   } | null>(null)
 
+  useEffect(() => {
+    if (open) {
+      if (storeCode) {
+        setInviteCode(storeCode)
+      }
+    } else {
+      setInviteCode('')
+      setFeedback(null)
+      setIsSubmitting(false)
+    }
+  }, [open, storeCode])
+
   const handleReset = () => {
     setInviteCode('')
     setFeedback(null)
     setIsSubmitting(false)
+    closeModal()
   }
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       handleReset()
     }
-    onOpenChange(newOpen)
+    if (props.onOpenChange) {
+      props.onOpenChange(newOpen)
+    } else if (!newOpen) {
+      closeModal()
+    }
   }
 
   const handleJoin = async (e?: React.FormEvent) => {
@@ -84,7 +109,7 @@ export function JoinBoardModal({ open, onOpenChange }: JoinBoardModalProps) {
         // After brief delay, navigate to board if returned
         if (res.board?.id) {
           setTimeout(() => {
-            onOpenChange(false)
+            handleOpenChange(false)
             navigate({ name: 'board-detail', boardId: res.board!.id! })
           }, 1200)
         }
@@ -173,3 +198,6 @@ export function JoinBoardModal({ open, onOpenChange }: JoinBoardModalProps) {
     </Dialog>
   )
 }
+
+export default JoinBoardModal
+

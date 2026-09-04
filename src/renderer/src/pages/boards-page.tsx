@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react'
 import { move } from '@dnd-kit/helpers'
 import { useNavigationStore } from '@/stores/navigation'
+import { useJoinModalStore } from '@/stores/join-modal'
 import { useBoardsStore, selectLoading } from '@/stores/boards'
 import { usePinnedBoards, useUnpinnedBoards } from '@/hooks/use-boards'
 import { Button } from '@/components/ui/button'
@@ -13,13 +14,13 @@ import {
   PinnedGridSection,
   UnpinnedGridSection,
   BoardCardPreview,
-  ShareBoardModal,
-  JoinBoardModal
+  ShareBoardModal
 } from '@/components/boards'
 import { Plus, Search, Sparkles, LogIn } from 'lucide-react'
 
 export function BoardsPage() {
   const navigate = useNavigationStore((s) => s.navigate)
+  const openJoinModal = useJoinModalStore((s) => s.openModal)
   const loading = useBoardsStore(selectLoading)
 
   const pinnedBoardsStore = usePinnedBoards()
@@ -47,7 +48,6 @@ export function BoardsPage() {
   const [editingBoard, setEditingBoard] = useState<Board | null>(null)
   const [deletingBoard, setDeletingBoard] = useState<Board | null>(null)
   const [sharingBoard, setSharingBoard] = useState<Board | null>(null)
-  const [joinModalOpen, setJoinModalOpen] = useState(false)
   const [copiedId, setCopiedId] = useState<number | string | null>(null)
 
   // Filtered views when searching
@@ -103,7 +103,7 @@ export function BoardsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setJoinModalOpen(true)}
+            onClick={() => openJoinModal()}
             className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
           >
             <LogIn className="size-3.5" /> Join Board
@@ -164,7 +164,7 @@ export function BoardsPage() {
           <div className="mt-4 flex items-center gap-2">
             <Button
               variant="outline"
-              onClick={() => setJoinModalOpen(true)}
+              onClick={() => openJoinModal()}
               className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
             >
               <LogIn className="size-3.5" /> Join Board
@@ -290,11 +290,10 @@ export function BoardsPage() {
         open={!!sharingBoard}
         onOpenChange={(open) => !open && setSharingBoard(null)}
       />
-
-      <JoinBoardModal open={joinModalOpen} onOpenChange={setJoinModalOpen} />
     </div>
   )
 }
 
 export default BoardsPage
+
 

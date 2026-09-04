@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   Sidebar,
   SidebarContent,
@@ -8,16 +7,17 @@ import {
   SidebarMenuItem,
   SidebarMenuButton
 } from '@/components/ui/sidebar'
-import { NavSidebarBoards, CreateBoardDrawer, JoinBoardModal } from '@/components/boards'
+import { NavSidebarBoards, CreateBoardDrawer } from '@/components/boards'
 import { usePinnedBoards, useUnpinnedBoards } from '@/hooks/use-boards'
 import { useNavigationStore } from '@/stores/navigation'
+import { useJoinModalStore } from '@/stores/join-modal'
 import { LogIn } from 'lucide-react'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pinnedBoards = usePinnedBoards()
   const unpinnedBoards = useUnpinnedBoards()
   const navigate = useNavigationStore((s) => s.navigate)
-  const [joinModalOpen, setJoinModalOpen] = useState(false)
+  const openJoinModal = useJoinModalStore((s) => s.openModal)
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -38,8 +38,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <CreateBoardDrawer />
             </div>
             <SidebarMenuButton
-              onClick={() => setJoinModalOpen(true)}
-              className="size-8 justify-center rounded-md border border-sidebar-border bg-sidebar-accent/50 hover:bg-sidebar-accent text-sidebar-foreground"
+              onClick={() => openJoinModal()}
+              className="size-8 justify-center rounded-md border border-sidebar-border bg-sidebar-accent/50 hover:bg-sidebar-accent text-sidebar-foreground cursor-pointer"
               title="Join Board"
             >
               <LogIn className="size-4" />
@@ -57,8 +57,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           Kaizen · 2026
         </span>
       </SidebarFooter>
-
-      <JoinBoardModal open={joinModalOpen} onOpenChange={setJoinModalOpen} />
     </Sidebar>
   )
 }

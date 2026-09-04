@@ -25,7 +25,7 @@ import { useUser } from '@/providers/auth-provider'
 import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Copy, Check, Share2, Trash2, Users, KeyRound, Shield, Loader2 } from 'lucide-react'
+import { Copy, Check, Share2, Trash2, Users, KeyRound, Shield, Loader2, Link } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -40,6 +40,14 @@ type ShareBoardModalProps = {
   onOpenChange: (open: boolean) => void
 }
 
+const getShareUrl = (code: string) => {
+  const origin =
+    typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+      ? window.location.origin
+      : 'https://kaizen33.vercel.app'
+  return `${origin}?code=${code}`
+}
+
 export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalProps) {
   const { user } = useUser()
 
@@ -49,6 +57,8 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
 
   const [generatedCode, setGeneratedCode] = useState<string | null>(null)
   const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedLinkCode, setCopiedLinkCode] = useState(false)
+  const [copiedActiveLinkId, setCopiedActiveLinkId] = useState<number | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
 
   const [invites, setInvites] = useState<BoardInvite[]>([])
@@ -131,6 +141,18 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
     navigator.clipboard.writeText(code)
     setCopiedCode(true)
     setTimeout(() => setCopiedCode(false), 2000)
+  }
+
+  const handleCopyLink = (code: string) => {
+    navigator.clipboard.writeText(getShareUrl(code))
+    setCopiedLinkCode(true)
+    setTimeout(() => setCopiedLinkCode(false), 2000)
+  }
+
+  const handleCopyActiveLink = (inviteId: number, code: string) => {
+    navigator.clipboard.writeText(getShareUrl(code))
+    setCopiedActiveLinkId(inviteId)
+    setTimeout(() => setCopiedActiveLinkId(null), 2000)
   }
 
   const handleRevoke = async (inviteId: number) => {
@@ -274,22 +296,40 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
                 <span className="font-mono text-base font-bold tracking-widest text-primary">
                   {generatedCode}
                 </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleCopy(generatedCode)}
-                  className="h-7 gap-1 text-xs font-medium cursor-pointer"
-                >
-                  {copiedCode ? (
-                    <>
-                      <Check className="size-3.5 text-emerald-500" /> Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="size-3.5" /> Copy Code
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleCopy(generatedCode)}
+                    className="h-7 gap-1 text-xs font-medium cursor-pointer"
+                  >
+                    {copiedCode ? (
+                      <>
+                        <Check className="size-3.5 text-emerald-500" /> Copied Code
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-3.5" /> Copy Code
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleCopyLink(generatedCode)}
+                    className="h-7 gap-1 text-xs font-medium cursor-pointer"
+                  >
+                    {copiedLinkCode ? (
+                      <>
+                        <Check className="size-3.5 text-primary-foreground" /> Copied Link
+                      </>
+                    ) : (
+                      <>
+                        <Link className="size-3.5" /> Copy Link
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -350,14 +390,33 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
                     </div>
                   </div>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRevoke(inv.id)}
-                    className="h-7 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive px-2"
-                  >
-                    Revoke
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => inv.code && handleCopyActiveLink(inv.id, inv.code)}
+                      className="h-7 gap-1 text-[11px] font-medium px-2 text-foreground hover:bg-accent cursor-pointer"
+                      title="Copy share link"
+                    >
+                      {copiedActiveLinkId === inv.id ? (
+                        <>
+                          <Check className="size-3 text-emerald-500" /> Copied
+                        </>
+                      ) : (
+                        <>
+                          <Link className="size-3 text-muted-foreground" /> Link
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRevoke(inv.id)}
+                      className="h-7 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive px-2 cursor-pointer"
+                    >
+                      Revoke
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
