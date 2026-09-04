@@ -10,8 +10,6 @@ import {
 import {
   ContextMenu,
   ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger
 } from '@/components/ui/context-menu'
 import {
@@ -21,11 +19,11 @@ import {
   Pencil,
   Trash2,
   Share2,
-  Check,
   FolderOpen,
   ArrowRight,
   GripVertical,
-  Plus
+  Plus,
+  LogOut
 } from 'lucide-react'
 import { useUser } from '@/providers/auth-provider'
 import { cn } from '@/lib/utils'
@@ -41,6 +39,7 @@ export type SortableGridBoardCardProps = {
   onEdit: () => void
   onShare: (e: React.MouseEvent) => void
   onDelete: () => void
+  onLeave?: () => void
 }
 
 export function SortableGridBoardCard({
@@ -52,7 +51,8 @@ export function SortableGridBoardCard({
   onTogglePin,
   onEdit,
   onShare,
-  onDelete
+  onDelete,
+  onLeave
 }: SortableGridBoardCardProps) {
   const { user } = useUser()
   const isOwner =
@@ -60,6 +60,9 @@ export function SortableGridBoardCard({
     Boolean(user?.id && board.owner === user.id) ||
     (!board.role && !board.owner)
   const canEdit = isOwner || board.role === 'edit'
+  const isPinned = !!board.pinned
+  const bgProps = getBoardBackgroundStyleAndClass(board.background)
+  const hasBackground = bgProps.isImage || bgProps.className
 
   const { ref, handleRef, isDragSource } = useSortable({
     id: board.id!,
@@ -69,74 +72,64 @@ export function SortableGridBoardCard({
     group
   })
 
-  const bgProps = getBoardBackgroundStyleAndClass(board.background)
-  const isPinned = Boolean(board.pinned)
-  const isCopied = copiedId === board.id
-
   return (
-    <ContextMenu key={board.id}>
+    <ContextMenu>
       <ContextMenuTrigger
         render={
           <div
             ref={ref}
-            role="button"
-            tabIndex={0}
-            onClick={onNavigate}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onNavigate()
-              }
-            }}
             className={cn(
-              'group relative flex min-h-[160px] flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 cursor-pointer select-none',
-              isDragSource ? 'opacity-50 ring-2 ring-primary/40' : ''
+              'group relative flex min-h-[160px] w-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card text-card-foreground shadow-2xs hover:shadow-md transition-all duration-200 hover:border-border cursor-pointer',
+              isDragSource && 'opacity-50 ring-2 ring-primary/40'
             )}
+            onClick={onNavigate}
           />
         }
       >
-        {/* Banner Section */}
+        {/* Banner Area */}
         <div
           className={cn(
             'relative h-20 w-full overflow-hidden shrink-0',
-            bgProps.isImage || bgProps.className
-              ? ''
-              : 'bg-gradient-to-br from-muted/80 via-muted/40 to-muted/60',
-            bgProps.className
+            hasBackground ? '' : 'bg-gradient-to-br from-muted/60 via-muted/30 to-muted/50'
           )}
           style={bgProps.style}
         >
-          {/* Overlay for banner images */}
-          {bgProps.isImage && (
-            <div className="absolute inset-0 bg-background/20 pointer-events-none" />
-          )}
+          {/* Custom image or preset gradient background overlay */}
+          <div className={cn('absolute inset-0', bgProps.className)} />
 
-          {/* Subtle bottom gradient fade for text readability */}
-          <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card/80 to-transparent" />
-
-          {/* Quick Action Top Right */}
+          {/* Quick Action Overlay Buttons (Top-Right) */}
           <div className="absolute right-1.5 top-1.5 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {/* Share Board button (owner only) */}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={onShare}
+                className="flex size-5 items-center justify-center rounded-md border border-white/30 bg-black/30 text-white hover:bg-black/50 shadow-xs transition-all backdrop-blur-md cursor-pointer"
+                title="Share Board"
+              >
+                <Share2 className="size-2.5" />
+              </button>
+            )}
+
+            {/* Quick Pin toggle button */}
             <button
               type="button"
               onClick={onTogglePin}
-              title={isPinned ? 'Unpin board' : 'Pin board'}
-              className={cn(
-                'flex size-5 items-center justify-center rounded-md border text-[10px] shadow-xs transition-all backdrop-blur-md cursor-pointer',
-                isPinned
-                  ? 'border-primary/40 bg-primary text-primary-foreground opacity-100'
-                  : 'border-white/30 bg-black/30 text-white hover:bg-black/50'
-              )}
+              className="flex size-5 items-center justify-center rounded-md border border-white/30 bg-black/30 text-white hover:bg-black/50 shadow-xs transition-all backdrop-blur-md cursor-pointer"
+              title={isPinned ? 'Unpin' : 'Pin Board'}
             >
-              {isPinned ? <Pin className="size-2.5 fill-current" /> : <Pin className="size-2.5" />}
+              {isPinned ? <PinOff className="size-2.5" /> : <Pin className="size-2.5" />}
             </button>
 
+            {/* Dropdown Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <button
                     type="button"
-                    onClick={(e) => e.stopPropagation()}
-                    title="Board options"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                    }}
                     className="flex size-5 items-center justify-center rounded-md border border-white/30 bg-black/30 text-white hover:bg-black/50 shadow-xs transition-all backdrop-blur-md cursor-pointer"
                   >
                     <MoreVertical className="size-2.5" />
@@ -170,7 +163,7 @@ export function SortableGridBoardCard({
                   )}
                 </DropdownMenuItem>
 
-                {isOwner && (
+                {isOwner ? (
                   <>
                     <DropdownMenuSeparator />
 
@@ -179,7 +172,16 @@ export function SortableGridBoardCard({
                       <span>Delete</span>
                     </DropdownMenuItem>
                   </>
-                )}
+                ) : onLeave ? (
+                  <>
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem variant="destructive" onClick={onLeave}>
+                      <LogOut className="size-3.5" />
+                      <span>Leave Board</span>
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -193,40 +195,34 @@ export function SortableGridBoardCard({
         </div>
 
         {/* Card Main Body */}
-        <div className="flex flex-1 items-start gap-2.5 p-2.5 -mt-3 relative z-[1]">
+        <div className="flex items-start gap-2.5 p-2.5 -mt-3 relative z-[1]">
           {/* Emoji Badge - overlapping the banner */}
           <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border-2 border-card bg-background text-sm shadow-sm">
             {board.icon || '📋'}
           </div>
 
-          <div className="min-w-0 flex-1 pt-0.5">
-            <div className="flex items-center gap-1.5 justify-between">
-              <h3 className="text-xs font-semibold tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
+          <div className="flex flex-1 flex-col min-w-0 pt-0.5 space-y-1">
+            <div className="flex items-center justify-between gap-1">
+              <h3 className="font-semibold text-xs text-foreground truncate group-hover:text-primary transition-colors">
                 {board.title || 'Untitled Board'}
               </h3>
-              {board.role && (
-                <span
-                  className={cn(
-                    'text-[9px] font-semibold px-1.5 py-0.5 rounded-full capitalize shrink-0',
-                    board.role === 'owner'
-                      ? 'bg-primary/10 text-primary'
-                      : board.role === 'edit'
-                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                        : 'bg-muted text-muted-foreground'
-                  )}
-                >
+              {board.role && board.role !== 'owner' && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium capitalize shrink-0">
                   {board.role}
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-1">
-              {board.description || 'No description'}
-            </p>
+
+            {board.description && (
+              <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+                {board.description}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Card Footer / Metadata & Drag Handle */}
-        <div className="flex items-center justify-between border-t bg-muted/10 px-2.5 py-1 text-[10px] text-muted-foreground mt-auto">
+        {/* Card Footer Row */}
+        <div className="flex items-center justify-between border-t border-border/40 px-2.5 py-1.5 text-[10px] text-muted-foreground/70 bg-card/50 mt-auto">
           <span className="truncate">
             {board.last_activity
               ? `Active ${new Date(board.last_activity).toLocaleDateString(undefined, {
@@ -240,16 +236,17 @@ export function SortableGridBoardCard({
                 })}`
               : 'Recent'}
           </span>
-          <div className="flex items-center gap-1">
+
+          <div className="flex items-center gap-1.5">
+            {/* Drag Handle Icon inside footer */}
             <span
               ref={handleRef}
-              className="cursor-grab touch-none active:cursor-grabbing text-muted-foreground/60 hover:text-foreground p-0.5"
+              className="cursor-grab touch-none active:cursor-grabbing p-0.5 text-muted-foreground/40 hover:text-foreground transition-colors"
               onClick={(e) => e.stopPropagation()}
               title="Drag to reorder"
             >
               <GripVertical className="size-3" />
             </span>
-            <ArrowRight className="size-2.5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </div>
       </ContextMenuTrigger>
@@ -260,6 +257,7 @@ export function SortableGridBoardCard({
           variant="context"
           onEdit={onEdit}
           onDelete={onDelete}
+          onLeave={onLeave}
           onTogglePin={onTogglePin}
         />
       </ContextMenuContent>

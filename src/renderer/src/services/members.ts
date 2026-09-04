@@ -73,6 +73,28 @@ export async function removeMember(memberId: number): Promise<boolean> {
   return true
 }
 
+export async function leaveBoard(
+  boardId: number | string,
+  userId: string
+): Promise<boolean> {
+  if (!boardId || !userId) return false
+
+  const { error } = await supabase
+    .from('board_members')
+    .delete()
+    .eq('board_id', Number(boardId))
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error leaving board:', error)
+    return false
+  }
+
+  broadcastSyncEvent('members')
+  broadcastSyncEvent('boards')
+  return true
+}
+
 export async function getUserBoardPermission(
   boardId: number | string,
   userId: string

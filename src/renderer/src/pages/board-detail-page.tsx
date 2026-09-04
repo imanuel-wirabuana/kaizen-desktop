@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EditBoardDrawer } from '@/components/boards/edit-board-drawer'
 import { DeleteBoardDrawer } from '@/components/boards/delete-board-drawer'
+import { LeaveBoardDrawer } from '@/components/boards/leave-board-drawer'
 import { ShareBoardModal } from '@/components/boards/share-board-modal'
 import { LaneColumn, InlineCreateLane } from '@/components/lanes'
 import { DraftSidebar } from '@/components/items'
@@ -83,6 +84,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const [loading, setLoading] = useState(true)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isLeaveOpen, setIsLeaveOpen] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
   const updateBoard = useBoardsStore((s) => s.updateBoard)
   const [copiedLink, setCopiedLink] = useState(false)
@@ -398,6 +400,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                       canEdit={canEdit}
                       onEdit={() => setIsEditOpen(true)}
                       onDelete={() => setIsDeleteOpen(true)}
+                      onLeave={() => setIsLeaveOpen(true)}
                     />
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -437,6 +440,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
             canEdit={canEdit}
             onEdit={() => setIsEditOpen(true)}
             onDelete={() => setIsDeleteOpen(true)}
+            onLeave={() => setIsLeaveOpen(true)}
           />
         </ContextMenuContent>
       </ContextMenu>
@@ -535,6 +539,14 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         board={board}
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
+        onSuccess={() => navigate({ name: 'boards' })}
+      />
+
+      {/* Leave Board Drawer */}
+      <LeaveBoardDrawer
+        board={board}
+        open={isLeaveOpen}
+        onOpenChange={setIsLeaveOpen}
         onSuccess={() => navigate({ name: 'boards' })}
       />
 

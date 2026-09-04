@@ -14,7 +14,8 @@ import {
   Trash2Icon,
   CopyIcon,
   CopyPlusIcon,
-  LayersIcon
+  LayersIcon,
+  LogOutIcon
 } from 'lucide-react'
 import { useBoardsStore } from '@/stores/boards'
 import { useUser } from '@/providers/auth-provider'
@@ -27,6 +28,7 @@ export type BoardMenuContentProps = {
   canEdit?: boolean
   onEdit?: (e?: any) => void
   onDelete?: (e?: any) => void
+  onLeave?: (e?: any) => void
   onTogglePin?: (e?: any) => void
 }
 
@@ -38,6 +40,7 @@ export function BoardMenuContent({
   canEdit: propCanEdit,
   onEdit,
   onDelete,
+  onLeave,
   onTogglePin
 }: BoardMenuContentProps) {
   const updateBoard = useBoardsStore((s) => s.updateBoard)
@@ -133,6 +136,16 @@ export function BoardMenuContent({
           <MenuItem destructive onClick={onDelete}>
             <Trash2Icon />
             <span>Delete Board</span>
+          </MenuItem>
+        </>
+      )}
+
+      {!isOwner && onLeave && (
+        <>
+          <MenuSeparator />
+          <MenuItem destructive onClick={onLeave}>
+            <LogOutIcon />
+            <span>Leave Board</span>
           </MenuItem>
         </>
       )}

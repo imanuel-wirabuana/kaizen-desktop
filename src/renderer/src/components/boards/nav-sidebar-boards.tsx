@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 import { EditBoardDrawer } from './edit-board-drawer'
 import { DeleteBoardDrawer } from './delete-board-drawer'
+import { LeaveBoardDrawer } from './leave-board-drawer'
 import { ShareBoardModal } from './share-board-modal'
 import { BoardMenuContent } from '@/components/menus/board-menu-content'
 import { useBoardsStore, selectLoading } from '@/stores/boards'
@@ -137,6 +138,7 @@ export function NavSidebarBoards({
 
   const [activeBoardForEdit, setActiveBoardForEdit] = useState<Board | null>(null)
   const [activeBoardForDelete, setActiveBoardForDelete] = useState<Board | null>(null)
+  const [activeBoardForLeave, setActiveBoardForLeave] = useState<Board | null>(null)
   const [activeBoardForShare, setActiveBoardForShare] = useState<Board | null>(null)
 
   const handleTogglePin = async (e: any, item: Board) => {
@@ -234,6 +236,7 @@ export function NavSidebarBoards({
           onEdit={setActiveBoardForEdit}
           onShare={(e, item) => handleShare(e, item)}
           onDelete={setActiveBoardForDelete}
+          onLeave={setActiveBoardForLeave}
         />
 
         {/* ── Unpinned Boards Section ── */}
@@ -247,6 +250,7 @@ export function NavSidebarBoards({
           onEdit={setActiveBoardForEdit}
           onShare={(e, item) => handleShare(e, item)}
           onDelete={setActiveBoardForDelete}
+          onLeave={setActiveBoardForLeave}
         />
 
         {/* ── Drag Overlay for Sidebar Board Items ── */}
@@ -284,6 +288,21 @@ export function NavSidebarBoards({
         }}
       />
 
+      {/* Leave Drawer */}
+      <LeaveBoardDrawer
+        board={activeBoardForLeave}
+        open={!!activeBoardForLeave}
+        onOpenChange={(open) => !open && setActiveBoardForLeave(null)}
+        onSuccess={() => {
+          if (
+            currentView.name === 'board-detail' &&
+            currentView.boardId === activeBoardForLeave?.id
+          ) {
+            navigate({ name: 'boards' })
+          }
+        }}
+      />
+
       {/* Share Modal */}
       <ShareBoardModal
         board={activeBoardForShare}
@@ -304,7 +323,8 @@ function PinnedBoardsGroup({
   onTogglePin,
   onEdit,
   onShare,
-  onDelete
+  onDelete,
+  onLeave
 }: {
   items: Board[]
   currentView: ReturnType<typeof useNavigationStore.getState>['currentView']
@@ -315,6 +335,7 @@ function PinnedBoardsGroup({
   onEdit: (item: Board) => void
   onShare: (e: React.MouseEvent, item: Board) => void
   onDelete: (item: Board) => void
+  onLeave?: (item: Board) => void
 }) {
   const { isDropTarget, ref } = useDroppable({
     id: 'pinned',
@@ -350,6 +371,7 @@ function PinnedBoardsGroup({
               onEdit={() => onEdit(item)}
               onShare={(e) => onShare(e, item)}
               onDelete={() => onDelete(item)}
+              onLeave={() => onLeave && onLeave(item)}
             />
           ))}
           {items.length === 0 && (
@@ -373,7 +395,8 @@ function UnpinnedBoardsGroup({
   onTogglePin,
   onEdit,
   onShare,
-  onDelete
+  onDelete,
+  onLeave
 }: {
   items: Board[]
   currentView: ReturnType<typeof useNavigationStore.getState>['currentView']
@@ -384,6 +407,7 @@ function UnpinnedBoardsGroup({
   onEdit: (item: Board) => void
   onShare: (e: React.MouseEvent, item: Board) => void
   onDelete: (item: Board) => void
+  onLeave?: (item: Board) => void
 }) {
   const { isDropTarget, ref } = useDroppable({
     id: 'unpinned',
@@ -419,6 +443,7 @@ function UnpinnedBoardsGroup({
               onEdit={() => onEdit(item)}
               onShare={(e) => onShare(e, item)}
               onDelete={() => onDelete(item)}
+              onLeave={() => onLeave && onLeave(item)}
             />
           ))}
           {items.length === 0 && (
@@ -442,7 +467,8 @@ function SortableSidebarBoardItem({
   onTogglePin,
   onEdit,
   onShare,
-  onDelete
+  onDelete,
+  onLeave
 }: {
   item: Board
   index: number
@@ -455,6 +481,7 @@ function SortableSidebarBoardItem({
   onEdit: () => void
   onShare: (e: React.MouseEvent) => void
   onDelete: () => void
+  onLeave?: () => void
 }) {
   const { ref, handleRef, isDragSource } = useSortable({
     id: item.id!,
@@ -506,6 +533,7 @@ function SortableSidebarBoardItem({
           variant="context"
           onEdit={onEdit}
           onDelete={onDelete}
+          onLeave={onLeave}
           onTogglePin={onTogglePin}
         />
       </ContextMenuContent>

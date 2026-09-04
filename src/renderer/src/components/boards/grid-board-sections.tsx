@@ -12,6 +12,7 @@ export type BoardGridSectionProps = {
   onEdit: (board: Board) => void
   onShare: (e: React.MouseEvent, id?: number | string) => void
   onDelete: (board: Board) => void
+  onLeave?: (board: Board) => void
 }
 
 // ── Droppable Pinned Grid Section ──
@@ -22,7 +23,8 @@ export function PinnedGridSection({
   onTogglePin,
   onEdit,
   onShare,
-  onDelete
+  onDelete,
+  onLeave
 }: BoardGridSectionProps) {
   const { isDropTarget, ref } = useDroppable({
     id: 'pinned',
@@ -66,6 +68,7 @@ export function PinnedGridSection({
                 onEdit={() => onEdit(board)}
                 onShare={(e) => onShare(e, board.id)}
                 onDelete={() => onDelete(board)}
+                onLeave={() => onLeave && onLeave(board)}
               />
             ))}
           </div>
@@ -84,6 +87,7 @@ export function UnpinnedGridSection({
   onEdit,
   onShare,
   onDelete,
+  onLeave,
   onCreateClick
 }: BoardGridSectionProps & { onCreateClick: () => void }) {
   const { isDropTarget, ref } = useDroppable({
@@ -126,6 +130,7 @@ export function UnpinnedGridSection({
               onEdit={() => onEdit(board)}
               onShare={(e) => onShare(e, board.id)}
               onDelete={() => onDelete(board)}
+              onLeave={() => onLeave && onLeave(board)}
             />
           ))}
         </div>

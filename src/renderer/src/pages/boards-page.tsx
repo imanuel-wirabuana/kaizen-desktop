@@ -11,6 +11,7 @@ import {
   BoardDrawer,
   EditBoardDrawer,
   DeleteBoardDrawer,
+  LeaveBoardDrawer,
   PinnedGridSection,
   UnpinnedGridSection,
   BoardCardPreview,
@@ -47,6 +48,7 @@ export function BoardsPage() {
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
   const [editingBoard, setEditingBoard] = useState<Board | null>(null)
   const [deletingBoard, setDeletingBoard] = useState<Board | null>(null)
+  const [leavingBoard, setLeavingBoard] = useState<Board | null>(null)
   const [sharingBoard, setSharingBoard] = useState<Board | null>(null)
   const [copiedId, setCopiedId] = useState<number | string | null>(null)
 
@@ -237,6 +239,7 @@ export function BoardsPage() {
                 onEdit={setEditingBoard}
                 onShare={handleShare}
                 onDelete={setDeletingBoard}
+                onLeave={setLeavingBoard}
               />
             )}
 
@@ -249,6 +252,7 @@ export function BoardsPage() {
               onEdit={setEditingBoard}
               onShare={handleShare}
               onDelete={setDeletingBoard}
+              onLeave={setLeavingBoard}
               onCreateClick={() => setCreateDrawerOpen(true)}
             />
           </div>
@@ -283,6 +287,12 @@ export function BoardsPage() {
         board={deletingBoard}
         open={!!deletingBoard}
         onOpenChange={(open) => !open && setDeletingBoard(null)}
+      />
+
+      <LeaveBoardDrawer
+        board={leavingBoard}
+        open={!!leavingBoard}
+        onOpenChange={(open) => !open && setLeavingBoard(null)}
       />
 
       <ShareBoardModal
