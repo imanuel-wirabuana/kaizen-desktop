@@ -37,9 +37,12 @@ export const useItemsStore = create<ItemsState>()(
     refreshItems: async (boardId?: number | string) => {
       const targetId = boardId ?? get().boardId
       if (!targetId) return
-      const data = await itemsService.getItemsByBoardId(targetId)
-      set({ items: data, loading: false })
-      broadcastSyncEvent('items')
+      try {
+        const data = await itemsService.getItemsByBoardId(targetId)
+        set({ boardId: targetId, items: data, loading: false })
+      } catch (err) {
+        console.error('Error in refreshItems:', err)
+      }
     },
 
     init: async (boardId: number | string, force: boolean = false) => {

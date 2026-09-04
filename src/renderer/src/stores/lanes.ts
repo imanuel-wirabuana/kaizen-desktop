@@ -54,10 +54,13 @@ export const useLanesStore = create<LanesState>()(
     refreshLanes: async (boardId?: number | string) => {
       const targetId = boardId ?? get().boardId
       if (!targetId) return
-      const userLanes = await lanesService.getLanesByBoardId(targetId)
-      const virtualDraft = createVirtualDraftLane(targetId)
-      set({ lanes: [virtualDraft, ...userLanes], loading: false })
-      broadcastSyncEvent('lanes')
+      try {
+        const userLanes = await lanesService.getLanesByBoardId(targetId)
+        const virtualDraft = createVirtualDraftLane(targetId)
+        set({ boardId: targetId, lanes: [virtualDraft, ...userLanes], loading: false })
+      } catch (err) {
+        console.error('Error in refreshLanes:', err)
+      }
     },
 
     init: async (boardId: number | string, force: boolean = false) => {

@@ -173,34 +173,40 @@ export async function importContentIntoBoard(
   boardId: number | string,
   parsedData: ParsedImportData
 ): Promise<boolean> {
-  const existingLanes = await getLanesByBoardId(boardId)
+  const targetBoardId = Number(boardId)
+  const existingLanes = await getLanesByBoardId(targetBoardId)
   const startLaneOrder =
     existingLanes.length > 0 ? Math.max(...existingLanes.map((l) => l.order ?? 0)) + 100 : 100
 
   for (let lIdx = 0; lIdx < parsedData.lanes.length; lIdx++) {
     const laneData = parsedData.lanes[lIdx]
     const createdLane = await createLane({
-      board_id: Number(boardId),
+      board_id: targetBoardId,
       title: laneData.title || `Column ${lIdx + 1}`,
       order: startLaneOrder + lIdx * 100
     })
 
-    if (createdLane && createdLane.id !== undefined && createdLane.id !== null) {
-      for (let iIdx = 0; iIdx < laneData.items.length; iIdx++) {
-        const itemTitle = laneData.items[iIdx]
-        if (itemTitle && itemTitle.trim()) {
-          await createItem({
-            board_id: Number(boardId),
-            lane_id: createdLane.id,
-            title: itemTitle.trim(),
-            order: (iIdx + 1) * 100
-          })
+    if (!createdLane || createdLane.id === undefined || createdLane.id === null) {
+      throw new Error(`Failed to create column "${laneData.title}". Check database permissions.`)
+    }
+
+    for (let iIdx = 0; iIdx < laneData.items.length; iIdx++) {
+      const itemTitle = laneData.items[iIdx]
+      if (itemTitle && itemTitle.trim()) {
+        const createdItem = await createItem({
+          board_id: targetBoardId,
+          lane_id: createdLane.id,
+          title: itemTitle.trim(),
+          order: (iIdx + 1) * 100
+        })
+        if (!createdItem) {
+          console.warn(`Warning: Failed to create task "${itemTitle}" in column "${createdLane.title}".`)
         }
       }
     }
   }
 
-  // Refresh stores for this board and trigger peer broadcasts
+  // Refresh stores for this board (non-destructive) and trigger peer broadcasts
   const boardIdStr = String(boardId)
   await useLanesStore.getState().refreshLanes(boardIdStr)
   await useItemsStore.getState().refreshItems(boardIdStr)

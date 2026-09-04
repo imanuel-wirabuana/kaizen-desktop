@@ -604,8 +604,8 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         onOpenChange={setIsImportOpen}
         onSuccess={() => {
           if (boardId) {
-            useLanesStore.getState().init(boardId, true)
-            useItemsStore.getState().init(boardId, true)
+            useLanesStore.getState().refreshLanes(boardId)
+            useItemsStore.getState().refreshItems(boardId)
           }
         }}
       />
