@@ -79,7 +79,7 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
         <Button
           variant="outline"
           onClick={handleOpen}
-          className="h-12 w-full justify-start gap-2.5 rounded-2xl border-2 border-dashed bg-background/40 border-muted-foreground/25 px-4 text-xs font-medium text-muted-foreground hover:bg-background/80 hover:text-foreground hover:border-primary/50 shadow-2xs transition-all duration-200 cursor-pointer"
+          className="h-14 w-full justify-start gap-2.5 rounded-2xl border-2 border-dashed bg-background/40 border-muted-foreground/25 px-4 text-xs font-medium text-muted-foreground hover:bg-background/80 hover:text-foreground hover:border-primary/50 shadow-2xs transition-all duration-200 cursor-pointer"
         >
           <div className="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Plus className="size-3.5" />

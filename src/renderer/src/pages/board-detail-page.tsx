@@ -218,23 +218,21 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
   if (loading) {
     return (
-      <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+      <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
         {/* Header Skeleton */}
-        <div className="flex items-center justify-between border-b pb-3">
-          <div className="flex items-center gap-3">
-            <Skeleton className="size-9 rounded-xl shrink-0" />
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-5 w-44 rounded-lg" />
-                <Skeleton className="h-4 w-16 rounded-full" />
-              </div>
-              <Skeleton className="h-3.5 w-64 rounded-md" />
+        <div className="flex items-center justify-between border-b pb-2 px-0.5">
+          <div className="flex items-center gap-2">
+            <Skeleton className="size-7 rounded-lg shrink-0" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-36 rounded-md" />
+              <Skeleton className="h-3.5 w-14 rounded-full" />
+              <Skeleton className="h-3 w-24 rounded-md hidden sm:block" />
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-20 rounded-xl" />
-            <Skeleton className="h-8 size-8 rounded-xl" />
-            <Skeleton className="h-8 w-24 rounded-xl" />
+          <div className="flex items-center gap-1.5">
+            <Skeleton className="h-7 w-16 rounded-lg" />
+            <Skeleton className="h-7 size-7 rounded-lg" />
+            <Skeleton className="h-7 w-20 rounded-lg" />
           </div>
         </div>
 
@@ -247,7 +245,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                 className="flex h-fit max-h-full w-72 shrink-0 flex-col rounded-2xl border bg-card/90 p-3 space-y-3 shadow-2xs"
               >
                 {/* Column Header */}
-                <div className="flex items-center justify-between pb-2 border-b">
+                <div className="flex h-14 shrink-0 items-center justify-between pb-2 border-b">
                   <div className="flex items-center gap-2">
                     <Skeleton className="size-3.5 rounded-full shrink-0" />
                     <Skeleton className="h-4 w-28 rounded-md" />
@@ -307,60 +305,59 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const bgProps = getBoardBackgroundStyleAndClass(board.background)
 
   return (
-    <div className="flex h-full pb-2 min-h-0 flex-col gap-3 overflow-hidden">
+    <div className="flex h-full pb-2 min-h-0 flex-col gap-2 overflow-hidden">
       {/* Board Header Bar with Right-click Context Menu */}
       <ContextMenu>
         <ContextMenuTrigger
           render={
-            <div className="flex items-center justify-between gap-3 px-1 py-0.5 select-none">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="flex size-8 items-center justify-center rounded-xl border bg-background text-base shadow-2xs shrink-0">
+            <div className="flex items-center justify-between gap-2.5 px-0.5 py-0 select-none">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex size-7 items-center justify-center rounded-lg border bg-background text-sm shadow-2xs shrink-0">
                   {board.icon || '📋'}
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-sm font-bold tracking-tight text-foreground truncate">
-                      {board.title || 'Untitled Board'}
-                    </h1>
-                    {isReadOnly && (
-                      <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                        <Eye className="size-3" /> View Only
-                      </span>
-                    )}
-                    {permissionRole === 'edit' && (
-                      <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                        <UserCheck className="size-3" /> Edit Access
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {board.description && (
-                      <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-[280px]">
+                <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                  <h1 className="text-xs sm:text-sm font-bold tracking-tight text-foreground truncate shrink-0">
+                    {board.title || 'Untitled Board'}
+                  </h1>
+                  {isReadOnly && (
+                    <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                      <Eye className="size-2.5" /> View Only
+                    </span>
+                  )}
+                  {permissionRole === 'edit' && (
+                    <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
+                      <UserCheck className="size-2.5" /> Edit Access
+                    </span>
+                  )}
+                  {board.description && (
+                    <>
+                      <span className="size-1 rounded-full bg-muted-foreground/30 shrink-0 hidden md:inline-block" />
+                      <p className="text-[11px] text-muted-foreground truncate max-w-[240px] hidden md:inline-block">
                         {board.description}
                       </p>
-                    )}
-                    {board.description && <span className="size-1 rounded-full bg-muted-foreground/30 shrink-0" />}
-                    <span
-                      className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground/80 shrink-0 bg-muted/40 px-1.5 py-0.2 rounded-md border border-border/40"
-                      title={board.last_activity ? `Last activity: ${new Date(board.last_activity).toLocaleString()}` : 'No activity recorded'}
-                    >
-                      <Clock className="size-2.5 text-muted-foreground/70" />
-                      <span>{formatLastActivity(board.last_activity || board.updated_at)}</span>
-                    </span>
-                  </div>
+                    </>
+                  )}
+                  <span className="size-1 rounded-full bg-muted-foreground/30 shrink-0 hidden sm:inline-block" />
+                  <span
+                    className="inline-flex items-center gap-1 text-[9.5px] font-medium text-muted-foreground/80 shrink-0 bg-muted/40 px-1.5 py-0.2 rounded-md border border-border/40"
+                    title={board.last_activity ? `Last activity: ${new Date(board.last_activity).toLocaleString()}` : 'No activity recorded'}
+                  >
+                    <Clock className="size-2.5 text-muted-foreground/70" />
+                    <span>{formatLastActivity(board.last_activity || board.updated_at)}</span>
+                  </span>
                 </div>
               </div>
 
               {/* Top Right Header Controls */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {/* Share Board Action (Owner only) */}
                 {isOwner && (
                   <Button
                     size="sm"
                     onClick={() => setIsShareOpen(true)}
-                    className="h-8 gap-1.5 rounded-xl text-xs font-semibold shadow-2xs cursor-pointer"
+                    className="h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs cursor-pointer"
                   >
-                    <Share2 className="size-3.5" />
+                    <Share2 className="size-3" />
                     <span>Share</span>
                   </Button>
                 )}
@@ -372,10 +369,10 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 size-8 p-0 rounded-xl text-muted-foreground hover:text-foreground"
+                        className="h-7 size-7 p-0 rounded-lg text-muted-foreground hover:text-foreground"
                         title="Board options"
                       >
-                        <MoreHorizontal className="size-4" />
+                        <MoreHorizontal className="size-3.5" />
                       </Button>
                     }
                   />
@@ -396,7 +393,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                   variant={isDraftOpen ? 'secondary' : 'outline'}
                   size="sm"
                   onClick={toggleDraftSidebar}
-                  className="h-8 gap-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                  className="h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs transition-all cursor-pointer"
                   title={isDraftOpen ? 'Close Draft Sidebar' : 'Open Draft Sidebar'}
                 >
                   <Inbox
@@ -407,7 +404,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                   />
                   <span>Drafts</span>
                   {draftItemsCount > 0 && (
-                    <span className="flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                    <span className="flex h-3.5 min-w-[14px] px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
                       {draftItemsCount}
                     </span>
                   )}

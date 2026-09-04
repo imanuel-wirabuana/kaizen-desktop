@@ -123,7 +123,7 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
               {/* Column Header */}
               <div
                 className={cn(
-                  'flex items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200 relative overflow-hidden',
+                  'flex h-14 shrink-0 items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200 relative overflow-hidden',
                   hasCustomBackground ? bgProps.className : isVirtual ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 backdrop-blur-md'
                 )}
                 style={hasCustomBackground ? bgProps.style : undefined}
@@ -293,7 +293,7 @@ export function LaneColumnPreview({ lane }: { lane: Lane }) {
       {/* Column Header */}
       <div
         className={cn(
-          'flex items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200 relative overflow-hidden',
+          'flex h-14 shrink-0 items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200 relative overflow-hidden',
           hasCustomBackground ? bgProps.className : isVirtual ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 backdrop-blur-md'
         )}
         style={hasCustomBackground ? bgProps.style : undefined}
