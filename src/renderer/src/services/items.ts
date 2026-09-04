@@ -71,9 +71,6 @@ export async function createItem(
     return null
   }
 
-  if (data?.[0]?.board_id) {
-    touchBoardActivity(data[0].board_id)
-  }
   return data?.[0] as KanbanItem
 }
 
@@ -97,9 +94,6 @@ export async function updateItem(
     return null
   }
 
-  if (data?.[0]?.board_id) {
-    touchBoardActivity(data[0].board_id)
-  }
   return data?.[0] as KanbanItem
 }
 

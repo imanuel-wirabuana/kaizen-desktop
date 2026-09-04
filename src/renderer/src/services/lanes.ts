@@ -52,9 +52,6 @@ export async function createLane(
     console.error('Error creating lane:', error)
     return null
   }
-  if (data?.[0]?.board_id) {
-    touchBoardActivity(data[0].board_id)
-  }
   return data?.[0] as Lane
 }
 
@@ -73,9 +70,6 @@ export async function updateLane(
   if (error) {
     console.error('Error updating lane:', error)
     return null
-  }
-  if (data?.[0]?.board_id) {
-    touchBoardActivity(data[0].board_id)
   }
   return data?.[0] as Lane
 }

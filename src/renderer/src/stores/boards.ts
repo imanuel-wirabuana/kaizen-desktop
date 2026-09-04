@@ -32,6 +32,7 @@ type BoardsState = {
 }
 
 let realtimeCleanup: (() => void) | null = null
+let suppressRealtimeRefetch = false
 
 export const useBoardsStore = create<BoardsState>()(
   subscribeWithSelector((set, get) => ({
@@ -55,6 +56,7 @@ export const useBoardsStore = create<BoardsState>()(
 
       // 1. Realtime postgres changes channel listener
       const channel = boardsService.subscribeBoards(() => {
+        if (suppressRealtimeRefetch) return
         boardsService.getBoards(owner).then((fresh) => {
           set({ boards: fresh.map((b) => ({ ...b, pinned: isBoardPinned(b.id) })) })
         })
@@ -63,6 +65,7 @@ export const useBoardsStore = create<BoardsState>()(
       // 2. Peer-to-peer real-time broadcast event listener (<50ms delivery)
       const unsubBroadcast = onSyncEvent((event) => {
         if (event === 'boards') {
+          if (suppressRealtimeRefetch) return
           boardsService.getBoards(owner).then((fresh) => {
             set({ boards: fresh.map((b) => ({ ...b, pinned: isBoardPinned(b.id) })) })
           })
@@ -109,19 +112,26 @@ export const useBoardsStore = create<BoardsState>()(
 
       set((s) => ({ boards: [optimistic, ...s.boards] }))
 
-      const result = await boardsService.createBoard({ ...draft, order })
+      suppressRealtimeRefetch = true
+      try {
+        const result = await boardsService.createBoard({ ...draft, order })
 
-      if (!result) {
-        set((s) => ({ boards: s.boards.filter((b) => b.id !== tempId) }))
-        return null
+        if (!result) {
+          set((s) => ({ boards: s.boards.filter((b) => b.id !== tempId) }))
+          return null
+        }
+
+        const withRole = { ...result, role: 'owner' as const }
+        set((s) => ({
+          boards: s.boards.map((b) => (b.id === tempId ? withRole : b))
+        }))
+        broadcastSyncEvent('boards')
+        return withRole
+      } finally {
+        setTimeout(() => {
+          suppressRealtimeRefetch = false
+        }, 500)
       }
-
-      const withRole = { ...result, role: 'owner' as const }
-      set((s) => ({
-        boards: s.boards.map((b) => (b.id === tempId ? withRole : b))
-      }))
-      broadcastSyncEvent('boards')
-      return withRole
     },
 
     // ── Optimistic update ──────────────────────────────────────
@@ -141,24 +151,31 @@ export const useBoardsStore = create<BoardsState>()(
 
       broadcastSyncEvent('boards')
 
-      const result = await boardsService.updateBoard(id, updates)
+      suppressRealtimeRefetch = true
+      try {
+        const result = await boardsService.updateBoard(id, updates)
 
-      if (!result) {
-        if (updates.pinned !== undefined) {
-          setBoardPinned(id, Boolean(prev.pinned))
+        if (!result) {
+          if (updates.pinned !== undefined) {
+            setBoardPinned(id, Boolean(prev.pinned))
+          }
+          set((s) => ({
+            boards: s.boards.map((b) => (String(b.id) === String(id) ? prev : b))
+          }))
+          broadcastSyncEvent('boards')
+          return null
         }
-        set((s) => ({
-          boards: s.boards.map((b) => (String(b.id) === String(id) ? prev : b))
-        }))
-        broadcastSyncEvent('boards')
-        return null
-      }
 
-      const withRole = { ...result, pinned: isBoardPinned(result.id), role: prev.role }
-      set((s) => ({
-        boards: s.boards.map((b) => (String(b.id) === String(id) ? withRole : b))
-      }))
-      return withRole
+        const withRole = { ...result, pinned: isBoardPinned(result.id), role: prev.role }
+        set((s) => ({
+          boards: s.boards.map((b) => (String(b.id) === String(id) ? withRole : b))
+        }))
+        return withRole
+      } finally {
+        setTimeout(() => {
+          suppressRealtimeRefetch = false
+        }, 500)
+      }
     },
 
     touchBoardActivity: async (boardId) => {
@@ -169,7 +186,6 @@ export const useBoardsStore = create<BoardsState>()(
           String(b.id) === String(boardId) ? { ...b, last_activity: now, updated_at: now } : b
         )
       }))
-      broadcastSyncEvent('boards')
       await boardsService.touchBoardActivity(boardId)
     },
 

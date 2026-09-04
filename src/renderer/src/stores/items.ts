@@ -108,25 +108,32 @@ export const useItemsStore = create<ItemsState>()(
 
       set((s) => ({ items: [...s.items, optimistic] }))
 
-      const result = await itemsService.createItem({
-        ...draft,
-        board_id: Number(currentBoardId),
-        lane_id: laneId,
-        order
-      })
+      suppressRealtimeRefetch = true
+      try {
+        const result = await itemsService.createItem({
+          ...draft,
+          board_id: Number(currentBoardId),
+          lane_id: laneId,
+          order
+        })
 
-      if (!result) {
-        console.error('addItem: database insert failed, reverting optimistic item')
-        set((s) => ({ items: s.items.filter((i) => String(i.id) !== String(tempId)) }))
-        return null
+        if (!result) {
+          console.error('addItem: database insert failed, reverting optimistic item')
+          set((s) => ({ items: s.items.filter((i) => String(i.id) !== String(tempId)) }))
+          return null
+        }
+
+        set((s) => ({
+          items: s.items.map((i) => (String(i.id) === String(tempId) ? result : i))
+        }))
+        broadcastSyncEvent('items')
+        if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
+        return result
+      } finally {
+        setTimeout(() => {
+          suppressRealtimeRefetch = false
+        }, 500)
       }
-
-      set((s) => ({
-        items: s.items.map((i) => (String(i.id) === String(tempId) ? result : i))
-      }))
-      broadcastSyncEvent('items')
-      if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
-      return result
     },
 
     // ── Optimistic Update Item ──────────────────────────────
@@ -144,22 +151,29 @@ export const useItemsStore = create<ItemsState>()(
 
       if (typeof id === 'number' && id < 0) return prevItem
 
-      const result = await itemsService.updateItem(id, updates)
+      suppressRealtimeRefetch = true
+      try {
+        const result = await itemsService.updateItem(id, updates)
 
-      if (!result) {
-        console.error(`updateItem: database update failed for item ${id}, reverting`)
+        if (!result) {
+          console.error(`updateItem: database update failed for item ${id}, reverting`)
+          set((s) => ({
+            items: s.items.map((i) => (String(i.id) === String(id) ? prevItem : i))
+          }))
+          broadcastSyncEvent('items')
+          return null
+        }
+
         set((s) => ({
-          items: s.items.map((i) => (String(i.id) === String(id) ? prevItem : i))
+          items: s.items.map((i) => (String(i.id) === String(id) ? result : i))
         }))
-        broadcastSyncEvent('items')
-        return null
+        if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
+        return result
+      } finally {
+        setTimeout(() => {
+          suppressRealtimeRefetch = false
+        }, 500)
       }
-
-      set((s) => ({
-        items: s.items.map((i) => (String(i.id) === String(id) ? result : i))
-      }))
-      if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
-      return result
     },
 
     // ── Optimistic Delete Item ──────────────────────────────
@@ -173,17 +187,24 @@ export const useItemsStore = create<ItemsState>()(
 
       if (typeof id === 'number' && id < 0) return true
 
-      const ok = await itemsService.deleteItem(id)
+      suppressRealtimeRefetch = true
+      try {
+        const ok = await itemsService.deleteItem(id)
 
-      if (!ok) {
-        console.error(`removeItem: database delete failed for item ${id}, reverting`)
-        set({ items: prevItems })
-        broadcastSyncEvent('items')
-        return false
+        if (!ok) {
+          console.error(`removeItem: database delete failed for item ${id}, reverting`)
+          set({ items: prevItems })
+          broadcastSyncEvent('items')
+          return false
+        }
+
+        if (target?.board_id) useBoardsStore.getState().touchBoardActivity(target.board_id)
+        return true
+      } finally {
+        setTimeout(() => {
+          suppressRealtimeRefetch = false
+        }, 500)
       }
-
-      if (target?.board_id) useBoardsStore.getState().touchBoardActivity(target.board_id)
-      return true
     },
 
     // ── Move item between lanes / reorder ───────────────────

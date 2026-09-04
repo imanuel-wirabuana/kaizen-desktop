@@ -73,7 +73,7 @@ export const useLanesStore = create<LanesState>()(
 
       // 2. Peer-to-peer broadcast subscription (<50ms delivery)
       const unsubBroadcast = onSyncEvent((event) => {
-        if (event === 'lanes' || event === 'boards') {
+        if (event === 'lanes') {
           const currentBoardId = get().boardId
           if (!currentBoardId || suppressRealtimeRefetch) return
           lanesService.getLanesByBoardId(currentBoardId).then((fresh) => {
@@ -116,23 +116,30 @@ export const useLanesStore = create<LanesState>()(
 
       set((s) => ({ lanes: [...s.lanes, optimistic] }))
 
-      const result = await lanesService.createLane({
-        ...draft,
-        board_id: optimistic.board_id,
-        order
-      })
+      suppressRealtimeRefetch = true
+      try {
+        const result = await lanesService.createLane({
+          ...draft,
+          board_id: optimistic.board_id,
+          order
+        })
 
-      if (!result) {
-        set((s) => ({ lanes: s.lanes.filter((l) => l.id !== tempId) }))
-        return null
+        if (!result) {
+          set((s) => ({ lanes: s.lanes.filter((l) => l.id !== tempId) }))
+          return null
+        }
+
+        set((s) => ({
+          lanes: s.lanes.map((l) => (l.id === tempId ? result : l))
+        }))
+        broadcastSyncEvent('lanes')
+        if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
+        return result
+      } finally {
+        setTimeout(() => {
+          suppressRealtimeRefetch = false
+        }, 500)
       }
-
-      set((s) => ({
-        lanes: s.lanes.map((l) => (l.id === tempId ? result : l))
-      }))
-      broadcastSyncEvent('lanes')
-      if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
-      return result
     },
 
     // ── Optimistic update ──────────────────────────────────────
@@ -152,21 +159,28 @@ export const useLanesStore = create<LanesState>()(
 
       broadcastSyncEvent('lanes')
 
-      const result = await lanesService.updateLane(id, updates)
+      suppressRealtimeRefetch = true
+      try {
+        const result = await lanesService.updateLane(id, updates)
 
-      if (!result) {
+        if (!result) {
+          set((s) => ({
+            lanes: s.lanes.map((l) => (String(l.id) === String(id) ? prevLane : l))
+          }))
+          broadcastSyncEvent('lanes')
+          return null
+        }
+
         set((s) => ({
-          lanes: s.lanes.map((l) => (String(l.id) === String(id) ? prevLane : l))
+          lanes: s.lanes.map((l) => (String(l.id) === String(id) ? result : l))
         }))
-        broadcastSyncEvent('lanes')
-        return null
+        if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
+        return result
+      } finally {
+        setTimeout(() => {
+          suppressRealtimeRefetch = false
+        }, 500)
       }
-
-      set((s) => ({
-        lanes: s.lanes.map((l) => (String(l.id) === String(id) ? result : l))
-      }))
-      if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
-      return result
     },
 
     // ── Optimistic delete ──────────────────────────────────────
@@ -180,16 +194,23 @@ export const useLanesStore = create<LanesState>()(
       set((s) => ({ lanes: s.lanes.filter((l) => String(l.id) !== String(id)) }))
       broadcastSyncEvent('lanes')
 
-      const ok = await lanesService.deleteLane(id)
+      suppressRealtimeRefetch = true
+      try {
+        const ok = await lanesService.deleteLane(id)
 
-      if (!ok) {
-        set({ lanes: prevLanes })
-        broadcastSyncEvent('lanes')
-        return false
+        if (!ok) {
+          set({ lanes: prevLanes })
+          broadcastSyncEvent('lanes')
+          return false
+        }
+
+        if (target?.board_id) useBoardsStore.getState().touchBoardActivity(target.board_id)
+        return true
+      } finally {
+        setTimeout(() => {
+          suppressRealtimeRefetch = false
+        }, 500)
       }
-
-      if (target?.board_id) useBoardsStore.getState().touchBoardActivity(target.board_id)
-      return true
     },
 
     // ── Move lane left/right ───────────────────────────────────

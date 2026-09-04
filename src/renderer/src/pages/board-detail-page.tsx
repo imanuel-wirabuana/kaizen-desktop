@@ -183,7 +183,21 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       (boards) => {
         const updated = boards.find((b) => String(b.id) === String(boardId))
         if (updated) {
-          setBoard(updated)
+          setBoard((prev) => {
+            if (!prev) return updated
+            // Skip re-rendering parent page if only last_activity or updated_at changed
+            if (
+              prev.title !== updated.title ||
+              prev.icon !== updated.icon ||
+              prev.description !== updated.description ||
+              prev.background !== updated.background ||
+              prev.owner !== updated.owner ||
+              prev.role !== updated.role
+            ) {
+              return updated
+            }
+            return prev
+          })
           if (updated.role) setPermissionRole(updated.role)
         }
       }
@@ -196,7 +210,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
     // Real-time broadcast sync event listener (<50ms delivery)
     const unsubBroadcast = onSyncEvent((event) => {
-      if (event === 'members' || event === 'boards') {
+      if (event === 'members') {
         checkPermission()
       }
     })
