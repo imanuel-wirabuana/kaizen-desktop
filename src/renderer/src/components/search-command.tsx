@@ -112,28 +112,60 @@ export function SearchCommand() {
     }
   }, [open])
 
-  // Merge store items/lanes with DB fetched items/lanes to ensure complete results across all boards
+  const accessibleBoardIds = React.useMemo(() => {
+    return new Set(boards.map((b) => String(b.id)).filter(Boolean))
+  }, [boards])
+
+  // Merge store items/lanes with DB fetched items/lanes, strictly filtered by accessible board IDs (owned & shared)
   const lanes = React.useMemo(() => {
     const map = new Map<string, Lane>()
     dbLanes.forEach((l) => {
-      if (l.id !== null) map.set(String(l.id), l)
+      if (
+        l.id !== null &&
+        l.board_id !== undefined &&
+        l.board_id !== null &&
+        accessibleBoardIds.has(String(l.board_id))
+      ) {
+        map.set(String(l.id), l)
+      }
     })
     storeLanes.forEach((l) => {
-      if (l.id !== null) map.set(String(l.id), l)
+      if (
+        l.id !== null &&
+        l.board_id !== undefined &&
+        l.board_id !== null &&
+        accessibleBoardIds.has(String(l.board_id))
+      ) {
+        map.set(String(l.id), l)
+      }
     })
     return Array.from(map.values())
-  }, [dbLanes, storeLanes])
+  }, [dbLanes, storeLanes, accessibleBoardIds])
 
   const items = React.useMemo(() => {
     const map = new Map<string, KanbanItem>()
     dbItems.forEach((i) => {
-      if (i.id !== undefined) map.set(String(i.id), i)
+      if (
+        i.id !== undefined &&
+        i.board_id !== undefined &&
+        i.board_id !== null &&
+        accessibleBoardIds.has(String(i.board_id))
+      ) {
+        map.set(String(i.id), i)
+      }
     })
     storeItems.forEach((i) => {
-      if (i.id !== undefined) map.set(String(i.id), i)
+      if (
+        i.id !== undefined &&
+        i.board_id !== undefined &&
+        i.board_id !== null &&
+        accessibleBoardIds.has(String(i.board_id))
+      ) {
+        map.set(String(i.id), i)
+      }
     })
     return Array.from(map.values())
-  }, [dbItems, storeItems])
+  }, [dbItems, storeItems, accessibleBoardIds])
 
   const run = (action: () => void) => {
     setOpen(false)
