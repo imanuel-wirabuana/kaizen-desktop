@@ -173,10 +173,12 @@ export function SearchCommand() {
   }
 
   const laneMap = React.useMemo(() => {
-    const map = new Map<number | null, string>()
-    map.set(null, 'Draft')
+    const map = new Map<string, string>()
+    map.set('null', 'Draft')
     lanes.forEach((l) => {
-      if (l.id !== null) map.set(l.id, l.title || 'Untitled Lane')
+      if (l.id !== null && l.id !== undefined) {
+        map.set(String(l.id), l.title || 'Untitled Lane')
+      }
     })
     return map
   }, [lanes])
@@ -190,7 +192,7 @@ export function SearchCommand() {
     return (
       <CommandItem
         key={`board-${id}`}
-        value={`board ${isPinned ? 'pinned ' : ''}${board.title ?? ''} ${board.description ?? ''}`}
+        value={`board board-id-${id} ${isPinned ? 'pinned ' : ''}${board.title ?? ''} ${board.description ?? ''}`}
         onSelect={() => run(() => navigate({ name: 'board-detail', boardId: id }))}
         className="flex cursor-pointer items-center justify-between gap-2 px-2 py-1.5 text-xs select-none rounded-md"
       >
@@ -229,7 +231,7 @@ export function SearchCommand() {
     return (
       <CommandItem
         key={`lane-${lane.id}`}
-        value={`lane column ${lane.icon ?? ''} ${lane.title ?? ''} ${boardTitle}`}
+        value={`lane column lane-id-${lane.id} ${lane.icon ?? ''} ${lane.title ?? ''} ${boardTitle}`}
         onSelect={() =>
           run(() => {
             if (lane.board_id) {
@@ -264,7 +266,8 @@ export function SearchCommand() {
   const renderTask = (item: KanbanItem) => {
     const priorityInfo = PRIORITY_CONFIG[item.priority ?? 0] || PRIORITY_CONFIG[0]
     const dueInfo = formatDueDate(item.due_date)
-    const laneName = laneMap.get(item.lane_id ?? null) || 'Draft'
+    const laneKey = item.lane_id !== null && item.lane_id !== undefined ? String(item.lane_id) : 'null'
+    const laneName = laneMap.get(laneKey) || 'Draft'
 
     const searchKeywords = [
       item.title ?? '',
@@ -276,7 +279,7 @@ export function SearchCommand() {
     return (
       <CommandItem
         key={`task-${item.id}`}
-        value={`task ${searchKeywords}`}
+        value={`task item-id-${item.id} ${searchKeywords}`}
         onSelect={() =>
           run(() => {
             if (item.board_id) {
