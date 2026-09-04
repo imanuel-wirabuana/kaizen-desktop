@@ -10,6 +10,8 @@ import { EditBoardDrawer } from '@/components/boards/edit-board-drawer'
 import { DeleteBoardDrawer } from '@/components/boards/delete-board-drawer'
 import { LeaveBoardDrawer } from '@/components/boards/leave-board-drawer'
 import { ShareBoardModal } from '@/components/boards/share-board-modal'
+import { ExportBoardModal } from '@/components/boards/export-board-modal'
+import { ImportBoardModal } from '@/components/boards/import-board-modal'
 import { LaneColumn, InlineCreateLane } from '@/components/lanes'
 import { DraftSidebar } from '@/components/items'
 import { getUserBoardPermission, subscribeBoardMembers } from '@/services/members'
@@ -49,7 +51,9 @@ import {
   Copy,
   CopyPlus,
   Layers,
-  Clock
+  Clock,
+  Download,
+  Upload
 } from 'lucide-react'
 import { BoardMenuContent } from '@/components/menus/board-menu-content'
 import { useNavigationStore } from '@/stores/navigation'
@@ -86,6 +90,8 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isLeaveOpen, setIsLeaveOpen] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
+  const [isExportOpen, setIsExportOpen] = useState(false)
+  const [isImportOpen, setIsImportOpen] = useState(false)
   const updateBoard = useBoardsStore((s) => s.updateBoard)
   const [copiedLink, setCopiedLink] = useState(false)
 
@@ -378,6 +384,34 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                   </Button>
                 )}
 
+                {/* Export Board Button */}
+                {canEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsExportOpen(true)}
+                    className="h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs cursor-pointer"
+                    title="Export Board to JSON or CSV"
+                  >
+                    <Upload className="size-3 text-muted-foreground" />
+                    <span>Export</span>
+                  </Button>
+                )}
+
+                {/* Import Content Button */}
+                {canEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsImportOpen(true)}
+                    className="h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs cursor-pointer"
+                    title="Import Content into Board"
+                  >
+                    <Download className="size-3 text-muted-foreground" />
+                    <span>Import</span>
+                  </Button>
+                )}
+
                 {/* Board Options Dropdown Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -401,6 +435,8 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                       onEdit={() => setIsEditOpen(true)}
                       onDelete={() => setIsDeleteOpen(true)}
                       onLeave={() => setIsLeaveOpen(true)}
+                      onExport={() => setIsExportOpen(true)}
+                      onImport={() => setIsImportOpen(true)}
                     />
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -441,6 +477,8 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
             onEdit={() => setIsEditOpen(true)}
             onDelete={() => setIsDeleteOpen(true)}
             onLeave={() => setIsLeaveOpen(true)}
+            onExport={() => setIsExportOpen(true)}
+            onImport={() => setIsImportOpen(true)}
           />
         </ContextMenuContent>
       </ContextMenu>
@@ -548,6 +586,28 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         open={isLeaveOpen}
         onOpenChange={setIsLeaveOpen}
         onSuccess={() => navigate({ name: 'boards' })}
+      />
+
+      {/* Export Board Modal */}
+      <ExportBoardModal
+        board={board}
+        lanes={lanes}
+        items={allItems}
+        open={isExportOpen}
+        onOpenChange={setIsExportOpen}
+      />
+
+      {/* Import Content Modal */}
+      <ImportBoardModal
+        board={board}
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onSuccess={() => {
+          if (boardId) {
+            useLanesStore.getState().init(boardId, true)
+            useItemsStore.getState().init(boardId, true)
+          }
+        }}
       />
 
       {/* Share Board Modal */}

@@ -26,7 +26,8 @@ type LanesState = {
   boardId: number | string | undefined
 
   // Lifecycle
-  init: (boardId: number | string) => Promise<void>
+  init: (boardId: number | string, force?: boolean) => Promise<void>
+  refreshLanes: (boardId?: number | string) => Promise<void>
   cleanup: () => void
 
   // Optimistic mutations
@@ -50,9 +51,18 @@ export const useLanesStore = create<LanesState>()(
     loading: true,
     boardId: undefined,
 
-    init: async (boardId: number | string) => {
+    refreshLanes: async (boardId?: number | string) => {
+      const targetId = boardId ?? get().boardId
+      if (!targetId) return
+      const userLanes = await lanesService.getLanesByBoardId(targetId)
+      const virtualDraft = createVirtualDraftLane(targetId)
+      set({ lanes: [virtualDraft, ...userLanes], loading: false })
+      broadcastSyncEvent('lanes')
+    },
+
+    init: async (boardId: number | string, force: boolean = false) => {
       const prevBoardId = get().boardId
-      if (String(prevBoardId) === String(boardId) && !get().loading) return
+      if (!force && String(prevBoardId) === String(boardId) && !get().loading) return
 
       realtimeCleanup?.()
       realtimeCleanup = null

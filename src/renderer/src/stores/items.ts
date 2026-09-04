@@ -11,7 +11,8 @@ type ItemsState = {
   boardId: number | string | undefined
 
   // Lifecycle
-  init: (boardId: number | string) => Promise<void>
+  init: (boardId: number | string, force?: boolean) => Promise<void>
+  refreshItems: (boardId?: number | string) => Promise<void>
   cleanup: () => void
 
   // Optimistic mutations
@@ -33,9 +34,17 @@ export const useItemsStore = create<ItemsState>()(
     loading: true,
     boardId: undefined,
 
-    init: async (boardId: number | string) => {
+    refreshItems: async (boardId?: number | string) => {
+      const targetId = boardId ?? get().boardId
+      if (!targetId) return
+      const data = await itemsService.getItemsByBoardId(targetId)
+      set({ items: data, loading: false })
+      broadcastSyncEvent('items')
+    },
+
+    init: async (boardId: number | string, force: boolean = false) => {
       const prevBoardId = get().boardId
-      if (String(prevBoardId) === String(boardId) && !get().loading) return
+      if (!force && String(prevBoardId) === String(boardId) && !get().loading) return
 
       realtimeCleanup?.()
       realtimeCleanup = null

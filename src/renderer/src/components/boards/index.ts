@@ -10,5 +10,7 @@ export * from './grid-board-card'
 export * from './grid-board-sections'
 export * from './share-board-modal'
 export * from './join-board-modal'
+export * from './export-board-modal'
+export * from './import-board-modal'
 
 

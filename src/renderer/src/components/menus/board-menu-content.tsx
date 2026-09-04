@@ -15,7 +15,9 @@ import {
   CopyIcon,
   CopyPlusIcon,
   LayersIcon,
-  LogOutIcon
+  LogOutIcon,
+  DownloadIcon,
+  UploadIcon
 } from 'lucide-react'
 import { useBoardsStore } from '@/stores/boards'
 import { useUser } from '@/providers/auth-provider'
@@ -29,6 +31,8 @@ export type BoardMenuContentProps = {
   onEdit?: (e?: any) => void
   onDelete?: (e?: any) => void
   onLeave?: (e?: any) => void
+  onExport?: (e?: any) => void
+  onImport?: (e?: any) => void
   onTogglePin?: (e?: any) => void
 }
 
@@ -41,6 +45,8 @@ export function BoardMenuContent({
   onEdit,
   onDelete,
   onLeave,
+  onExport,
+  onImport,
   onTogglePin
 }: BoardMenuContentProps) {
   const updateBoard = useBoardsStore((s) => s.updateBoard)
@@ -86,6 +92,22 @@ export function BoardMenuContent({
           <span>Edit Board</span>
         </MenuItem>
       )}
+
+      {canEdit && onExport && (
+        <MenuItem onClick={onExport}>
+          <UploadIcon className="text-muted-foreground" />
+          <span>Export Board</span>
+        </MenuItem>
+      )}
+
+      {canEdit && onImport && (
+        <MenuItem onClick={onImport}>
+          <DownloadIcon className="text-muted-foreground" />
+          <span>Import Content</span>
+        </MenuItem>
+      )}
+
+      {/* Duplicate Submenu */}
 
       {/* Duplicate Submenu */}
       <MenuSub>
