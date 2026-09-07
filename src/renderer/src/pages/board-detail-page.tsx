@@ -339,7 +339,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const bgProps = getBoardBackgroundStyleAndClass(board.background)
 
   return (
-    <div className="flex h-full pb-2 min-h-0 flex-col gap-2 overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
       {/* Board Header Bar with Right-click Context Menu */}
       <ContextMenu>
         <ContextMenuTrigger

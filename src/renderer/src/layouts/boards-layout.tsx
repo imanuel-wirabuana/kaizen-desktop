@@ -208,7 +208,7 @@ export function BoardsLayout({ children }: { children: React.ReactNode }) {
       {/* Dedicated Kanban Workspace Provider (Encloses Center Canvas & Right Draft Sidebar) */}
       <DragDropProvider onDragEnd={handleKanbanDragEnd}>
         {/* Center Content Workspace Area */}
-        <SidebarInset className="flex h-svh min-h-0 flex-1 flex-col overflow-hidden">
+        <SidebarInset className="flex min-h-0 flex-1 flex-col overflow-hidden m-2 md:ml-0 rounded-xl shadow-2xs bg-background">
           <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b bg-background/80 px-3 backdrop-blur-sm">
             <div className="flex items-center gap-1.5">
               <SidebarTrigger className="-ml-1 size-7" />
