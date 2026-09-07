@@ -35,7 +35,10 @@ export const BOARD_MUTATION_SCHEMA_DETAILS = `SCHEMA DETAILS:
   - description (string optional, acceptance criteria or details)
   - priority (number optional: 0 = Low/None, 1 = Medium, 2 = High, 3 = Urgent)
   - due_date (string optional, ISO format "YYYY-MM-DD")
-  - background (string optional: solid hex e.g. "#ef4444", CSS gradient e.g. "linear-gradient(135deg, #059669, #10b981)", or image URL e.g. "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&q=80")`
+  - background (string optional: solid hex e.g. "#ef4444", CSS gradient e.g. "linear-gradient(135deg, #059669, #10b981)", or image URL e.g. "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&q=80")
+  - order (number optional: controls vertical positioning within a column; smaller numbers appear higher, e.g. 10 is higher than 100)
+  - target_lane_title (string optional: name of destination column when moving task)
+  - target_lane_id (number optional: ID of destination column when moving task)`
 
 /**
  * Expected JSON output schema and sample actions block.
@@ -46,14 +49,25 @@ export const BOARD_MUTATION_JSON_SCHEMA_EXAMPLE = `\`\`\`json
   "actions": [
     // --- ADD EXAMPLES (Solids, Gradients, and Imagery) ---
     { "type": "add_lane", "title": "Testing & QA", "icon": "🧪", "description": "QA validation", "background": "linear-gradient(135deg, #059669 0%, #10b981 100%)" },
-    { "type": "add_item", "lane_title": "Testing & QA", "title": "Run regression smoke tests", "icon": "🚀", "priority": 3, "due_date": "2026-09-15", "background": "#1e293b" },
+    { "type": "add_item", "lane_title": "Testing & QA", "title": "Run regression smoke tests", "icon": "🚀", "priority": 3, "due_date": "2026-09-15", "background": "#1e293b", "order": 100 },
+
+    // --- MOVE & REORDER EXAMPLES ---
+    // Move task to another column (appends to bottom by default):
+    { "type": "move_item", "item_id": 402, "target_lane_title": "In Progress" },
+    // Move task to another column at top position (order: 10):
+    { "type": "move_item", "item_id": 403, "target_lane_title": "Done", "order": 10 },
+    // Move task to Draft / Unassigned:
+    { "type": "move_item", "item_id": 404, "target_lane_title": "Draft" },
+    // Reorder tasks in a column (e.g. by priority, ascending orders):
+    { "type": "update_item", "item_id": 405, "order": 100 },
+    { "type": "update_item", "item_id": 406, "order": 200 },
 
     // --- UPDATE EXAMPLES (Use exact IDs from context) ---
     // Solid color update
     { "type": "update_lane", "lane_id": 102, "background": "#3b82f6" },
     // Gradient update
     { "type": "update_lane", "lane_id": 103, "background": "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)" },
-    // Thematic image URL update (e.g. fitness, code, design, nature)
+    // Thematic image URL update
     { "type": "update_lane", "lane_id": 105, "background": "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&q=80" },
     // Task gradient styling
     { "type": "update_item", "item_id": 405, "title": "Critical Security Patch", "background": "linear-gradient(135deg, #be123c 0%, #f43f5e 100%)" },
@@ -72,14 +86,23 @@ export const BOARD_MUTATION_JSON_SCHEMA_EXAMPLE = `\`\`\`json
  */
 export const MUTATION_GUIDELINES = `GUIDELINES & EDIT PERMISSION CONSTRAINTS:
 1. USER PERMISSION: EDIT (Full Modify Access). You are authorized to propose board changes using JSON mutation blocks.
-2. When proposing ANY addition, update, or deletion, explain your plan clearly and concisely, and ALWAYS append a structured \`\`\`json code block at the end of your response with this exact schema:
+2. When proposing ANY addition, update, move, or deletion, explain your plan clearly and concisely, and ALWAYS append a structured \`\`\`json code block at the end of your response with this exact schema:
 
 ${BOARD_MUTATION_JSON_SCHEMA_EXAMPLE}
 
 3. When referencing existing lanes or items, ALWAYS use their exact \`lane_id\` and \`item_id\` shown in the BOARD CONTEXT.
 4. For new tasks in a newly added column in the same batch, specify \`lane_title\` matching the new column's title.
 
-5. CREATIVE BACKGROUND DESIGN SYSTEM (Be imaginative, visually stunning, and purposeful!):
+5. MOVING & REORDERING TASKS:
+   - When asked to move a task, use:
+     { "type": "move_item", "item_id": <id>, "target_lane_title": "<Column>" }
+   - By default, moving a task appends it to the bottom of the target column.
+   - To place a task at the TOP of a column, set "order": 10 (or a value lower than the column's first item).
+   - To move a task to Draft / Unassigned, use "target_lane_title": "Draft" or "target_lane_id": null.
+   - When asked to order or sort tasks (e.g. by priority, due date, or custom criteria), emit "update_item" actions setting ascending "order" values (e.g. 100, 200, 300...).
+   - IN YOUR CHAT RESPONSE: ALWAYS clearly explain each move in plain English before the JSON block, stating the task title, source column, destination column, and resulting position (e.g., "Moving 'Bug Fix #12' from [To Do] to [In Progress] at the top (#1)").
+
+6. CREATIVE BACKGROUND DESIGN SYSTEM (Be imaginative, visually stunning, and purposeful!):
    You have FULL CREATIVE FREEDOM to choose backgrounds across 3 rich modalities:
    
    A. MODERN SOLID COLORS:
@@ -144,9 +167,11 @@ export const VIEW_ONLY_GUIDELINES = `CRITICAL PERMISSION CONSTRAINT (VIEW ONLY):
  * Suggested prompt chips shown in the empty chat state for users with edit access.
  */
 export const QUICK_SUGGESTIONS_EDIT = [
-  'Break this board into a 4-stage sprint workflow',
-  'Apply a creative aesthetic theme with gradients and images',
-  'Rename column or move tasks between lanes'
+  'Break down a goal into sprint columns',
+  'Order tasks in To Do by priority',
+  'Move completed tasks to Done',
+  'Suggest high-priority backlog tasks',
+  'Apply a creative aesthetic theme with gradients and images'
 ]
 
 /**
@@ -191,6 +216,7 @@ export function formatBoardContext(
     for (const lane of sortedLanes) {
       const laneTitle = lane.title || (lane.id === null ? 'Draft' : 'Untitled Column')
       const laneIdLabel = lane.id === null ? 'Draft (lane_id: null)' : `lane_id: ${lane.id}`
+      const laneOrderStr = lane.order !== undefined && lane.order !== null ? `, order: ${lane.order}` : ''
       const laneIconStr = lane.icon ? ` ${lane.icon}` : ''
       const laneItems = items
         .filter((i) =>
@@ -200,18 +226,23 @@ export function formatBoardContext(
 
       const laneBgStr = lane.background ? ` [bg: "${lane.background}"]` : ''
       lines.push(
-        `• Column [${laneTitle}]${laneIconStr}${laneBgStr} (${laneIdLabel}): ${laneItems.length} task(s)`
+        `• Column [${laneTitle}]${laneIconStr}${laneBgStr} (${laneIdLabel}${laneOrderStr}): ${laneItems.length} task(s)`
       )
-      for (const item of laneItems) {
+      laneItems.forEach((item, itemIdx) => {
+        const itemPos = `#${itemIdx + 1}`
+        const itemOrderVal =
+          item.order !== undefined && item.order !== null
+            ? `order: ${item.order}`
+            : `order: ${(itemIdx + 1) * 100}`
         const itemIconStr = item.icon ? `${item.icon} ` : ''
         const itemPrioStr = item.priority ? ` [priority: ${item.priority}]` : ''
         const itemDueStr = item.due_date ? ` [due: ${item.due_date}]` : ''
         const itemBgStr = item.background ? ` [bg: "${item.background}"]` : ''
         const itemDescStr = item.description ? ` - "${item.description}"` : ''
         lines.push(
-          `   - [item_id: ${item.id}] ${itemIconStr}${item.title || 'Untitled'}${itemPrioStr}${itemDueStr}${itemBgStr}${itemDescStr}`
+          `   - [item_id: ${item.id}, ${itemOrderVal}] ${itemPos} ${itemIconStr}${item.title || 'Untitled'}${itemPrioStr}${itemDueStr}${itemBgStr}${itemDescStr}`
         )
-      }
+      })
     }
   }
 

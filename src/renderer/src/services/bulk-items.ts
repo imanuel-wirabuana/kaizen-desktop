@@ -79,18 +79,28 @@ export async function updateItemsBulk(
     }
     if (payload.lane_id !== undefined) {
       payload.lane_id =
-        payload.lane_id !== null ? Number(payload.lane_id) : null
+        payload.lane_id !== null && !isNaN(Number(payload.lane_id)) ? Number(payload.lane_id) : null
+    }
+    if (payload.order !== undefined && payload.order !== null) {
+      payload.order = Number(payload.order)
     }
 
-    return supabase.from('items').update(payload).eq('id', id)
+    return supabase.from('items').update(payload).eq('id', Number(id))
   })
 
   const results = await Promise.allSettled(promises)
   let successCount = 0
 
-  results.forEach((res) => {
-    if (res.status === 'fulfilled' && !res.value.error) {
-      successCount++
+  results.forEach((res, idx) => {
+    const targetId = updatesList[idx]?.id
+    if (res.status === 'fulfilled') {
+      if (res.value.error) {
+        console.error(`updateItemsBulk: failed to update item ${targetId}:`, res.value.error)
+      } else {
+        successCount++
+      }
+    } else {
+      console.error(`updateItemsBulk: rejected updating item ${targetId}:`, res.reason)
     }
   })
 

@@ -140,6 +140,7 @@ export type ItemMenuContentProps = {
 
 export function ItemMenuContent({ item, variant, onEdit }: ItemMenuContentProps) {
   const updateItem = useItemsStore((s) => s.updateItem)
+  const moveItem = useItemsStore((s) => s.moveItem)
   const removeItem = useItemsStore((s) => s.removeItem)
   const duplicateItem = useItemsStore((s) => s.duplicateItem)
   const lanes = useLanesStore((s) => s.lanes)
@@ -162,9 +163,19 @@ export function ItemMenuContent({ item, variant, onEdit }: ItemMenuContentProps)
 
   const handleMoveTo = async (targetBoardId: number, targetLaneId: number | null) => {
     if (String(targetBoardId) === String(item.board_id)) {
-      await updateItem(item.id, { lane_id: targetLaneId })
+      const itemsInTargetLane = useItemsStore
+        .getState()
+        .items.filter((i) =>
+          targetLaneId === null ? i.lane_id === null : String(i.lane_id) === String(targetLaneId)
+        )
+      const maxOrder = itemsInTargetLane.reduce((max, i) => Math.max(max, i.order ?? 0), 0)
+      await moveItem(item.id, targetLaneId, maxOrder + 100)
     } else {
-      await itemsService.updateItem(item.id, { board_id: targetBoardId, lane_id: targetLaneId })
+      await itemsService.updateItem(item.id, {
+        board_id: targetBoardId,
+        lane_id: targetLaneId,
+        order: 100
+      })
       useItemsStore.setState((s) => ({
         items: s.items.filter((i) => String(i.id) !== String(item.id))
       }))

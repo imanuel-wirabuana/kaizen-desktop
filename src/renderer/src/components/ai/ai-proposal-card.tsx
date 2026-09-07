@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Sparkles, Check, ChevronRight, PlusCircle, Pencil, Trash2 } from 'lucide-react'
+import { Sparkles, Check, ChevronRight, PlusCircle, Pencil, Trash2, ArrowRight, ArrowUpDown } from 'lucide-react'
 import { useItemsStore } from '@/stores/items'
 import { useLanesStore } from '@/stores/lanes'
 import type { BoardMutationProposal } from '@/lib/ai/ai-tools'
@@ -17,10 +17,16 @@ export function AiProposalCard({ proposal, applied, onReview }: AiProposalCardPr
 
   let added = 0
   let updated = 0
+  let moved = 0
   let deleted = 0
 
   for (const a of actions) {
-    if (a.type.startsWith('add_')) added++
+    if (a.type === 'add_lane' || a.type === 'add_item') added++
+    else if (
+      a.type === 'move_item' ||
+      (a.type === 'update_item' && (a.target_lane_title || a.target_lane_id !== undefined))
+    )
+      moved++
     else if (a.type.startsWith('update_')) updated++
     else if (a.type.startsWith('delete_')) deleted++
   }
@@ -41,6 +47,11 @@ export function AiProposalCard({ proposal, applied, onReview }: AiProposalCardPr
           {added > 0 && (
             <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
               +{added} Add
+            </span>
+          )}
+          {moved > 0 && (
+            <span className="px-1.5 py-0.5 rounded-md bg-sky-500/15 text-sky-600 dark:text-sky-400">
+              →{moved} Move
             </span>
           )}
           {updated > 0 && (
@@ -69,6 +80,20 @@ export function AiProposalCard({ proposal, applied, onReview }: AiProposalCardPr
             let icon = <PlusCircle className="size-3 text-emerald-500" />
             let label = ''
 
+            const isMove =
+              act.type === 'move_item' ||
+              (act.type === 'update_item' && (act.target_lane_title || act.target_lane_id !== undefined))
+
+            const isReorderOnly =
+              act.type === 'update_item' &&
+              !isMove &&
+              act.order !== undefined &&
+              !act.title &&
+              !act.description &&
+              !act.background &&
+              !act.priority &&
+              !act.due_date
+
             if (act.type === 'add_lane') {
               label = `+ Column "${act.title || 'Untitled Column'}"`
             } else if (act.type === 'add_item') {
@@ -78,6 +103,20 @@ export function AiProposalCard({ proposal, applied, onReview }: AiProposalCardPr
               const existingLane = allLanes.find((l) => l.id === act.lane_id)
               const laneTitle = act.title || act.old_title || existingLane?.title || 'Untitled Column'
               label = `~ Column "${laneTitle}"`
+            } else if (isMove) {
+              icon = <ArrowRight className="size-3 text-sky-500" />
+              const existingItem = allItems.find((i) => i.id === act.item_id)
+              const taskTitle = act.title || act.old_title || existingItem?.title || 'Untitled Task'
+              let targetName = act.target_lane_title
+              if (!targetName && act.target_lane_id !== undefined) {
+                targetName = allLanes.find((l) => l.id === act.target_lane_id)?.title || 'Column'
+              }
+              label = `→ Move "${taskTitle}" to [${targetName || 'Column'}]`
+            } else if (isReorderOnly) {
+              icon = <ArrowUpDown className="size-3 text-indigo-500" />
+              const existingItem = allItems.find((i) => i.id === act.item_id)
+              const taskTitle = act.title || act.old_title || existingItem?.title || 'Untitled Task'
+              label = `↕ Reorder "${taskTitle}"`
             } else if (act.type === 'update_item') {
               icon = <Pencil className="size-3 text-amber-500" />
               const existingItem = allItems.find((i) => i.id === act.item_id)

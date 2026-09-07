@@ -21,6 +21,7 @@ export type BoardMutationAction =
       priority?: number | null
       due_date?: string | null
       background?: string | null
+      order?: number | null
     }
   | {
       id: string
@@ -45,6 +46,18 @@ export type BoardMutationAction =
       priority?: number | null
       due_date?: string | null
       background?: string | null
+      order?: number | 'top' | 'bottom' | null
+    }
+  | {
+      id: string
+      type: 'move_item'
+      item_id: number
+      old_title?: string
+      title?: string
+      icon?: string | null
+      target_lane_id?: number | null
+      target_lane_title?: string
+      order?: number | 'top' | 'bottom' | null
     }
   | {
       id: string
@@ -62,6 +75,198 @@ export type BoardMutationAction =
 export type BoardMutationProposal = {
   summary: string
   actions: BoardMutationAction[]
+}
+
+/**
+ * Strips emojis and punctuation for flexible case-insensitive matching.
+ */
+function cleanStringForMatch(s: string): string {
+  if (!s) return ''
+  return s
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    .toLowerCase()
+    .trim()
+}
+
+/**
+ * Resolves item ID and title from explicit IDs or by title matching existing items.
+ */
+function resolveItemReference(act: any): { id: number; title?: string } | null {
+  const rawId = act.item_id ?? act.id ?? act.task_id
+  if (rawId !== undefined && rawId !== null && !isNaN(Number(rawId))) {
+    const numId = Number(rawId)
+    const existing = useItemsStore.getState().items.find((i) => i.id === numId)
+    return {
+      id: numId,
+      title: act.old_title || act.title || existing?.title || undefined
+    }
+  }
+
+  // Fallback: search by title
+  const searchName = String(act.old_title || act.title || act.name || act.task || '').trim()
+  if (searchName) {
+    const existingItems = useItemsStore.getState().items
+    const cleanSearch = cleanStringForMatch(searchName)
+
+    // Exact match (case-insensitive)
+    let found = existingItems.find(
+      (i) => i.title && i.title.toLowerCase().trim() === searchName.toLowerCase()
+    )
+    // Clean match (emojis stripped)
+    if (!found) {
+      found = existingItems.find(
+        (i) => i.title && cleanStringForMatch(i.title) === cleanSearch
+      )
+    }
+    // Substring match
+    if (!found && cleanSearch.length > 2) {
+      found = existingItems.find(
+        (i) =>
+          i.title &&
+          (cleanStringForMatch(i.title).includes(cleanSearch) ||
+            cleanSearch.includes(cleanStringForMatch(i.title)))
+      )
+    }
+    if (found) {
+      return {
+        id: found.id,
+        title: found.title || undefined
+      }
+    }
+  }
+
+  return null
+}
+
+/**
+ * Resolves destination lane (ID and Title), handling "Draft" / unassigned and fuzzy matching.
+ */
+function resolveTargetLane(act: any): { targetLaneId?: number | null; targetLaneTitle?: string } {
+  const rawLaneId = act.target_lane_id ?? act.lane_id ?? act.to_lane_id ?? act.destination_lane_id
+  const rawLaneTitle =
+    act.target_lane_title ??
+    act.lane_title ??
+    act.target_lane ??
+    act.to_lane ??
+    act.to ??
+    act.lane ??
+    act.destination_lane ??
+    act.destination
+
+  const titleStr = rawLaneTitle ? String(rawLaneTitle).trim() : undefined
+
+  // Explicit Draft check
+  if (
+    rawLaneId === null ||
+    rawLaneId === 'null' ||
+    (titleStr && ['draft', 'drafts', 'unassigned', 'inbox', 'draft column'].includes(titleStr.toLowerCase()))
+  ) {
+    return { targetLaneId: null, targetLaneTitle: 'Draft' }
+  }
+
+  if (rawLaneId !== undefined && rawLaneId !== null && !isNaN(Number(rawLaneId))) {
+    const numId = Number(rawLaneId)
+    const existing = useLanesStore.getState().lanes.find((l) => l.id === numId)
+    return {
+      targetLaneId: numId,
+      targetLaneTitle: titleStr || existing?.title || undefined
+    }
+  }
+
+  if (titleStr) {
+    const existingLanes = useLanesStore.getState().lanes
+    const cleanSearch = cleanStringForMatch(titleStr)
+
+    // Exact match
+    let found = existingLanes.find(
+      (l) => l.title && l.title.toLowerCase().trim() === titleStr.toLowerCase() && l.id !== null
+    )
+    // Clean match
+    if (!found) {
+      found = existingLanes.find(
+        (l) => l.title && cleanStringForMatch(l.title) === cleanSearch && l.id !== null
+      )
+    }
+    // Substring match
+    if (!found && cleanSearch.length > 2) {
+      found = existingLanes.find(
+        (l) =>
+          l.title &&
+          l.id !== null &&
+          (cleanStringForMatch(l.title).includes(cleanSearch) ||
+            cleanSearch.includes(cleanStringForMatch(l.title)))
+      )
+    }
+
+    if (found && found.id !== null) {
+      return {
+        targetLaneId: found.id,
+        targetLaneTitle: found.title || titleStr
+      }
+    }
+
+    return { targetLaneTitle: titleStr }
+  }
+
+  return {}
+}
+
+/**
+ * Resolves semantic or numeric order values ('top', 'bottom', or numbers).
+ */
+function resolveOrderValue(act: any): number | 'top' | 'bottom' | null | undefined {
+  const rawVal = act.order ?? act.position ?? act.pos ?? act.index
+  if (rawVal === undefined) return undefined
+  if (rawVal === null || rawVal === 'null') return null
+
+  if (typeof rawVal === 'string') {
+    const lower = rawVal.toLowerCase().trim()
+    if (['top', 'first', 'start', 'beginning'].includes(lower)) return 'top'
+    if (['bottom', 'last', 'end'].includes(lower)) return 'bottom'
+    if (!isNaN(Number(lower))) return Number(lower)
+  } else if (typeof rawVal === 'number') {
+    return rawVal
+  }
+
+  return undefined
+}
+
+/**
+ * Resolves lane ID from explicit IDs or by title matching existing lanes.
+ */
+function resolveLaneReference(act: any): { id: number; title?: string } | null {
+  const rawId = act.lane_id ?? act.id
+  if (rawId !== undefined && rawId !== null && !isNaN(Number(rawId))) {
+    const numId = Number(rawId)
+    const existing = useLanesStore.getState().lanes.find((l) => l.id === numId)
+    return {
+      id: numId,
+      title: act.title || existing?.title || undefined
+    }
+  }
+
+  const searchName = String(act.lane_title || act.title || act.name || '').trim()
+  if (searchName) {
+    const existingLanes = useLanesStore.getState().lanes
+    const cleanSearch = cleanStringForMatch(searchName)
+
+    let found = existingLanes.find(
+      (l) => l.title && l.title.toLowerCase().trim() === searchName.toLowerCase() && l.id !== null
+    )
+    if (!found) {
+      found = existingLanes.find(
+        (l) => l.title && cleanStringForMatch(l.title) === cleanSearch && l.id !== null
+      )
+    }
+    if (found && found.id !== null) {
+      return {
+        id: found.id,
+        title: found.title || undefined
+      }
+    }
+  }
+
+  return null
 }
 
 /**
@@ -89,7 +294,7 @@ function normalizeToMutationProposal(parsed: any): BoardMutationProposal | null 
           description: act.description ? String(act.description).trim() : undefined,
           background: act.background ? String(act.background).trim() : undefined
         })
-      } else if (type === 'add_item' && act.title) {
+      } else if (type === 'add_item' && (act.title || act.item)) {
         let parsedPriority: number | null | undefined = undefined
         if (typeof act.priority === 'number') {
           parsedPriority = act.priority
@@ -97,40 +302,33 @@ function normalizeToMutationProposal(parsed: any): BoardMutationProposal | null 
           parsedPriority = Number(act.priority)
         }
 
+        const parsedOrder = resolveOrderValue(act)
+        const numericOrder = typeof parsedOrder === 'number' ? parsedOrder : parsedOrder === null ? null : undefined
+        const { targetLaneId, targetLaneTitle } = resolveTargetLane(act)
+
         validActions.push({
           id: actId,
           type: 'add_item',
-          lane_id: act.lane_id !== undefined ? act.lane_id : undefined,
-          lane_title: act.lane_title ? String(act.lane_title).trim() : undefined,
-          title: String(act.title).trim(),
+          lane_id: targetLaneId !== undefined ? targetLaneId : act.lane_id !== undefined ? act.lane_id : undefined,
+          lane_title: targetLaneTitle || (act.lane_title ? String(act.lane_title).trim() : undefined),
+          title: String(act.title || act.item).trim(),
           icon: act.icon ? String(act.icon).trim() : undefined,
           description: act.description ? String(act.description).trim() : undefined,
           priority: parsedPriority,
+          order: numericOrder,
           due_date: act.due_date ? String(act.due_date).trim() : undefined,
           background: act.background ? String(act.background).trim() : undefined
         })
-      } else if (type === 'update_lane' && (act.lane_id !== undefined || act.lane_title || act.title)) {
-        let resolvedLaneId: number | undefined = undefined
-        if (act.lane_id !== undefined) {
-          resolvedLaneId = Number(act.lane_id)
-        } else {
-          const searchName = (act.lane_title || act.title || '').toLowerCase().trim()
-          const found = useLanesStore.getState().lanes.find(
-            (l) => l.title && l.title.toLowerCase().trim() === searchName && l.id !== null
-          )
-          if (found && found.id !== null) {
-            resolvedLaneId = found.id
-          }
-        }
-
-        if (resolvedLaneId !== undefined) {
-          const existingLane = useLanesStore.getState().lanes.find((l) => l.id === resolvedLaneId)
-          const currentLaneTitle = existingLane?.title || 'Untitled Column'
+      } else if (type === 'update_lane') {
+        const laneRef = resolveLaneReference(act)
+        if (laneRef) {
+          const existingLane = useLanesStore.getState().lanes.find((l) => l.id === laneRef.id)
+          const currentLaneTitle = existingLane?.title || laneRef.title || 'Untitled Column'
 
           validActions.push({
             id: actId,
             type: 'update_lane',
-            lane_id: resolvedLaneId,
+            lane_id: laneRef.id,
             old_title: act.old_title ? String(act.old_title).trim() : currentLaneTitle,
             title: act.title ? String(act.title).trim() : undefined,
             icon: act.icon !== undefined ? (act.icon ? String(act.icon).trim() : null) : undefined,
@@ -148,73 +346,71 @@ function normalizeToMutationProposal(parsed: any): BoardMutationProposal | null 
                 : undefined
           })
         }
-      } else if (type === 'update_item' && act.item_id !== undefined) {
-        let parsedPriority: number | null | undefined = undefined
-        if (typeof act.priority === 'number') {
-          parsedPriority = act.priority
-        } else if (act.priority !== undefined && act.priority !== null && !isNaN(Number(act.priority))) {
-          parsedPriority = Number(act.priority)
-        } else if (act.priority === null) {
-          parsedPriority = null
-        }
+      } else if (type === 'update_item' || type === 'move_item') {
+        const itemRef = resolveItemReference(act)
+        if (itemRef) {
+          let parsedPriority: number | null | undefined = undefined
+          if (typeof act.priority === 'number') {
+            parsedPriority = act.priority
+          } else if (act.priority !== undefined && act.priority !== null && !isNaN(Number(act.priority))) {
+            parsedPriority = Number(act.priority)
+          } else if (act.priority === null) {
+            parsedPriority = null
+          }
 
-        validActions.push({
-          id: actId,
-          type: 'update_item',
-          item_id: Number(act.item_id),
-          old_title: act.old_title ? String(act.old_title).trim() : undefined,
-          title: act.title ? String(act.title).trim() : undefined,
-          icon: act.icon !== undefined ? (act.icon ? String(act.icon).trim() : null) : undefined,
-          description:
-            act.description !== undefined
-              ? act.description
-                ? String(act.description).trim()
-                : null
-              : undefined,
-          target_lane_id: act.target_lane_id !== undefined ? act.target_lane_id : undefined,
-          target_lane_title: act.target_lane_title ? String(act.target_lane_title).trim() : undefined,
-          priority: parsedPriority,
-          due_date:
-            act.due_date !== undefined ? (act.due_date ? String(act.due_date).trim() : null) : undefined,
-          background:
-            act.background !== undefined
-              ? act.background
-                ? String(act.background).trim()
-                : null
-              : undefined
-        })
-      } else if (type === 'delete_item' && act.item_id !== undefined) {
-        let itemTitle = act.title ? String(act.title).trim() : undefined
-        if (!itemTitle) {
-          try {
-            const found = useItemsStore.getState().items.find((i) => i.id === Number(act.item_id))
-            itemTitle = found?.title || 'Untitled Task'
-          } catch {
-            itemTitle = 'Untitled Task'
-          }
+          const parsedOrder = resolveOrderValue(act)
+          const { targetLaneId, targetLaneTitle } = resolveTargetLane(act)
+
+          const isExplicitMove =
+            type === 'move_item' || targetLaneId !== undefined || targetLaneTitle !== undefined
+
+          validActions.push({
+            id: actId,
+            type: isExplicitMove ? 'move_item' : 'update_item',
+            item_id: itemRef.id,
+            old_title: act.old_title ? String(act.old_title).trim() : itemRef.title,
+            title: act.title && act.title.trim() !== itemRef.title ? String(act.title).trim() : undefined,
+            icon: act.icon !== undefined ? (act.icon ? String(act.icon).trim() : null) : undefined,
+            description:
+              act.description !== undefined
+                ? act.description
+                  ? String(act.description).trim()
+                  : null
+                : undefined,
+            target_lane_id: targetLaneId,
+            target_lane_title: targetLaneTitle,
+            priority: parsedPriority,
+            order: parsedOrder,
+            due_date:
+              act.due_date !== undefined ? (act.due_date ? String(act.due_date).trim() : null) : undefined,
+            background:
+              act.background !== undefined
+                ? act.background
+                  ? String(act.background).trim()
+                  : null
+                : undefined
+          })
         }
-        validActions.push({
-          id: actId,
-          type: 'delete_item',
-          item_id: Number(act.item_id),
-          title: itemTitle
-        })
-      } else if (type === 'delete_lane' && act.lane_id !== undefined) {
-        let laneTitle = act.title ? String(act.title).trim() : undefined
-        if (!laneTitle) {
-          try {
-            const found = useLanesStore.getState().lanes.find((l) => l.id === Number(act.lane_id))
-            laneTitle = found?.title || 'Untitled Column'
-          } catch {
-            laneTitle = 'Untitled Column'
-          }
+      } else if (type === 'delete_item') {
+        const itemRef = resolveItemReference(act)
+        if (itemRef) {
+          validActions.push({
+            id: actId,
+            type: 'delete_item',
+            item_id: itemRef.id,
+            title: act.title ? String(act.title).trim() : itemRef.title || 'Untitled Task'
+          })
         }
-        validActions.push({
-          id: actId,
-          type: 'delete_lane',
-          lane_id: Number(act.lane_id),
-          title: laneTitle
-        })
+      } else if (type === 'delete_lane') {
+        const laneRef = resolveLaneReference(act)
+        if (laneRef) {
+          validActions.push({
+            id: actId,
+            type: 'delete_lane',
+            lane_id: laneRef.id,
+            title: act.title ? String(act.title).trim() : laneRef.title || 'Untitled Column'
+          })
+        }
       }
     })
 

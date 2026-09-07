@@ -20,7 +20,9 @@ import {
   Columns,
   LayoutGrid,
   ListChecks,
-  Filter
+  Filter,
+  ArrowRight,
+  ArrowUpDown
 } from 'lucide-react'
 import { PRIORITY_CONFIG } from '@/components/items'
 import { executeBoardMutations } from '@/lib/ai/board-mutations'
@@ -191,18 +193,63 @@ export function AiMutationPreviewModal({
       if (action.description) detailsList.push(action.description)
       if (action.background) detailsList.push(`background: ${action.background}`)
       if (detailsList.length > 0) details = detailsList.join(' · ')
-    } else if (action.type === 'update_item') {
-      badgeClass = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-      icon = <Pencil className="size-3.5 text-amber-500" />
+    } else if (
+      action.type === 'move_item' ||
+      (action.type === 'update_item' && (action.target_lane_title || action.target_lane_id !== undefined))
+    ) {
+      badgeClass = 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
+      icon = <ArrowRight className="size-3.5 text-sky-500" />
       const existingItem = allItems.find((i) => i.id === action.item_id)
       const currentTitle = action.old_title || existingItem?.title || 'Untitled Task'
-      if (action.title && action.title.trim() !== currentTitle.trim()) {
-        title = `Rename Task: "${currentTitle}" → "${action.icon ? `${action.icon} ` : ''}${action.title}"`
-      } else {
-        title = `Update Task: "${action.icon ? `${action.icon} ` : ''}${action.title || currentTitle}"`
+      let destName = action.target_lane_title
+      if (!destName && action.target_lane_id !== undefined) {
+        destName = allLanes.find((l) => l.id === action.target_lane_id)?.title || 'Column'
       }
+      title = `Move Task: "${currentTitle}" → [${destName || 'Target Column'}]`
+
       const detailsList: string[] = []
-      if (action.target_lane_title) detailsList.push(`move to [${action.target_lane_title}]`)
+      const sourceLane = allLanes.find((l) => l.id === existingItem?.lane_id)
+      if (sourceLane?.title) detailsList.push(`from [${sourceLane.title}]`)
+      if (action.order !== undefined && action.order !== null) {
+        detailsList.push(`order: ${action.order}`)
+      }
+      if ('title' in action && action.title && action.title.trim() !== currentTitle.trim()) {
+        detailsList.push(`rename: "${action.title}"`)
+      }
+      if ('priority' in action && action.priority !== undefined && action.priority !== null) {
+        const pLabel = PRIORITY_CONFIG[action.priority as keyof typeof PRIORITY_CONFIG]?.label || 'None'
+        detailsList.push(`priority: ${pLabel}`)
+      }
+      if (detailsList.length > 0) details = detailsList.join(' · ')
+    } else if (action.type === 'update_item') {
+      const existingItem = allItems.find((i) => i.id === action.item_id)
+      const currentTitle = action.old_title || existingItem?.title || 'Untitled Task'
+      const isReorderOnly =
+        action.order !== undefined &&
+        !action.title &&
+        !action.description &&
+        !action.background &&
+        !action.priority &&
+        !action.due_date
+
+      if (isReorderOnly) {
+        badgeClass = 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
+        icon = <ArrowUpDown className="size-3.5 text-indigo-500" />
+        title = `Reorder Task: "${currentTitle}" → order: ${action.order}`
+      } else {
+        badgeClass = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+        icon = <Pencil className="size-3.5 text-amber-500" />
+        if (action.title && action.title.trim() !== currentTitle.trim()) {
+          title = `Rename Task: "${currentTitle}" → "${action.icon ? `${action.icon} ` : ''}${action.title}"`
+        } else {
+          title = `Update Task: "${action.icon ? `${action.icon} ` : ''}${action.title || currentTitle}"`
+        }
+      }
+
+      const detailsList: string[] = []
+      if (action.order !== undefined && action.order !== null && !isReorderOnly) {
+        detailsList.push(`order: ${action.order}`)
+      }
       if (action.priority !== undefined && action.priority !== null) {
         const pLabel = PRIORITY_CONFIG[action.priority as keyof typeof PRIORITY_CONFIG]?.label || 'None'
         detailsList.push(`priority: ${pLabel}`)

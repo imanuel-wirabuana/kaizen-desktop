@@ -35,6 +35,7 @@ export interface PreviewCardItem {
   icon?: string | null
   due_date?: string | null
   background?: string | null
+  order?: number | null
   diffStatus: PreviewDiffStatus
   actionId?: string
   isSelected?: boolean
@@ -115,7 +116,10 @@ export function AiKanbanPreviewBoard({
     const updateLaneMap = new Map<number, Extract<BoardMutationAction, { type: 'update_lane' }>>()
     const deleteLaneMap = new Map<number, Extract<BoardMutationAction, { type: 'delete_lane' }>>()
     const addItemActions: Extract<BoardMutationAction, { type: 'add_item' }>[] = []
-    const updateItemMap = new Map<number, Extract<BoardMutationAction, { type: 'update_item' }>>()
+    const updateItemMap = new Map<
+      number,
+      Extract<BoardMutationAction, { type: 'update_item' } | { type: 'move_item' }>
+    >()
     const deleteItemMap = new Map<number, Extract<BoardMutationAction, { type: 'delete_item' }>>()
 
     for (const act of actions) {
@@ -123,7 +127,8 @@ export function AiKanbanPreviewBoard({
       else if (act.type === 'update_lane') updateLaneMap.set(act.lane_id, act)
       else if (act.type === 'delete_lane') deleteLaneMap.set(act.lane_id, act)
       else if (act.type === 'add_item') addItemActions.push(act)
-      else if (act.type === 'update_item') updateItemMap.set(act.item_id, act)
+      else if (act.type === 'update_item' || act.type === 'move_item')
+        updateItemMap.set(act.item_id, act)
       else if (act.type === 'delete_item') deleteItemMap.set(act.item_id, act)
     }
 
@@ -229,6 +234,33 @@ export function AiKanbanPreviewBoard({
       return draftLane
     }
 
+    const cleanStringForMatch = (s: string) =>
+      s
+        .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+        .toLowerCase()
+        .trim()
+
+    const findTargetLane = (title: string | undefined): PreviewLaneItem | undefined => {
+      if (!title) return undefined
+      const trimmed = title.trim()
+      if (['draft', 'drafts', 'unassigned', 'inbox', 'draft column'].includes(trimmed.toLowerCase())) {
+        return getOrCreateDraftLane()
+      }
+      const direct = laneByTitleLower.get(trimmed.toLowerCase())
+      if (direct) return direct
+
+      const cleanSearch = cleanStringForMatch(trimmed)
+      for (const [t, lane] of laneByTitleLower.entries()) {
+        if (cleanStringForMatch(t) === cleanSearch) return lane
+      }
+      for (const [t, lane] of laneByTitleLower.entries()) {
+        if (cleanSearch.length > 2 && (cleanStringForMatch(t).includes(cleanSearch) || cleanSearch.includes(cleanStringForMatch(t)))) {
+          return lane
+        }
+      }
+      return undefined
+    }
+
     // Helper to find existing lane title
     const getLaneTitleById = (lId: number | null | undefined): string | undefined => {
       if (lId === null || lId === undefined) return 'Drafts'
@@ -248,6 +280,7 @@ export function AiKanbanPreviewBoard({
       let priority: number | null | undefined = item.priority ?? 0
       let due_date = item.due_date
       let background = item.background
+      let order: number | null | undefined = item.order
       let laneId: number | string | null = item.lane_id ?? null
       let actionId: string | undefined = undefined
       let isSelected = false
@@ -264,25 +297,40 @@ export function AiKanbanPreviewBoard({
         isSelected = selectedIds.has(updAct.id)
         if (isSelected) {
           diffStatus = 'updated'
-          if (updAct.title) title = updAct.title
-          if (updAct.icon !== undefined) icon = updAct.icon
-          if (updAct.description !== undefined) description = updAct.description
-          if (updAct.priority !== undefined) priority = updAct.priority
-          if (updAct.due_date !== undefined) due_date = updAct.due_date
-          if (updAct.background !== undefined) background = updAct.background
+          if ('title' in updAct && updAct.title) title = updAct.title
+          if ('icon' in updAct && updAct.icon !== undefined) icon = updAct.icon
+          if ('description' in updAct && updAct.description !== undefined)
+            description = updAct.description
+          if ('priority' in updAct && updAct.priority !== undefined) priority = updAct.priority
+          if ('due_date' in updAct && updAct.due_date !== undefined) due_date = updAct.due_date
+          if ('background' in updAct && updAct.background !== undefined)
+            background = updAct.background
 
           // Check if item moved to another lane
+          let isMoved = false
           if (updAct.target_lane_id !== undefined) {
             const oldLaneTitle = getLaneTitleById(item.lane_id)
             laneId = updAct.target_lane_id
             movedFromLaneTitle = oldLaneTitle
+            isMoved = true
           } else if (updAct.target_lane_title) {
-            const targetMatchedLane = laneByTitleLower.get(updAct.target_lane_title.toLowerCase().trim())
+            const targetMatchedLane = findTargetLane(updAct.target_lane_title)
             if (targetMatchedLane) {
               const oldLaneTitle = getLaneTitleById(item.lane_id)
-              laneId = targetMatchedLane.id
+              laneId = targetMatchedLane.isVirtual ? null : targetMatchedLane.id
               movedFromLaneTitle = oldLaneTitle
+              isMoved = true
             }
+          }
+
+          if (updAct.order === 'top') {
+            order = 10
+          } else if (updAct.order === 'bottom') {
+            order = 9999
+          } else if (typeof updAct.order === 'number') {
+            order = updAct.order
+          } else if (isMoved) {
+            order = 9999 // Default moved items to bottom of column
           }
         }
       }
@@ -297,6 +345,7 @@ export function AiKanbanPreviewBoard({
         priority,
         due_date,
         background,
+        order,
         diffStatus,
         actionId,
         isSelected,
@@ -324,7 +373,7 @@ export function AiKanbanPreviewBoard({
       if (act.lane_id !== undefined && act.lane_id !== null) {
         targetLane = laneById.get(String(act.lane_id))
       } else if (act.lane_title) {
-        targetLane = laneByTitleLower.get(act.lane_title.toLowerCase().trim())
+        targetLane = findTargetLane(act.lane_title)
       }
 
       if (!targetLane && resultLanes.length > 0) {
@@ -341,6 +390,7 @@ export function AiKanbanPreviewBoard({
         priority: act.priority ?? 0,
         due_date: act.due_date ?? null,
         background: act.background ?? null,
+        order: act.order !== undefined && act.order !== null ? act.order : 9999,
         diffStatus: 'added',
         actionId: act.id,
         isSelected,
@@ -357,6 +407,11 @@ export function AiKanbanPreviewBoard({
     // If draft lane was created and has items, prepend or append it
     if (draftLane && (draftLane as PreviewLaneItem).items.length > 0) {
       resultLanes.push(draftLane)
+    }
+
+    // Sort items within each lane according to their order
+    for (const lane of resultLanes) {
+      lane.items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     }
 
     return resultLanes
@@ -721,7 +776,21 @@ export function AiKanbanPreviewCard({
             </span>
           )}
 
-          {item.diffStatus === 'updated' && (
+          {item.diffStatus === 'updated' && item.movedFromLaneTitle && (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[9px] font-bold border',
+                item.isSelected
+                  ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30'
+                  : 'bg-muted text-muted-foreground border-border'
+              )}
+            >
+              <ArrowRight className="size-2.5" />
+              {item.isSelected ? `Moved from [${item.movedFromLaneTitle}]` : '(Skipped Move)'}
+            </span>
+          )}
+
+          {item.diffStatus === 'updated' && !item.movedFromLaneTitle && (
             <span
               className={cn(
                 'inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[9px] font-bold border',

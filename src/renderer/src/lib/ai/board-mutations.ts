@@ -47,6 +47,33 @@ export async function executeBoardMutations(
     }
   }
 
+  const cleanStringForMatch = (s: string) =>
+    s
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+      .toLowerCase()
+      .trim()
+
+  const resolveLaneIdFromTitle = (title: string | undefined): number | null | undefined => {
+    if (!title) return undefined
+    const trimmed = title.trim()
+    if (['draft', 'drafts', 'unassigned', 'inbox', 'draft column'].includes(trimmed.toLowerCase())) {
+      return null
+    }
+    const exact = laneTitleToId.get(trimmed.toLowerCase())
+    if (exact !== undefined) return exact
+
+    const cleanSearch = cleanStringForMatch(trimmed)
+    for (const [t, id] of laneTitleToId.entries()) {
+      if (cleanStringForMatch(t) === cleanSearch) return id
+    }
+    for (const [t, id] of laneTitleToId.entries()) {
+      if (cleanSearch.length > 2 && (cleanStringForMatch(t).includes(cleanSearch) || cleanSearch.includes(cleanStringForMatch(t)))) {
+        return id
+      }
+    }
+    return undefined
+  }
+
   // -------------------------------------------------------------
   // PHASE 1: Bulk Add New Lanes (Single Request)
   // -------------------------------------------------------------
@@ -108,6 +135,27 @@ export async function executeBoardMutations(
     })
   }
 
+  // Fetch current items on the board to track per-lane orders
+  const allBoardItems = useItemsStore
+    .getState()
+    .items.filter((i) => String(i.board_id) === String(targetBoardId))
+
+  const maxOrderPerLane = new Map<number | null, number>()
+  const minOrderPerLane = new Map<number | null, number>()
+
+  for (const item of allBoardItems) {
+    const lId = item.lane_id ?? null
+    const ord = item.order ?? 0
+    const curMax = maxOrderPerLane.get(lId)
+    if (curMax === undefined || ord > curMax) {
+      maxOrderPerLane.set(lId, ord)
+    }
+    const curMin = minOrderPerLane.get(lId)
+    if (curMin === undefined || ord < curMin) {
+      minOrderPerLane.set(lId, ord)
+    }
+  }
+
   // -------------------------------------------------------------
   // PHASE 3: Bulk Add Items (Single Request)
   // -------------------------------------------------------------
@@ -120,11 +168,16 @@ export async function executeBoardMutations(
         if (act.lane_id !== undefined) {
           resolvedLaneId = act.lane_id
         } else if (act.lane_title) {
-          const found = laneTitleToId.get(act.lane_title.toLowerCase().trim())
-          if (found !== undefined) {
-            resolvedLaneId = found
-          }
+          resolvedLaneId = resolveLaneIdFromTitle(act.lane_title) ?? null
         }
+
+        const currentLaneMax = maxOrderPerLane.get(resolvedLaneId) ?? 0
+        const calculatedOrder =
+          act.order !== undefined && act.order !== null
+            ? act.order
+            : currentLaneMax + (idx + 1) * 100
+
+        maxOrderPerLane.set(resolvedLaneId, Math.max(currentLaneMax, calculatedOrder))
 
         return {
           board_id: targetBoardId,
@@ -135,7 +188,7 @@ export async function executeBoardMutations(
           priority: act.priority ?? 0,
           due_date: act.due_date ?? null,
           background: act.background ?? null,
-          order: (idx + 1) * 100
+          order: calculatedOrder
         }
       })
 
@@ -147,26 +200,64 @@ export async function executeBoardMutations(
   }
 
   // -------------------------------------------------------------
-  // PHASE 4: Concurrent Update Items
+  // PHASE 4: Concurrent Update / Move Items
   // -------------------------------------------------------------
-  const updateItemActions = actions.filter((a) => a.type === 'update_item')
+  const updateItemActions = actions.filter(
+    (a) => a.type === 'update_item' || a.type === 'move_item'
+  )
   if (updateItemActions.length > 0) {
     const updatesList = updateItemActions.map((act) => {
       const data: Partial<KanbanItem> = {}
-      if (act.title !== undefined) data.title = act.title
-      if (act.icon !== undefined) data.icon = act.icon
-      if (act.description !== undefined) data.description = act.description
-      if (act.priority !== undefined) data.priority = act.priority
-      if (act.due_date !== undefined) data.due_date = act.due_date
-      if (act.background !== undefined) data.background = act.background
+      if ('title' in act && act.title !== undefined) data.title = act.title
+      if ('icon' in act && act.icon !== undefined) data.icon = act.icon
+      if ('description' in act && act.description !== undefined) data.description = act.description
+      if ('priority' in act && act.priority !== undefined) data.priority = act.priority
+      if ('due_date' in act && act.due_date !== undefined) data.due_date = act.due_date
+      if ('background' in act && act.background !== undefined) data.background = act.background
 
+      // Resolve destination lane ID
+      let resolvedLaneId: number | null | undefined = undefined
       if (act.target_lane_id !== undefined) {
-        data.lane_id = act.target_lane_id
+        resolvedLaneId = act.target_lane_id
       } else if (act.target_lane_title) {
-        const found = laneTitleToId.get(act.target_lane_title.toLowerCase().trim())
-        if (found !== undefined) {
-          data.lane_id = found
+        resolvedLaneId = resolveLaneIdFromTitle(act.target_lane_title)
+      }
+
+      if (resolvedLaneId !== undefined) {
+        data.lane_id = resolvedLaneId
+      }
+
+      // Existing task state
+      const currentTask = allBoardItems.find((i) => i.id === act.item_id)
+      const isLaneChange =
+        resolvedLaneId !== undefined &&
+        (currentTask ? currentTask.lane_id !== resolvedLaneId : true)
+      const targetLane =
+        resolvedLaneId !== undefined ? resolvedLaneId : (currentTask?.lane_id ?? null)
+
+      // Calculate order
+      if (act.order === 'top') {
+        const curMin = minOrderPerLane.get(targetLane) ?? 100
+        const newOrder = curMin > 10 ? curMin - 100 : Math.max(1, Math.floor(curMin / 2))
+        minOrderPerLane.set(targetLane, newOrder)
+        data.order = newOrder
+      } else if (act.order === 'bottom') {
+        const curMax = maxOrderPerLane.get(targetLane) ?? 0
+        const newOrder = curMax + 100
+        maxOrderPerLane.set(targetLane, newOrder)
+        data.order = newOrder
+      } else if (typeof act.order === 'number') {
+        data.order = act.order
+        const curMax = maxOrderPerLane.get(targetLane) ?? 0
+        if (act.order > curMax) {
+          maxOrderPerLane.set(targetLane, act.order)
         }
+      } else if (isLaneChange) {
+        // Default when moving to a new column without explicit order: append to bottom
+        const curMax = maxOrderPerLane.get(targetLane) ?? 0
+        const newOrder = curMax + 100
+        maxOrderPerLane.set(targetLane, newOrder)
+        data.order = newOrder
       }
 
       return {
