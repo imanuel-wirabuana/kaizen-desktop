@@ -11,7 +11,8 @@ import {
   HelpCircle,
   Square,
   Maximize2,
-  Minimize2
+  Minimize2,
+  ChevronDown
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { streamKaizenChat } from '@/lib/ai/ai-provider'
@@ -57,6 +58,7 @@ export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiS
 
   const [input, setInput] = useState('')
   const [streamingText, setStreamingText] = useState<string | null>(null)
+  const [showScrollBottom, setShowScrollBottom] = useState(false)
   const messagesScrollRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -87,7 +89,29 @@ export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiS
         container.scrollHeight - container.scrollTop - container.clientHeight < 160
       if (force || isNearBottom) {
         container.scrollTop = container.scrollHeight
+        setShowScrollBottom(false)
       }
+    }
+  }
+
+  // Smooth scroll to bottom triggered by floating button
+  const handleScrollToBottomSmooth = () => {
+    if (messagesScrollRef.current) {
+      messagesScrollRef.current.scrollTo({
+        top: messagesScrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
+      setShowScrollBottom(false)
+    }
+  }
+
+  // Scroll listener to toggle floating button visibility
+  const handleScroll = () => {
+    if (messagesScrollRef.current) {
+      const container = messagesScrollRef.current
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight
+      setShowScrollBottom(distanceFromBottom > 120 && messages.length > 0)
     }
   }
 
@@ -104,6 +128,7 @@ export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiS
       }
       setIsGenerating(false)
       setStreamingText(null)
+      setShowScrollBottom(false)
     }
   }, [boardId, setIsGenerating])
 
@@ -309,6 +334,7 @@ export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiS
           {/* Messages Scroll Area */}
           <div
             ref={messagesScrollRef}
+            onScroll={handleScroll}
             className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3 custom-scrollbar"
           >
             <div className={cn('space-y-3', isFullScreen && 'max-w-4xl mx-auto w-full px-2 sm:px-4 py-2')}>
@@ -462,7 +488,22 @@ export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiS
           </div>
 
           {/* Input Footer */}
-          <div className="p-2.5 border-t bg-muted/20 shrink-0">
+          <div className="p-2.5 border-t bg-muted/20 shrink-0 relative">
+            {/* Floating Scroll to Bottom Pill */}
+            {showScrollBottom && (
+              <div className="absolute -top-9 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={handleScrollToBottomSmooth}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-background/95 hover:bg-card border border-border/80 shadow-md hover:shadow-lg text-xs text-muted-foreground hover:text-foreground hover:border-primary/50 backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer animate-in fade-in slide-in-from-bottom-2 select-none group"
+                  title="Scroll to bottom"
+                >
+                  <ChevronDown className="size-3.5 text-primary group-hover:translate-y-0.5 transition-transform" />
+                  <span className="text-[10px] font-semibold tracking-tight">Scroll to bottom</span>
+                </button>
+              </div>
+            )}
+
             <div className={cn(isFullScreen && 'max-w-4xl mx-auto w-full px-2 sm:px-4')}>
               <div className="flex flex-col gap-1.5 rounded-xl border bg-card p-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all shadow-2xs">
                 <textarea
