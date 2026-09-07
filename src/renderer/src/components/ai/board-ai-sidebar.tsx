@@ -21,6 +21,8 @@ import {
 } from '@/lib/ai/ai-tools'
 import { useBoardAiStore, BoardAiMessage } from '@/stores/board-ai'
 import { AiProposalCard } from './ai-proposal-card'
+import { AiMarkdown } from './ai-markdown'
+
 
 interface BoardAiSidebarProps {
   board: Board | null
@@ -278,9 +280,10 @@ export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
                   )}
                 >
                   {msg.content && (
-                    <div className="whitespace-pre-wrap select-text leading-relaxed">
-                      {msg.content}
-                    </div>
+                    <AiMarkdown
+                      content={msg.content}
+                      isUser={msg.role === 'user'}
+                    />
                   )}
 
                   {/* Proposal Card if emitted */}

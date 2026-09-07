@@ -28,6 +28,7 @@
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
     "@supabase/supabase-js": "^2.49.1",
+    "@tanstack/markdown": "^0.0.13",
     "ai": "^7.0.93",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
