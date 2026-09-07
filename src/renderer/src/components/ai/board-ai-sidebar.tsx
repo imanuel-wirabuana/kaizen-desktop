@@ -55,6 +55,7 @@ export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiS
   const addMessage = useBoardAiStore((s) => s.addMessage)
   const clearBoardChat = useBoardAiStore((s) => s.clearBoardChat)
   const openPreviewModal = useBoardAiStore((s) => s.openPreviewModal)
+  const hasHydrated = useBoardAiStore((s) => s.hasHydrated)
 
   const [input, setInput] = useState('')
   const [streamingText, setStreamingText] = useState<string | null>(null)
@@ -338,7 +339,12 @@ export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiS
             className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3 custom-scrollbar"
           >
             <div className={cn('space-y-3', isFullScreen && 'max-w-4xl mx-auto w-full px-2 sm:px-4 py-2')}>
-              {messages.length === 0 && !isGenerating ? (
+              {!hasHydrated ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
+                  <Loader2 className="size-5 animate-spin text-primary" />
+                  <span className="text-xs font-medium">Loading chat history...</span>
+                </div>
+              ) : messages.length === 0 && !isGenerating ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-2 py-8 space-y-3">
                   <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs">
                     <Bot className="size-6" />

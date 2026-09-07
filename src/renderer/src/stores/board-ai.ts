@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type { BoardMutationProposal } from '@/lib/ai/ai-tools'
+import { aiChatIndexedDbStorage } from '@/lib/ai/ai-chat-db'
 
 export interface BoardAiMessage {
   id: string
@@ -18,6 +19,8 @@ interface BoardAiState {
   isGenerating: boolean
   activeProposal: BoardMutationProposal | null
   chatsByBoard: Record<string, BoardAiMessage[]>
+  hasHydrated: boolean
+  setHasHydrated: (val: boolean) => void
 
   // Sidebar controls
   toggleSidebar: () => void
@@ -51,6 +54,8 @@ export const useBoardAiStore = create<BoardAiState>()(
       isGenerating: false,
       activeProposal: null,
       chatsByBoard: {},
+      hasHydrated: false,
+      setHasHydrated: (val) => set({ hasHydrated: val }),
 
       toggleSidebar: () => set((state) => ({ isOpen: !state.isOpen })),
       openSidebar: () => set({ isOpen: true }),
@@ -127,9 +132,40 @@ export const useBoardAiStore = create<BoardAiState>()(
     }),
     {
       name: 'kaizen_board_ai_chats',
+      storage: createJSONStorage(() => aiChatIndexedDbStorage),
       partialize: (state) => ({
         chatsByBoard: state.chatsByBoard
-      })
+      }),
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState as Partial<BoardAiState>) || {}
+        const mergedChats: Record<string, BoardAiMessage[]> = {
+          ...(persisted.chatsByBoard || {})
+        }
+
+        if (currentState.chatsByBoard) {
+          for (const [boardId, currentMsgs] of Object.entries(currentState.chatsByBoard)) {
+            const persistedMsgs = mergedChats[boardId] || []
+            const existingIds = new Set(persistedMsgs.map((m) => m.id))
+            const newMsgs = currentMsgs.filter((m) => !existingIds.has(m.id))
+            mergedChats[boardId] = [...persistedMsgs, ...newMsgs]
+          }
+        }
+
+        return {
+          ...currentState,
+          ...persisted,
+          chatsByBoard: mergedChats,
+          hasHydrated: true
+        }
+      },
+      onRehydrateStorage: () => {
+        return (_state, error) => {
+          if (error) {
+            console.error('[AI Chat] Failed to rehydrate chats from IndexedDB:', error)
+          }
+          useBoardAiStore.setState({ hasHydrated: true })
+        }
+      }
     }
   )
 )
