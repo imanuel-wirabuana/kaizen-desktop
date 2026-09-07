@@ -4,13 +4,27 @@ import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
 import { broadcastSyncEvent } from '@/lib/realtime'
 
+export type ParsedImportItem = {
+  title?: string | null
+  icon?: string | null
+  description?: string | null
+  priority?: number | null
+  due_date?: string | null
+  background?: string | null
+}
+
+export type ParsedImportLane = {
+  title?: string | null
+  icon?: string | null
+  description?: string | null
+  background?: string | null
+  items: ParsedImportItem[]
+}
+
 export type ParsedImportData = {
   format: 'JSON' | 'CSV'
   boardTitle?: string
-  lanes: {
-    title: string
-    items: string[]
-  }[]
+  lanes: ParsedImportLane[]
 }
 
 /**
@@ -28,14 +42,23 @@ export function exportBoardToJson(_board: Board, lanes: Lane[], items: KanbanIte
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
     return {
-      lane: lane.title || (lane.id === null ? 'Draft' : 'Untitled Column'),
+      title: lane.title || (lane.id === null ? 'Draft' : 'Untitled Column'),
+      icon: lane.icon || null,
+      description: lane.description || null,
+      background: lane.background || null,
       items: laneItems.map((item) => ({
-        item: item.title || 'Untitled Task'
+        title: item.title || 'Untitled Task',
+        icon: item.icon || null,
+        description: item.description || null,
+        priority: item.priority ?? null,
+        due_date: item.due_date || null,
+        background: item.background || null
       }))
     }
   })
 
   const exportObj = {
+    board: _board?.title,
     lanes: lanesData
   }
 
@@ -103,13 +126,49 @@ export function parseBoardImportText(text: string): ParsedImportData {
       const boardTitle = json.board || json.title || undefined
       const rawLanes = Array.isArray(json.lanes) ? json.lanes : Array.isArray(json) ? json : []
 
-      const lanes = rawLanes.map((l: any, idx: number) => {
-        const laneTitle = typeof l === 'string' ? l : l.lane || l.title || l.name || `Column ${idx + 1}`
+      const lanes: ParsedImportLane[] = rawLanes.map((l: any, idx: number) => {
+        const laneTitle = typeof l === 'string' ? l : l.title || l.lane || l.name || `Column ${idx + 1}`
+        const laneIcon = typeof l === 'object' && l ? (l.icon ?? null) : null
+        const laneDesc = typeof l === 'object' && l ? (l.description ?? null) : null
+        const laneBg = typeof l === 'object' && l ? (l.background ?? null) : null
+
         const rawItems = Array.isArray(l.items) ? l.items : []
-        const items = rawItems.map((i: any) =>
-          typeof i === 'string' ? i : i.item || i.title || i.name || 'Untitled Task'
-        )
-        return { title: laneTitle, items }
+        const items: ParsedImportItem[] = rawItems.map((i: any) => {
+          if (typeof i === 'string') {
+            return {
+              title: i,
+              icon: null,
+              description: null,
+              priority: null,
+              due_date: null,
+              background: null
+            }
+          }
+          const itemTitle = i?.title || i?.item || i?.name || 'Untitled Task'
+          let parsedPriority: number | null = null
+          if (typeof i?.priority === 'number') {
+            parsedPriority = i.priority
+          } else if (i?.priority !== undefined && i?.priority !== null && !isNaN(Number(i.priority))) {
+            parsedPriority = Number(i.priority)
+          }
+
+          return {
+            title: itemTitle,
+            icon: i?.icon ?? null,
+            description: i?.description ?? null,
+            priority: parsedPriority,
+            due_date: i?.due_date ?? null,
+            background: i?.background ?? null
+          }
+        })
+
+        return {
+          title: laneTitle,
+          icon: laneIcon,
+          description: laneDesc,
+          background: laneBg,
+          items
+        }
       })
 
       return { format: 'JSON', boardTitle, lanes }
@@ -164,9 +223,19 @@ export function parseBoardImportText(text: string): ParsedImportData {
     }
   }
 
-  const lanes = laneTitles.map((title, idx) => ({
+  const lanes: ParsedImportLane[] = laneTitles.map((title, idx) => ({
     title: title || `Column ${idx + 1}`,
-    items: laneItemsMap[idx]
+    icon: null,
+    description: null,
+    background: null,
+    items: laneItemsMap[idx].map((itemTitle) => ({
+      title: itemTitle,
+      icon: null,
+      description: null,
+      priority: null,
+      due_date: null,
+      background: null
+    }))
   }))
 
   return {
@@ -193,6 +262,9 @@ export async function importContentIntoBoard(
     const createdLane = await createLane({
       board_id: targetBoardId,
       title: laneData.title || `Column ${lIdx + 1}`,
+      icon: laneData.icon ?? undefined,
+      description: laneData.description ?? undefined,
+      background: laneData.background ?? undefined,
       order: startLaneOrder + lIdx * 100
     })
 
@@ -201,12 +273,18 @@ export async function importContentIntoBoard(
     }
 
     for (let iIdx = 0; iIdx < laneData.items.length; iIdx++) {
-      const itemTitle = laneData.items[iIdx]
+      const itemData = laneData.items[iIdx]
+      const itemTitle = itemData?.title
       if (itemTitle && itemTitle.trim()) {
         const createdItem = await createItem({
           board_id: targetBoardId,
           lane_id: createdLane.id,
           title: itemTitle.trim(),
+          icon: itemData.icon ?? undefined,
+          description: itemData.description ?? undefined,
+          priority: itemData.priority ?? undefined,
+          due_date: itemData.due_date ?? undefined,
+          background: itemData.background ?? undefined,
           order: (iIdx + 1) * 100
         })
         if (!createdItem) {

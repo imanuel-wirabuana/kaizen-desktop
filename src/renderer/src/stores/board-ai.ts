@@ -13,6 +13,7 @@ export interface BoardAiMessage {
 
 interface BoardAiState {
   isOpen: boolean
+  isFullScreen: boolean
   isPreviewOpen: boolean
   isGenerating: boolean
   activeProposal: BoardMutationProposal | null
@@ -22,6 +23,8 @@ interface BoardAiState {
   toggleSidebar: () => void
   openSidebar: () => void
   closeSidebar: () => void
+  toggleFullScreen: () => void
+  setIsFullScreen: (val: boolean) => void
 
   // Chat message management
   getBoardMessages: (boardId: string | number) => BoardAiMessage[]
@@ -43,6 +46,7 @@ export const useBoardAiStore = create<BoardAiState>()(
   persist(
     (set, get) => ({
       isOpen: false,
+      isFullScreen: false,
       isPreviewOpen: false,
       isGenerating: false,
       activeProposal: null,
@@ -50,7 +54,9 @@ export const useBoardAiStore = create<BoardAiState>()(
 
       toggleSidebar: () => set((state) => ({ isOpen: !state.isOpen })),
       openSidebar: () => set({ isOpen: true }),
-      closeSidebar: () => set({ isOpen: false }),
+      closeSidebar: () => set({ isOpen: false, isFullScreen: false }),
+      toggleFullScreen: () => set((state) => ({ isFullScreen: !state.isFullScreen })),
+      setIsFullScreen: (val) => set({ isFullScreen: val }),
 
       getBoardMessages: (boardId) => {
         const key = String(boardId)

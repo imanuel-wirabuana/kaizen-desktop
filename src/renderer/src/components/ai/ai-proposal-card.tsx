@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Sparkles, Check, ChevronRight, PlusCircle, Pencil, Trash2 } from 'lucide-react'
+import { useItemsStore } from '@/stores/items'
+import { useLanesStore } from '@/stores/lanes'
 import type { BoardMutationProposal } from '@/lib/ai/ai-tools'
 
 interface AiProposalCardProps {
@@ -10,6 +12,8 @@ interface AiProposalCardProps {
 
 export function AiProposalCard({ proposal, applied, onReview }: AiProposalCardProps) {
   const actions = proposal.actions || []
+  const allItems = useItemsStore((s) => s.items)
+  const allLanes = useLanesStore((s) => s.lanes)
 
   let added = 0
   let updated = 0
@@ -66,21 +70,29 @@ export function AiProposalCard({ proposal, applied, onReview }: AiProposalCardPr
             let label = ''
 
             if (act.type === 'add_lane') {
-              label = `+ Column "${act.title}"`
+              label = `+ Column "${act.title || 'Untitled Column'}"`
             } else if (act.type === 'add_item') {
-              label = `+ Task "${act.title}"`
+              label = `+ Task "${act.title || 'Untitled Task'}"`
             } else if (act.type === 'update_lane') {
               icon = <Pencil className="size-3 text-amber-500" />
-              label = `~ Column "${act.title}"`
+              const existingLane = allLanes.find((l) => l.id === act.lane_id)
+              const laneTitle = act.title || act.old_title || existingLane?.title || 'Untitled Column'
+              label = `~ Column "${laneTitle}"`
             } else if (act.type === 'update_item') {
               icon = <Pencil className="size-3 text-amber-500" />
-              label = `~ Task "${act.title || '#' + act.item_id}"`
+              const existingItem = allItems.find((i) => i.id === act.item_id)
+              const taskTitle = act.title || act.old_title || existingItem?.title || 'Untitled Task'
+              label = `~ Task "${taskTitle}"`
             } else if (act.type === 'delete_item') {
               icon = <Trash2 className="size-3 text-rose-500" />
-              label = `- Task "${act.title || '#' + act.item_id}"`
+              const existingItem = allItems.find((i) => i.id === act.item_id)
+              const taskTitle = act.title || existingItem?.title || 'Untitled Task'
+              label = `- Task "${taskTitle}"`
             } else if (act.type === 'delete_lane') {
               icon = <Trash2 className="size-3 text-rose-500" />
-              label = `- Column "${act.title || '#' + act.lane_id}"`
+              const existingLane = allLanes.find((l) => l.id === act.lane_id)
+              const laneTitle = act.title || existingLane?.title || 'Untitled Column'
+              label = `- Column "${laneTitle}"`
             }
 
             return (

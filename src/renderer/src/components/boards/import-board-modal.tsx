@@ -47,8 +47,18 @@ export function ImportBoardModal({
             {
               board: initialData.boardTitle,
               lanes: initialData.lanes.map((l) => ({
-                lane: l.title,
-                items: l.items.map((i) => ({ item: i }))
+                title: l.title,
+                icon: l.icon,
+                description: l.description,
+                background: l.background,
+                items: l.items.map((i) => ({
+                  title: i.title,
+                  icon: i.icon,
+                  description: i.description,
+                  priority: i.priority,
+                  due_date: i.due_date,
+                  background: i.background
+                }))
               }))
             },
             null,

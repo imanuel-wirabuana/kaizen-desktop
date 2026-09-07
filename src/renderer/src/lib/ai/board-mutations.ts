@@ -56,6 +56,9 @@ export async function executeBoardMutations(
       const lanePayloads = addLaneActions.map((act, idx) => ({
         board_id: targetBoardId,
         title: act.title,
+        icon: act.icon ?? null,
+        description: act.description ?? null,
+        background: act.background ?? null,
         order: maxLaneOrder + idx * 100
       }))
 
@@ -79,9 +82,17 @@ export async function executeBoardMutations(
   const updateLaneActions = actions.filter((a) => a.type === 'update_lane')
   if (updateLaneActions.length > 0) {
     const laneUpdatePromises = updateLaneActions.map(async (act) => {
-      const res = await updateLane(act.lane_id, { title: act.title })
+      const updateData: Partial<Lane> = {}
+      if (act.title !== undefined) updateData.title = act.title
+      if (act.icon !== undefined) updateData.icon = act.icon
+      if (act.description !== undefined) updateData.description = act.description
+      if (act.background !== undefined) updateData.background = act.background
+
+      const res = await updateLane(act.lane_id, updateData)
       if (res) {
-        laneTitleToId.set(act.title.toLowerCase().trim(), act.lane_id)
+        if (act.title) {
+          laneTitleToId.set(act.title.toLowerCase().trim(), act.lane_id)
+        }
         return true
       }
       return false
@@ -92,7 +103,7 @@ export async function executeBoardMutations(
       if (r.status === 'fulfilled' && r.value) {
         appliedCount++
       } else {
-        errors.push(`Failed to rename column #${updateLaneActions[idx].lane_id}`)
+        errors.push(`Failed to update column #${updateLaneActions[idx].lane_id}`)
       }
     })
   }
@@ -119,8 +130,11 @@ export async function executeBoardMutations(
           board_id: targetBoardId,
           lane_id: resolvedLaneId,
           title: act.title,
+          icon: act.icon ?? null,
           description: act.description ?? null,
           priority: act.priority ?? 0,
+          due_date: act.due_date ?? null,
+          background: act.background ?? null,
           order: (idx + 1) * 100
         }
       })
@@ -140,8 +154,11 @@ export async function executeBoardMutations(
     const updatesList = updateItemActions.map((act) => {
       const data: Partial<KanbanItem> = {}
       if (act.title !== undefined) data.title = act.title
+      if (act.icon !== undefined) data.icon = act.icon
       if (act.description !== undefined) data.description = act.description
       if (act.priority !== undefined) data.priority = act.priority
+      if (act.due_date !== undefined) data.due_date = act.due_date
+      if (act.background !== undefined) data.background = act.background
 
       if (act.target_lane_id !== undefined) {
         data.lane_id = act.target_lane_id

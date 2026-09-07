@@ -37,9 +37,16 @@ export function getBoardBackgroundStyleAndClass(background?: string | null): Boa
     }
   }
 
-  // 2. Direct CSS Color or Gradient (#hex, rgb(), hsl(), linear-gradient())
+  // 2. Direct CSS Color or Gradient (#hex, rgb(), hsl(), linear-gradient(), or named colors)
   const isCssValue =
-    /^(#|rgb|rgba|hsl|hsla|var|linear-gradient|radial-gradient|conic-gradient)/i.test(bg)
+    /^(#|rgb|rgba|hsl|hsla|var|linear-gradient|radial-gradient|conic-gradient)/i.test(bg) ||
+    /^(red|blue|green|yellow|orange|purple|violet|indigo|pink|emerald|teal|cyan|slate|zinc|amber|rose|black|white|gray|grey)$/i.test(
+      bg
+    ) ||
+    (typeof CSS !== 'undefined' &&
+      typeof CSS.supports === 'function' &&
+      CSS.supports('color', bg) &&
+      !bg.includes(' '))
 
   if (isCssValue) {
     return {
