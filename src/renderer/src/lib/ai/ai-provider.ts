@@ -2,15 +2,31 @@ import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModel } from 'ai'
 
 export const AI_BASE_URL = 'https://imanuelcdw-dawra.hf.space/v1'
-export const AI_API_KEY = 'sk-6bfffd4f7d73aaad-b8j4vt-d126e60c'
+
+export const AI_API_KEYS = [
+  'sk-6bfffd4f7d73aaad-b8j4vt-d126e60c',
+  'sk-6bfffd4f7d73aaad-oo2jsg-4181a2f8',
+  'sk-6bfffd4f7d73aaad-w2kegj-45bed3fa',
+  'sk-6bfffd4f7d73aaad-qn3jag-39cfde90',
+  'sk-6bfffd4f7d73aaad-zdo4cf-ddd5b512'
+] as const
+
+/**
+ * Returns a randomly selected AI API key from the key pool.
+ */
+export function getRandomApiKey(): string {
+  const index = Math.floor(Math.random() * AI_API_KEYS.length)
+  return AI_API_KEYS[index]
+}
+
+export const AI_API_KEY = AI_API_KEYS[0]
 export const AI_MODEL_NAME = 'kaizen'
 
-const customOpenAi = createOpenAI({
-  baseURL: AI_BASE_URL,
-  apiKey: AI_API_KEY
-})
-
 export function getLanguageModel(): LanguageModel {
+  const customOpenAi = createOpenAI({
+    baseURL: AI_BASE_URL,
+    apiKey: getRandomApiKey()
+  })
   return customOpenAi(AI_MODEL_NAME)
 }
 
@@ -42,11 +58,13 @@ export async function streamKaizenChat({
   }
   formattedMessages.push(...messages)
 
+  const selectedKey = getRandomApiKey()
+
   const response = await fetch(`${AI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${AI_API_KEY}`
+      Authorization: `Bearer ${selectedKey}`
     },
     body: JSON.stringify({
       model: AI_MODEL_NAME,
