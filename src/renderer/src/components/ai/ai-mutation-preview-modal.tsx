@@ -281,7 +281,14 @@ export function AiMutationPreviewModal({
             </span>
             <span className="font-semibold text-foreground truncate">{title}</span>
           </div>
-          {details && <p className="text-[11px] text-muted-foreground pl-0.5">{details}</p>}
+          {details && (
+            <p
+              className="text-[11px] text-muted-foreground pl-0.5 break-words line-clamp-2 leading-relaxed"
+              title={details}
+            >
+              {details}
+            </p>
+          )}
         </div>
       </div>
     )

@@ -16,12 +16,17 @@ import {
 import { cn } from '@/lib/utils'
 import { streamKaizenChat } from '@/lib/ai/ai-provider'
 import {
-  buildSystemPrompt,
   extractProposalFromContent,
   cleanContentForDisplay,
   splitStreamingContent,
   BoardMutationProposal
 } from '@/lib/ai/ai-tools'
+import {
+  buildSystemPrompt,
+  QUICK_SUGGESTIONS_EDIT,
+  QUICK_SUGGESTIONS_VIEW,
+  type BoardPermissionRole
+} from '@/lib/ai/ai-prompts'
 import { useBoardAiStore, BoardAiMessage } from '@/stores/board-ai'
 import { AiProposalCard } from './ai-proposal-card'
 import { AiMarkdown } from './ai-markdown'
@@ -30,17 +35,15 @@ interface BoardAiSidebarProps {
   board: Board | null
   lanes: Lane[]
   items: KanbanItem[]
+  permissionRole?: BoardPermissionRole
 }
-
-const QUICK_SUGGESTIONS = [
-  'Break this board into a 4-stage sprint workflow',
-  'Rename column or move tasks between lanes',
-  'Add testing tasks and clean up completed items'
-]
 
 const EMPTY_MESSAGES: BoardAiMessage[] = []
 
-export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
+export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiSidebarProps) {
+  const isReadOnly = permissionRole === 'view'
+  const activeSuggestions = isReadOnly ? QUICK_SUGGESTIONS_VIEW : QUICK_SUGGESTIONS_EDIT
+
   const isOpen = useBoardAiStore((s) => s.isOpen)
   const isFullScreen = useBoardAiStore((s) => s.isFullScreen)
   const toggleFullScreen = useBoardAiStore((s) => s.toggleFullScreen)
@@ -148,7 +151,7 @@ export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
       }))
 
       const fullContent = await streamKaizenChat({
-        system: buildSystemPrompt(board, lanes, items),
+        system: buildSystemPrompt(board, lanes, items, permissionRole),
         messages: chatHistory,
         signal: controller.signal,
         onDelta: (_delta, accumulated) => {
@@ -158,8 +161,8 @@ export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
         }
       })
 
-      // 3. After streaming completes, detect and extract any proposal
-      const proposal = extractProposalFromContent(fullContent)
+      // 3. After streaming completes, detect and extract any proposal (only if user can edit)
+      const proposal = !isReadOnly ? extractProposalFromContent(fullContent) : null
       const displayContent = proposal ? cleanContentForDisplay(fullContent) : fullContent
 
       const assistantMsg: BoardAiMessage = {
@@ -174,7 +177,7 @@ export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
       if (err?.name === 'AbortError') {
         console.log('AI streaming stopped by user')
         if (accumulatedText.trim()) {
-          const proposal = extractProposalFromContent(accumulatedText)
+          const proposal = !isReadOnly ? extractProposalFromContent(accumulatedText) : null
           const displayContent = proposal ? cleanContentForDisplay(accumulatedText) : accumulatedText
           addMessage(boardId, {
             id: `assistant-${Date.now()}`,
@@ -190,8 +193,8 @@ export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
           content: accumulatedText
-            ? `${accumulatedText}\n\n*(Generation interrupted: ${err?.message || 'connection error'})*`
-            : `Error: ${err?.message || 'Failed to connect to Kaizen AI.'}`,
+            ? `${accumulatedText}\n\n*(Network or streaming error occurred)*`
+            : 'Sorry, I encountered an error connecting to the AI service. Please verify your connection or API key.',
           createdAt: Date.now()
         })
       }
@@ -204,6 +207,7 @@ export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
   }
 
   const handleOpenProposalReview = (proposal: BoardMutationProposal, messageId: string) => {
+    if (isReadOnly) return
     openPreviewModal(proposal)
     sessionStorage.setItem('pending_ai_message_id', messageId)
   }
@@ -249,6 +253,11 @@ export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
                   {board.icon ? `${board.icon} ` : ''}
                   {board.title || 'Board'}
                 </span>
+                {isReadOnly && (
+                  <span className="rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[9px] font-bold border border-amber-500/30 shrink-0">
+                    View Only
+                  </span>
+                )}
                 {isFullScreen && (
                   <span className="hidden sm:inline-flex items-center px-1.5 py-0.2 rounded-md bg-muted text-[10px] font-medium text-muted-foreground border shrink-0">
                     Full Screen View
@@ -312,12 +321,21 @@ export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
                     <h4 className="text-sm font-bold text-foreground">
                       Kaizen Board Co-Pilot
                     </h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Ask me to break down goals, plan sprint columns, or suggest tasks tailored to{' '}
-                      <span className="font-semibold text-foreground">
-                        {board.title || 'this board'}
-                      </span>.
-                    </p>
+                    {isReadOnly ? (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        You have <span className="font-semibold text-amber-500">View-Only</span> access. Ask me to analyze progress, review tasks, or identify bottlenecks for{' '}
+                        <span className="font-semibold text-foreground">
+                          {board.title || 'this board'}
+                        </span>.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Ask me to break down goals, plan sprint columns, or suggest tasks tailored to{' '}
+                        <span className="font-semibold text-foreground">
+                          {board.title || 'this board'}
+                        </span>.
+                      </p>
+                    )}
                   </div>
 
                   {/* Quick suggestions */}
@@ -330,7 +348,7 @@ export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
                         <HelpCircle className="size-2.5" /> Try asking:
                       </div>
                     )}
-                    {QUICK_SUGGESTIONS.map((suggestion, idx) => (
+                    {activeSuggestions.map((suggestion, idx) => (
                       <button
                         key={idx}
                         type="button"
@@ -375,8 +393,8 @@ export function BoardAiSidebar({ board, lanes, items }: BoardAiSidebarProps) {
                           />
                         )}
 
-                        {/* Proposal Card if emitted */}
-                        {msg.proposal && (
+                        {/* Proposal Card if emitted (only for users with edit access) */}
+                        {msg.proposal && !isReadOnly && (
                           <AiProposalCard
                             proposal={msg.proposal}
                             applied={msg.applied}

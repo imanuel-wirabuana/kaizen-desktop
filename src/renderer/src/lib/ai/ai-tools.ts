@@ -340,116 +340,20 @@ export function splitStreamingContent(text: string): { display: string; hasPropo
   return { display: text, hasProposalBlock: false }
 }
 
-/**
- * Serializes the current board, lanes, and tasks into a clean markdown context
- * including exact database IDs and metadata for surgical CRUD operations.
- */
-export function formatBoardContext(
-  board: Board | null | undefined,
-  lanes: Lane[],
-  items: KanbanItem[]
-): string {
-  if (!board) return 'No board context available.'
+export {
+  type BoardPermissionRole,
+  KAIZEN_ASSISTANT_ROLE,
+  KAIZEN_ASSISTANT_ROLE_EDIT,
+  KAIZEN_ASSISTANT_ROLE_VIEW,
+  BOARD_MUTATION_SCHEMA_DETAILS,
+  BOARD_MUTATION_JSON_SCHEMA_EXAMPLE,
+  MUTATION_GUIDELINES,
+  VIEW_ONLY_GUIDELINES,
+  QUICK_SUGGESTIONS,
+  QUICK_SUGGESTIONS_EDIT,
+  QUICK_SUGGESTIONS_VIEW,
+  formatBoardContext,
+  buildSystemPrompt
+} from './ai-prompts'
 
-  const sortedLanes = [...lanes].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-  const lines: string[] = [
-    `Current Board: "${board.title || 'Untitled'}" (board_id: ${board.id ?? 'unknown'})`,
-    board.description ? `Description: ${board.description}` : '',
-    '',
-    'Existing Columns & Tasks (Use exact lane_id and item_id when updating or deleting):'
-  ]
 
-  if (sortedLanes.length === 0) {
-    lines.push('- No columns created yet.')
-  } else {
-    for (const lane of sortedLanes) {
-      const laneTitle = lane.title || (lane.id === null ? 'Draft' : 'Untitled Column')
-      const laneIdLabel = lane.id === null ? 'Draft (lane_id: null)' : `lane_id: ${lane.id}`
-      const laneIconStr = lane.icon ? ` ${lane.icon}` : ''
-      const laneItems = items
-        .filter((i) =>
-          lane.id === null ? i.lane_id === null : Number(i.lane_id) === Number(lane.id)
-        )
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-
-      const laneBgStr = lane.background ? ` [bg: "${lane.background}"]` : ''
-      lines.push(
-        `• Column [${laneTitle}]${laneIconStr}${laneBgStr} (${laneIdLabel}): ${laneItems.length} task(s)`
-      )
-      for (const item of laneItems) {
-        const itemIconStr = item.icon ? `${item.icon} ` : ''
-        const itemPrioStr = item.priority ? ` [priority: ${item.priority}]` : ''
-        const itemDueStr = item.due_date ? ` [due: ${item.due_date}]` : ''
-        const itemBgStr = item.background ? ` [bg: "${item.background}"]` : ''
-        const itemDescStr = item.description ? ` - "${item.description}"` : ''
-        lines.push(
-          `   - [item_id: ${item.id}] ${itemIconStr}${item.title || 'Untitled'}${itemPrioStr}${itemDueStr}${itemBgStr}${itemDescStr}`
-        )
-      }
-    }
-  }
-
-  return lines.filter(Boolean).join('\n')
-}
-
-export function buildSystemPrompt(
-  board: Board | null | undefined,
-  lanes: Lane[],
-  items: KanbanItem[]
-): string {
-  const boardContext = formatBoardContext(board, lanes, items)
-
-  return `You are Kaizen Assistant, an intelligent, agile project management co-pilot inside Kaizen Kanban Desktop.
-You help users plan workflows, break down objectives, write actionable user stories, and organize tasks.
-You have FULL CAPABILITY to propose:
-- ADDING new columns/lanes and tasks
-- UPDATING existing columns (renaming, changing icon, description, background color) and tasks (renaming, changing description, icon, priority, due date, background color, or moving between lanes)
-- DELETING existing columns or tasks
-
-BOARD CONTEXT:
-${boardContext}
-
-SCHEMA DETAILS:
-- Lane:
-  - title (string, required when adding, optional when updating)
-  - icon (string optional, emoji character e.g. "🚀", "📁", "🔥")
-  - description (string optional, brief summary)
-  - background (string optional, hex color or style e.g. "#22c55e", "#3b82f6", "#ef4444", "#f59e0b", "#8b5cf6")
-- Item / Task:
-  - title (string, required when adding, optional when updating)
-  - icon (string optional, emoji character e.g. "⚡", "🐛", "🎨")
-  - description (string optional, acceptance criteria or details)
-  - priority (number optional: 0 = Low/None, 1 = Medium, 2 = High, 3 = Urgent)
-  - due_date (string optional, ISO format "YYYY-MM-DD")
-  - background (string optional, hex color or style e.g. "#ef4444", "#3b82f6")
-
-GUIDELINES:
-1. When proposing ANY addition, update, or deletion, explain your plan clearly and concisely, and ALWAYS append a structured \`\`\`json code block at the end of your response with this exact schema:
-
-\`\`\`json
-{
-  "summary": "Brief 1-sentence summary of proposed changes",
-  "actions": [
-    // --- ADD EXAMPLES ---
-    { "type": "add_lane", "title": "Testing & QA", "icon": "🧪", "description": "QA validation", "background": "#22c55e" },
-    { "type": "add_item", "lane_title": "Testing & QA", "title": "Run regression smoke tests", "icon": "🚀", "priority": 3, "due_date": "2026-09-15" },
-
-    // --- UPDATE EXAMPLES (Use exact IDs from context) ---
-    { "type": "update_lane", "lane_id": 102, "title": "In Code Review", "icon": "👀" },
-    { "type": "update_lane", "lane_id": 105, "background": "#3b82f6" },
-    { "type": "update_item", "item_id": 405, "title": "Updated Task Title", "target_lane_id": 103, "priority": 2, "due_date": "2026-09-20" },
-    { "type": "update_item", "item_id": 406, "background": "#ef4444" },
-
-    // --- DELETE EXAMPLES (Use exact IDs from context) ---
-    { "type": "delete_item", "item_id": 408, "title": "Obsolete task title" },
-    { "type": "delete_lane", "lane_id": 105, "title": "Deprecated Column" }
-  ]
-}
-\`\`\`
-
-2. When referencing existing lanes or items, ALWAYS use their exact \`lane_id\` and \`item_id\` shown in the BOARD CONTEXT.
-3. For new tasks in a newly added column in the same batch, specify \`lane_title\` matching the new column's title.
-4. When asked to change, set, or add a background or color to a column/lane or task, ALWAYS propose an \`update_lane\` or \`update_item\` with the \`background\` property set to a clean hex color code (e.g. Green: "#22c55e", Blue: "#3b82f6", Red: "#ef4444", Amber: "#f59e0b", Purple: "#8b5cf6", Teal: "#14b8a6", Slate: "#0f172a") or CSS gradient.
-5. Keep chat explanations friendly, concise, and formatted in clean markdown.
-6. If the user asks a general or analytical question about the board or tasks without requesting changes, answer directly without providing a json block.`
-}

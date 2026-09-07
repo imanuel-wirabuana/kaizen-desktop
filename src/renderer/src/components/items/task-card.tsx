@@ -152,22 +152,27 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
             )}
             style={hasCustomBackground ? bgProps.style : undefined}
           >
+            {bgProps.isImage && (
+              <div className="absolute inset-0 bg-background/70 dark:bg-background/80 pointer-events-none" />
+            )}
             {isEditing ? (
-              <TaskForm
-                initialValues={{
-                  title: item.title || '',
-                  icon: item.icon || null,
-                  description: item.description || '',
-                  priority: item.priority ?? 0,
-                  dueDate: item.due_date ? item.due_date : '',
-                  background: item.background || ''
-                }}
-                onSubmit={handleSave}
-                onCancel={() => setIsEditing(false)}
-                submitLabel="Save"
-              />
+              <div className="relative z-10">
+                <TaskForm
+                  initialValues={{
+                    title: item.title || '',
+                    icon: item.icon || null,
+                    description: item.description || '',
+                    priority: item.priority ?? 0,
+                    dueDate: item.due_date ? item.due_date : '',
+                    background: item.background || ''
+                  }}
+                  onSubmit={handleSave}
+                  onCancel={() => setIsEditing(false)}
+                  submitLabel="Save"
+                />
+              </div>
             ) : (
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 relative z-10">
                 <div className="flex items-start justify-between gap-1.5 min-w-0">
                   <div className="flex items-start gap-1.5 min-w-0 flex-1">
                     {!readOnly && (

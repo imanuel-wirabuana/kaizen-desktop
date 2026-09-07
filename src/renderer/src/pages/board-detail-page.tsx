@@ -596,7 +596,12 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         <DraftSidebar />
 
         {/* AI Assistant Sidebar (Same level as Canvas) */}
-        <BoardAiSidebar board={board} lanes={lanes} items={allItems} />
+        <BoardAiSidebar
+          board={board}
+          lanes={lanes}
+          items={allItems}
+          permissionRole={permissionRole}
+        />
       </div>
 
       {/* Edit Board Drawer */}

@@ -527,7 +527,10 @@ export function AiKanbanPreviewLane({
         )}
         style={hasCustomBackground ? bgProps.style : undefined}
       >
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        {bgProps.isImage && (
+          <div className="absolute inset-0 bg-background/60 dark:bg-background/75 pointer-events-none" />
+        )}
+        <div className="flex items-center gap-1.5 min-w-0 flex-1 relative z-10">
           {lane.actionId && (
             <button
               type="button"
@@ -564,7 +567,7 @@ export function AiKanbanPreviewLane({
         </div>
 
         {/* Diff Badge & Item Count */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1 shrink-0 relative z-10">
           {lane.diffStatus === 'added' && (
             <span
               className={cn(
@@ -679,7 +682,11 @@ export function AiKanbanPreviewCard({
       )}
       style={hasCustomBackground ? bgProps.style : undefined}
     >
-      {/* Top Header Row with Diff Badge & Checkbox / Priority */}
+      {bgProps.isImage && (
+        <div className="absolute inset-0 bg-background/70 dark:bg-background/80 pointer-events-none" />
+      )}
+      <div className="space-y-1.5 relative z-10 w-full">
+        {/* Top Header Row with Diff Badge & Checkbox / Priority */}
       <div className="flex items-center justify-between gap-1">
         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
           {item.actionId && (
@@ -798,6 +805,7 @@ export function AiKanbanPreviewCard({
           </span>
         </div>
       )}
+      </div>
     </div>
   )
 }
