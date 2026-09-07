@@ -14,8 +14,11 @@ import { ExportBoardModal } from '@/components/boards/export-board-modal'
 import { ImportBoardModal } from '@/components/boards/import-board-modal'
 import { LaneColumn, InlineCreateLane } from '@/components/lanes'
 import { DraftSidebar } from '@/components/items'
+import { BoardAiSidebar, AiMutationPreviewModal } from '@/components/ai'
+import { useBoardAiStore } from '@/stores/board-ai'
 import { getUserBoardPermission, subscribeBoardMembers } from '@/services/members'
 import { useUser } from '@/providers/auth-provider'
+import { Sparkles } from 'lucide-react'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -105,6 +108,14 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const isDraftOpen = useDraftSidebarStore((s) => s.isOpen)
   const toggleDraftSidebar = useDraftSidebarStore((s) => s.toggle)
   const closeDraftSidebar = useDraftSidebarStore((s) => s.close)
+
+  // AI Assistant store state
+  const isAiOpen = useBoardAiStore((s) => s.isOpen)
+  const toggleAiSidebar = useBoardAiStore((s) => s.toggleSidebar)
+  const closeAiSidebar = useBoardAiStore((s) => s.closeSidebar)
+  const isAiPreviewOpen = useBoardAiStore((s) => s.isPreviewOpen)
+  const closeAiPreview = useBoardAiStore((s) => s.closePreviewModal)
+  const activeAiProposal = useBoardAiStore((s) => s.activeProposal)
 
   // Lanes and Items stores
   const allLanes = useLanesStore(selectLanes)
@@ -229,10 +240,11 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       supabase.removeChannel(memChannel)
       unsubBroadcast()
       closeDraftSidebar()
+      closeAiSidebar()
       useLanesStore.getState().cleanup()
       useItemsStore.getState().cleanup()
     }
-  }, [boardId, user?.id, closeDraftSidebar])
+  }, [boardId, user?.id, closeDraftSidebar, closeAiSidebar])
 
   const isOwner = permissionRole === 'owner'
   const isReadOnly = permissionRole === 'view'
@@ -441,6 +453,26 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
+                {/* AI Assistant Toggle Button */}
+                <Button
+                  variant={isAiOpen ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={toggleAiSidebar}
+                  className={cn(
+                    'h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs transition-all cursor-pointer',
+                    isAiOpen && 'bg-primary/15 text-primary border-primary/30'
+                  )}
+                  title={isAiOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
+                >
+                  <Sparkles
+                    className={cn(
+                      'size-3.5',
+                      isAiOpen ? 'text-primary animate-pulse' : 'text-primary/70'
+                    )}
+                  />
+                  <span>Assistant</span>
+                </Button>
+
                 {/* Draft Sidebar Toggle Button */}
                 <Button
                   variant={isDraftOpen ? 'secondary' : 'outline'}
@@ -562,6 +594,9 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
         {/* Right Draft Sidebar (Same level as Canvas) */}
         <DraftSidebar />
+
+        {/* AI Assistant Sidebar (Same level as Canvas) */}
+        <BoardAiSidebar board={board} lanes={lanes} items={allItems} />
       </div>
 
       {/* Edit Board Drawer */}
@@ -612,6 +647,22 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
       {/* Share Board Modal */}
       <ShareBoardModal board={board} open={isShareOpen} onOpenChange={setIsShareOpen} />
+
+      {/* AI Mutation Review & Bulk CRUD Modal (Add, Update, Delete) */}
+      <AiMutationPreviewModal
+        board={board}
+        proposal={activeAiProposal}
+        open={isAiPreviewOpen}
+        onOpenChange={(open) => {
+          if (!open) closeAiPreview()
+        }}
+        onSuccess={() => {
+          if (boardId) {
+            useLanesStore.getState().refreshLanes(boardId)
+            useItemsStore.getState().refreshItems(boardId)
+          }
+        }}
+      />
     </div>
   )
 }

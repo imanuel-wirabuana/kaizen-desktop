@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -11,23 +11,59 @@ import { Button } from '@/components/ui/button'
 import { Upload, Download, Loader2, FileText, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react'
 import { parseBoardImportText, importContentIntoBoard, ParsedImportData } from '@/lib/board-export-import'
 
+import { useBoardAiStore } from '@/stores/board-ai'
+
 type ImportBoardModalProps = {
   board: Board | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  initialData?: ParsedImportData | null
+  initialText?: string
+  title?: string
+  description?: string
 }
 
 export function ImportBoardModal({
   board,
   open,
   onOpenChange,
-  onSuccess
+  onSuccess,
+  initialData,
+  initialText,
+  title,
+  description
 }: ImportBoardModalProps) {
   const [inputText, setInputText] = useState('')
   const [isImporting, setIsImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (open) {
+      if (initialData) {
+        setInputText(
+          JSON.stringify(
+            {
+              board: initialData.boardTitle,
+              lanes: initialData.lanes.map((l) => ({
+                lane: l.title,
+                items: l.items.map((i) => ({ item: i }))
+              }))
+            },
+            null,
+            2
+          )
+        )
+      } else if (initialText) {
+        setInputText(initialText)
+      }
+    } else {
+      if (initialData || initialText) {
+        setInputText('')
+      }
+    }
+  }, [open, initialData, initialText])
 
   const parsedData = useMemo<ParsedImportData | null>(() => {
     if (!inputText.trim()) return null
@@ -74,6 +110,12 @@ export function ImportBoardModal({
         return
       }
 
+      const pendingMsgId = sessionStorage.getItem('pending_ai_message_id')
+      if (pendingMsgId && board.id) {
+        useBoardAiStore.getState().markProposalApplied(board.id, pendingMsgId)
+        sessionStorage.removeItem('pending_ai_message_id')
+      }
+
       setInputText('')
       onOpenChange(false)
       if (onSuccess) onSuccess()
@@ -91,13 +133,21 @@ export function ImportBoardModal({
         <DialogHeader className="shrink-0 space-y-1.5 pb-3 border-b">
           <div className="flex items-center gap-2">
             <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
-              <Download className="size-4" />
+              {initialData ? <Sparkles className="size-4" /> : <Download className="size-4" />}
             </div>
-            <DialogTitle>Import Content into Board</DialogTitle>
+            <DialogTitle>
+              {title || (initialData ? 'Review & Apply AI Additions' : 'Import Content into Board')}
+            </DialogTitle>
           </div>
           <DialogDescription className="text-xs leading-relaxed">
-            Import columns and tasks directly into{' '}
-            <span className="font-semibold text-foreground">{board?.title || 'this board'}</span> by pasting JSON or CSV text strings.
+            {description || (
+              <>
+                {initialData
+                  ? 'Review proposed columns and tasks before applying them to '
+                  : 'Import columns and tasks directly into '}
+                <span className="font-semibold text-foreground">{board?.title || 'this board'}</span>.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
