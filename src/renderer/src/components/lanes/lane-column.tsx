@@ -234,7 +234,7 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
               {/* Footer Inline Create Task Button */}
               {!readOnly && (
                 <div className="p-2 border-t border-border/50 bg-muted/20 backdrop-blur-xs">
-                  <InlineCreateTask laneId={lane.id} />
+                  <InlineCreateTask laneId={lane.id} boardId={lane.board_id ?? undefined} />
                 </div>
               )}
             </div>

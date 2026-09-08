@@ -114,7 +114,7 @@ export function DraftSidebar({ readOnly = false }: { readOnly?: boolean }) {
         {/* Sidebar Footer Inline Task Creator */}
         {!readOnly && (
           <div className="p-2.5 border-t border-border/50 bg-sidebar/50">
-            <InlineCreateTask laneId={null} />
+            <InlineCreateTask laneId={null} boardId={boardId} />
           </div>
         )}
       </div>

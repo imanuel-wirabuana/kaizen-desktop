@@ -90,8 +90,11 @@ export const useItemsStore = create<ItemsState>()(
 
     // ── Optimistic Create Item ──────────────────────────────
     addItem: async (draft) => {
-      const currentBoardId = get().boardId
-      if (!currentBoardId) return null
+      const currentBoardId = draft.board_id ?? get().boardId
+      if (!currentBoardId || isNaN(Number(currentBoardId))) {
+        console.error('addItem: cannot add item without a valid boardId', { draft, currentBoardId: get().boardId })
+        return null
+      }
 
       const laneId = draft.lane_id !== undefined && draft.lane_id !== null ? (typeof draft.lane_id === 'number' || !isNaN(Number(draft.lane_id)) ? Number(draft.lane_id) : draft.lane_id) : null
       const sameLaneItems = get().items.filter(

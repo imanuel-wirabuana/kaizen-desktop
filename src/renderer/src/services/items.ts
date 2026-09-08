@@ -48,8 +48,14 @@ export async function getItemById(id: number): Promise<KanbanItem | null> {
 export async function createItem(
   item: Partial<KanbanItem>
 ): Promise<KanbanItem | null> {
+  const boardId = Number(item.board_id)
+  if (!boardId || isNaN(boardId)) {
+    console.error('createItem: invalid or missing board_id:', item.board_id)
+    return null
+  }
+
   const payload = {
-    board_id: Number(item.board_id),
+    board_id: boardId,
     lane_id: item.lane_id !== undefined && item.lane_id !== null ? Number(item.lane_id) : null,
     title: item.title ?? 'New Task',
     icon: item.icon ?? null,
@@ -67,7 +73,7 @@ export async function createItem(
     .select()
 
   if (error) {
-    console.error('Error creating item:', error)
+    console.error('Error creating item in Supabase:', error.message, error.details, error.hint)
     return null
   }
 

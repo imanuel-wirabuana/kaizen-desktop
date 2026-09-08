@@ -27,21 +27,27 @@ export function useBoardDetailData(boardId: number | string): BoardDetailData {
   const { data: dbPermission } = useBoardPermissionQuery(boardId, user?.id)
   useRealtimeCanvasSync(boardId, user?.id)
 
-  const { data: qLanes = [], isLoading: isLanesLoading } = useLanesQuery(boardId)
-  const { data: qItems = [] } = useItemsQuery(boardId)
+  const { data: qLanesData, isLoading: isLanesLoading } = useLanesQuery(boardId)
+  const { data: qItemsData } = useItemsQuery(boardId)
+
+  // Ensure current boardId is always synchronized in stores immediately
+  useEffect(() => {
+    useLanesStore.setState({ boardId })
+    useItemsStore.setState({ boardId })
+  }, [boardId])
 
   // Synchronize fresh query data to stores so DnD and local actions stay in sync
   useEffect(() => {
-    if (qLanes.length > 0) {
-      useLanesStore.setState({ boardId, lanes: qLanes, loading: false })
+    if (qLanesData !== undefined) {
+      useLanesStore.setState({ boardId, lanes: qLanesData, loading: isLanesLoading })
     }
-  }, [boardId, qLanes])
+  }, [boardId, qLanesData, isLanesLoading])
 
   useEffect(() => {
-    if (qItems.length > 0) {
-      useItemsStore.setState({ boardId, items: qItems, loading: false })
+    if (qItemsData !== undefined) {
+      useItemsStore.setState({ boardId, items: qItemsData, loading: false })
     }
-  }, [boardId, qItems])
+  }, [boardId, qItemsData])
 
   const board = boardData || null
   const permissions = useBoardPermissions(board, dbPermission, user?.id)
@@ -53,14 +59,14 @@ export function useBoardDetailData(boardId: number | string): BoardDetailData {
   const lanes = useMemo(() => {
     const fromStore = storeLanes.filter((l) => String(l.board_id) === String(boardId))
     if (fromStore.length > 0) return fromStore
-    return qLanes.filter((l) => String(l.board_id) === String(boardId))
-  }, [storeLanes, qLanes, boardId])
+    return (qLanesData || []).filter((l) => String(l.board_id) === String(boardId))
+  }, [storeLanes, qLanesData, boardId])
 
   const items = useMemo(() => {
     const fromStore = storeItems.filter((i) => String(i.board_id) === String(boardId))
     if (fromStore.length > 0) return fromStore
-    return qItems.filter((i) => String(i.board_id) === String(boardId))
-  }, [storeItems, qItems, boardId])
+    return (qItemsData || []).filter((i) => String(i.board_id) === String(boardId))
+  }, [storeItems, qItemsData, boardId])
 
   // Filter canvas lanes (real user lanes with non-null id)
   const canvasLanes = useMemo(() => lanes.filter((l) => l.id !== null), [lanes])

@@ -7,9 +7,10 @@ import { TaskForm, TaskFormValues } from './task-form'
 
 type InlineCreateTaskProps = {
   laneId: number | null
+  boardId?: number | string | null
 }
 
-export function InlineCreateTask({ laneId }: InlineCreateTaskProps) {
+export function InlineCreateTask({ laneId, boardId }: InlineCreateTaskProps) {
   const { user } = useUser()
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -19,16 +20,31 @@ export function InlineCreateTask({ laneId }: InlineCreateTaskProps) {
   const handleSubmit = async (values: TaskFormValues) => {
     setIsSubmitting(true)
     try {
-      await addItem({
+      let isoDueDate: string | null = null
+      if (values.dueDate) {
+        const d = new Date(values.dueDate)
+        if (!isNaN(d.getTime())) {
+          isoDueDate = d.toISOString()
+        }
+      }
+
+      const created = await addItem({
+        board_id: boardId ? Number(boardId) : undefined,
         lane_id: laneId,
         title: values.title,
         icon: values.icon,
         description: values.description || null,
         priority: values.priority,
-        due_date: values.dueDate ? new Date(values.dueDate).toISOString() : null,
+        due_date: isoDueDate,
         background: values.background || null,
         owner: user?.id || null
       })
+
+      if (!created) {
+        console.error('Failed to create task: addItem returned null')
+        return
+      }
+
       setIsOpen(false)
     } catch (err) {
       console.error('Error creating task item:', err)

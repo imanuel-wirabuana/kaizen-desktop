@@ -23,6 +23,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
   useSidebar
 } from '@/components/ui/sidebar'
 import {
@@ -37,7 +38,8 @@ import {
   PlusIcon,
   UsersIcon,
   PinIcon,
-  LogIn
+  LogIn,
+  LayoutGridIcon
 } from 'lucide-react'
 import { EditBoardDrawer } from './edit-board-drawer'
 import { DeleteBoardDrawer } from './delete-board-drawer'
@@ -364,6 +366,8 @@ export function NavSidebarBoards() {
           }}
         />
 
+        <SidebarSeparator className="my-1 opacity-60" />
+
         {/* ── 2. Pinned Boards Category (/pinned) ── */}
         <PinnedBoardsGroup
           items={items['pinned'] || []}
@@ -378,6 +382,8 @@ export function NavSidebarBoards() {
           onLeave={setActiveBoardForLeave}
           onCreateFolder={() => setCreateFolderModalOpen(true)}
         />
+
+        <SidebarSeparator className="my-1 opacity-60" />
 
         {/* ── 3. My Boards Category (/my boards) ── */}
         <MyBoardsGroup
@@ -394,6 +400,8 @@ export function NavSidebarBoards() {
           onCreateFolder={() => setCreateFolderModalOpen(true)}
           onCreateBoard={handleCreateBoard}
         />
+
+        <SidebarSeparator className="my-1 opacity-60" />
 
         {/* ── 4. Shared Boards Category (/shared boards) ── */}
         <SharedBoardsGroup
@@ -970,7 +978,10 @@ function MyBoardsGroup({
   return (
     <SidebarGroup className="group/category group-data-[collapsible=icon]:hidden">
       <div className="flex items-center justify-between pr-1">
-        <SidebarGroupLabel>My Boards</SidebarGroupLabel>
+        <SidebarGroupLabel className="flex items-center gap-1.5">
+          <LayoutGridIcon className="size-3 text-muted-foreground" />
+          <span>My Boards</span>
+        </SidebarGroupLabel>
         {onCreateBoard && (
           <SidebarGroupAction
             onClick={onCreateBoard}
