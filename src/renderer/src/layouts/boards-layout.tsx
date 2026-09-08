@@ -13,10 +13,14 @@ import { DraftSidebar, TaskCardPreview } from '@/components/items'
 import { LaneColumnPreview } from '@/components/lanes'
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
+import { useUser } from '@/providers/auth-provider'
+import { useRealtimeBoardsSync } from '@/queries/use-realtime-sync'
 import { initGlobalRealtimeSync } from '@/lib/realtime'
 
 export function BoardsLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useUser()
   useBoardsInit()
+  useRealtimeBoardsSync(user?.id)
 
   useEffect(() => {
     initGlobalRealtimeSync()

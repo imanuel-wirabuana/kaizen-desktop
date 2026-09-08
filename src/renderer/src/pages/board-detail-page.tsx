@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useBreadcrumbs } from '@/stores/dynamic-breadcrumb'
 import { useBoardsStore } from '@/stores/boards'
-import { useLanesStore, selectLanes, selectLanesLoading } from '@/stores/lanes'
+import { useLanesStore, selectLanes } from '@/stores/lanes'
 import { useItemsStore, selectItems } from '@/stores/items'
 import { useDraftSidebarStore } from '@/stores/draft-sidebar'
 import { Button } from '@/components/ui/button'
@@ -16,8 +16,14 @@ import { LaneColumn, InlineCreateLane } from '@/components/lanes'
 import { DraftSidebar } from '@/components/items'
 import { BoardAiSidebar, AiMutationPreviewModal } from '@/components/ai'
 import { useBoardAiStore } from '@/stores/board-ai'
-import { getUserBoardPermission, subscribeBoardMembers } from '@/services/members'
 import { useUser } from '@/providers/auth-provider'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/queries/query-keys'
+import { useBoardDetailQuery } from '@/queries/boards'
+import { useBoardPermissionQuery } from '@/queries/members'
+import { useLanesQuery } from '@/queries/lanes'
+import { useItemsQuery } from '@/queries/items'
+import { useRealtimeCanvasSync } from '@/queries/use-realtime-sync'
 import { Sparkles } from 'lucide-react'
 import {
   ContextMenu,
@@ -60,8 +66,6 @@ import {
 } from 'lucide-react'
 import { BoardMenuContent } from '@/components/menus/board-menu-content'
 import { useNavigationStore } from '@/stores/navigation'
-import { onSyncEvent } from '@/lib/realtime'
-import { supabase } from '@/lib/supabase'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
 
@@ -85,10 +89,38 @@ function formatLastActivity(dateStr?: string | null): string {
 export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const navigate = useNavigationStore((s) => s.navigate)
   const { user } = useUser()
+  const queryClient = useQueryClient()
 
-  const [board, setBoard] = useState<Board | null>(null)
-  const [permissionRole, setPermissionRole] = useState<'owner' | 'edit' | 'view' | null>('owner')
-  const [loading, setLoading] = useState(true)
+  const { data: boardData, isLoading: isBoardLoading } = useBoardDetailQuery(boardId, user?.id)
+  const { data: dbPermission } = useBoardPermissionQuery(boardId, user?.id)
+  useRealtimeCanvasSync(boardId, user?.id)
+
+  const { data: qLanes = [], isLoading: isLanesLoading } = useLanesQuery(boardId)
+  const { data: qItems = [] } = useItemsQuery(boardId)
+
+  // Synchronize fresh query data to stores so DnD and local actions stay in sync
+  useEffect(() => {
+    if (qLanes.length > 0) {
+      useLanesStore.setState({ boardId, lanes: qLanes, loading: false })
+    }
+  }, [boardId, qLanes])
+
+  useEffect(() => {
+    if (qItems.length > 0) {
+      useItemsStore.setState({ boardId, items: qItems, loading: false })
+    }
+  }, [boardId, qItems])
+
+  const board = boardData || null
+  const permissionRole = useMemo<'owner' | 'edit' | 'view' | null>(() => {
+    if (dbPermission) return dbPermission
+    if (boardData?.role) return boardData.role
+    if (user?.id && boardData?.owner === user.id) return 'owner'
+    return boardData ? 'view' : null
+  }, [dbPermission, boardData?.role, boardData?.owner, boardData, user?.id])
+
+  // Only show the page skeleton if we have literally NO board data at all (first load of brand-new board)
+  const loading = isBoardLoading && !board
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isLeaveOpen, setIsLeaveOpen] = useState(false)
@@ -117,23 +149,27 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const closeAiPreview = useBoardAiStore((s) => s.closePreviewModal)
   const activeAiProposal = useBoardAiStore((s) => s.activeProposal)
 
-  // Lanes and Items stores
-  const allLanes = useLanesStore(selectLanes)
-  const lanesLoading = useLanesStore(selectLanesLoading)
-  const allItems = useItemsStore(selectItems)
+  // Lanes and Items: prioritize store if active, fallback to React Query cache
+  const storeLanes = useLanesStore(selectLanes)
+  const storeItems = useItemsStore(selectItems)
 
-  // Strictly scope lanes and items to current boardId to prevent cross-board leaks
-  const lanes = useMemo(
-    () => allLanes.filter((l) => String(l.board_id) === String(boardId)),
-    [allLanes, boardId]
-  )
-  const items = useMemo(
-    () => allItems.filter((i) => String(i.board_id) === String(boardId)),
-    [allItems, boardId]
-  )
+  const lanes = useMemo(() => {
+    const fromStore = storeLanes.filter((l) => String(l.board_id) === String(boardId))
+    if (fromStore.length > 0) return fromStore
+    return qLanes.filter((l) => String(l.board_id) === String(boardId))
+  }, [storeLanes, qLanes, boardId])
+
+  const items = useMemo(() => {
+    const fromStore = storeItems.filter((i) => String(i.board_id) === String(boardId))
+    if (fromStore.length > 0) return fromStore
+    return qItems.filter((i) => String(i.board_id) === String(boardId))
+  }, [storeItems, qItems, boardId])
 
   // Filter canvas lanes (real user lanes with non-null id)
   const canvasLanes = useMemo(() => lanes.filter((l) => l.id !== null), [lanes])
+
+  // Skeletons only show if query is loading AND there are zero cached canvas lanes!
+  const lanesLoading = isLanesLoading && canvasLanes.length === 0
 
   // Count items in Draft (lane_id === null)
   const draftItemsCount = useMemo(() => items.filter((i) => i.lane_id === null).length, [items])
@@ -150,101 +186,11 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   useBreadcrumbs(breadcrumbItems)
 
   useEffect(() => {
-    let isCancelled = false
-    setLoading(true)
-
-    // Try store first (optimistic), fall back to service
-    const fromStore = useBoardsStore.getState().boards.find((b) => String(b.id) === String(boardId))
-    if (fromStore) {
-      setBoard(fromStore)
-      if (fromStore.role) {
-        setPermissionRole(fromStore.role)
-      } else if (user?.id && fromStore.owner === user.id) {
-        setPermissionRole('owner')
-      }
-      setLoading(false)
-    } else {
-      import('@/services/boards').then(({ getBoardById }) =>
-        getBoardById(boardId).then((data) => {
-          if (!isCancelled) {
-            setBoard(data)
-            if (data?.role) {
-              setPermissionRole(data.role)
-            } else if (user?.id && data?.owner === user.id) {
-              setPermissionRole('owner')
-            }
-            setLoading(false)
-          }
-        })
-      )
-    }
-
-    const checkPermission = () => {
-      if (user?.id) {
-        getUserBoardPermission(boardId, user.id).then((role) => {
-          if (!isCancelled) {
-            setPermissionRole(role)
-          }
-        })
-      }
-    }
-
-    // Also fetch exact user permission from DB if user present
-    checkPermission()
-
-    // Initialize lanes and items stores for this board
-    useLanesStore.getState().init(boardId)
-    useItemsStore.getState().init(boardId)
-
-    // Stay in sync with boards store
-    const unsub = useBoardsStore.subscribe(
-      (s) => s.boards,
-      (boards) => {
-        const updated = boards.find((b) => String(b.id) === String(boardId))
-        if (updated) {
-          setBoard((prev) => {
-            if (!prev) return updated
-            // Skip re-rendering parent page if only last_activity or updated_at changed
-            if (
-              prev.title !== updated.title ||
-              prev.icon !== updated.icon ||
-              prev.description !== updated.description ||
-              prev.background !== updated.background ||
-              prev.owner !== updated.owner ||
-              prev.role !== updated.role
-            ) {
-              return updated
-            }
-            return prev
-          })
-          if (updated.role) setPermissionRole(updated.role)
-        }
-      }
-    )
-
-    // Real-time member table Postgres subscription
-    const memChannel = subscribeBoardMembers(boardId, () => {
-      checkPermission()
-    })
-
-    // Real-time broadcast sync event listener (<50ms delivery)
-    const unsubBroadcast = onSyncEvent((event) => {
-      if (event === 'members') {
-        checkPermission()
-      }
-    })
-
     return () => {
-      isCancelled = true
-      unsub()
-      supabase.removeChannel(memChannel)
-      unsubBroadcast()
       closeDraftSidebar()
       closeAiSidebar()
-      useLanesStore.getState().cleanup()
-      useItemsStore.getState().cleanup()
     }
-  }, [boardId, user?.id, closeDraftSidebar, closeAiSidebar])
+  }, [closeDraftSidebar, closeAiSidebar])
 
   const isOwner = permissionRole === 'owner'
   const isReadOnly = permissionRole === 'view'
@@ -599,7 +545,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         <BoardAiSidebar
           board={board}
           lanes={lanes}
-          items={allItems}
+          items={items}
           permissionRole={permissionRole}
         />
       </div>
@@ -609,7 +555,10 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         board={board}
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
-        onSuccess={(updated) => setBoard(updated)}
+        onSuccess={(updated) => {
+          queryClient.setQueryData(queryKeys.boards.detail(boardId), updated)
+          queryClient.invalidateQueries({ queryKey: queryKeys.boards.all })
+        }}
       />
 
       {/* Delete Board Drawer */}
@@ -632,7 +581,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       <ExportBoardModal
         board={board}
         lanes={lanes}
-        items={allItems}
+        items={items}
         open={isExportOpen}
         onOpenChange={setIsExportOpen}
       />
@@ -644,6 +593,8 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         onOpenChange={setIsImportOpen}
         onSuccess={() => {
           if (boardId) {
+            queryClient.invalidateQueries({ queryKey: queryKeys.lanes.list(boardId) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.items.list(boardId) })
             useLanesStore.getState().refreshLanes(boardId)
             useItemsStore.getState().refreshItems(boardId)
           }

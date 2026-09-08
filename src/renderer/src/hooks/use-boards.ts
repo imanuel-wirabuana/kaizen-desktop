@@ -8,22 +8,25 @@ import {
   selectUnpinnedBoards
 } from '@/stores/boards'
 
+import { useBoardsQuery } from '@/queries/boards'
+
 /** Initializes the boards store for the current user. Mount once near the app root. */
 export function useBoardsInit() {
   const { user, isLoaded, isSignedIn } = useUser()
-  const init = useBoardsStore((s) => s.init)
-  const cleanup = useBoardsStore((s) => s.cleanup)
+  const owner = isLoaded && isSignedIn && user?.id ? user.id : undefined
+  const { data: boards, isLoading } = useBoardsQuery(owner)
 
   useEffect(() => {
-    if (!isLoaded) return
-    const owner = isSignedIn && user?.id ? user.id : undefined
     if (!owner) {
-      cleanup()
+      useBoardsStore.getState().cleanup()
       return
     }
-    init(owner)
-    return () => cleanup()
-  }, [isLoaded, isSignedIn, user?.id, init, cleanup])
+    if (boards) {
+      useBoardsStore.setState({ boards, loading: false, owner })
+    } else if (isLoading && useBoardsStore.getState().boards.length === 0) {
+      useBoardsStore.setState({ loading: true, owner })
+    }
+  }, [owner, boards, isLoading])
 }
 
 export function useBoards(): Board[] {
