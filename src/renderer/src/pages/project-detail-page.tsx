@@ -5,6 +5,7 @@ import { CollisionPriority } from '@dnd-kit/abstract'
 import { useDroppable } from '@dnd-kit/react'
 import { Plus, Pencil, Trash2, FolderIcon, MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +32,7 @@ import { useBreadcrumbs, BreadcrumbItem } from '@/stores/dynamic-breadcrumb'
 export function ProjectDetailPage({ projectId }: { projectId: string }) {
   const navigate = useNavigationStore((s) => s.navigate)
   const folders = useBoardFoldersStore((s) => s.folders)
+  const updateFolder = useBoardFoldersStore((s) => s.updateFolder)
   const boardFolderMap = useBoardFoldersStore((s) => s.boardFolderMap)
   const boardOrderMap = useBoardFoldersStore((s) => s.boardOrderMap)
   const moveBoardToFolder = useBoardFoldersStore((s) => s.moveBoardToFolder)
@@ -156,9 +158,24 @@ export function ProjectDetailPage({ projectId }: { projectId: string }) {
       {/* ── Project Header ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-muted/50 text-xl shrink-0 shadow-2xs">
-            {folder.icon || '📁'}
-          </span>
+          <InlineEmojiPicker
+            value={folder.icon || '📁'}
+            onChange={(emoji) => {
+              updateFolder(folder.id, { icon: emoji })
+            }}
+            align="start"
+            side="bottom"
+            title="Click to change project icon"
+            trigger={
+              <button
+                type="button"
+                className="flex size-10 items-center justify-center rounded-xl bg-muted/50 text-xl shrink-0 shadow-2xs hover:bg-muted/80 hover:scale-105 active:scale-95 transition-all cursor-pointer border border-transparent hover:border-primary/40"
+                title="Click to change project icon"
+              >
+                {folder.icon || '📁'}
+              </button>
+            }
+          />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold tracking-tight text-foreground">

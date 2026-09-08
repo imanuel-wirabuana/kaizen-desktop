@@ -277,3 +277,30 @@ export function subscribeBoards(onPayload?: (payload: unknown) => void): Realtim
 
   return boardsChannel
 }
+
+// 11. Realtime Subscription for a single board by ID
+export function subscribeBoard(
+  boardId: number | string,
+  onPayload?: (payload: unknown) => void
+): RealtimeChannel {
+  const channelName = `board-detail-${boardId}-${Math.random().toString(36).substring(2, 9)}`
+  const boardChannel = supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'boards',
+        filter: `id=eq.${boardId}`
+      },
+      (payload) => {
+        if (onPayload) {
+          onPayload(payload)
+        }
+      }
+    )
+    .subscribe()
+
+  return boardChannel
+}

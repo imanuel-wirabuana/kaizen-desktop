@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { useUser } from '@/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
+import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { Plus, X, Loader2, Palette, Sparkles } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 import { BackgroundPicker } from '@/components/ui/background-picker'
@@ -17,7 +16,6 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
   const [icon, setIcon] = useState('📌')
   const [description, setDescription] = useState('')
   const [background, setBackground] = useState('')
-  const [popoverOpen, setPopoverOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const addLane = useLanesStore((s) => s.addLane)
@@ -133,34 +131,25 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
         {/* Icon & Title Inputs */}
         <div className="space-y-2">
           {/* Emoji Icon Selector */}
-          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-            <PopoverTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex h-8 w-full items-center justify-between px-2.5 text-left font-normal bg-background"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm">{icon}</span>
-                    <span className="text-xs text-muted-foreground">Choose Emoji Icon</span>
-                  </span>
-                </Button>
-              }
-            />
-            <PopoverContent align="start" className="w-[300px] border-none bg-transparent p-0 shadow-none z-50">
-              <EmojiPicker
-                className="h-[300px] w-full rounded-lg border shadow-md"
-                onEmojiSelect={({ emoji }) => {
-                  setIcon(emoji)
-                  setPopoverOpen(false)
-                }}
+          <InlineEmojiPicker
+            value={icon}
+            onChange={(emoji) => setIcon(emoji)}
+            align="start"
+            side="bottom"
+            title="Choose Emoji Icon"
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                className="flex h-9 w-full items-center justify-between px-2.5 text-left font-normal bg-background cursor-pointer"
               >
-                <EmojiPickerSearch />
-                <EmojiPickerContent />
-              </EmojiPicker>
-            </PopoverContent>
-          </Popover>
+                <span className="flex items-center gap-2">
+                  <span className="text-lg">{icon}</span>
+                  <span className="text-xs text-muted-foreground">Choose Emoji Icon</span>
+                </span>
+              </Button>
+            }
+          />
 
           <Input
             placeholder="Lane title (e.g. In Progress)..."

@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
-import { Check, X } from 'lucide-react'
+import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
+import { Check, X, Smile } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 import { cn } from '@/lib/utils'
 
@@ -18,7 +17,6 @@ export function InlineEditLane({ lane, isEditing, onEditingChange, readOnly = fa
   const [title, setTitle] = useState(lane.title || '')
   const [icon, setIcon] = useState<string | null>(lane.icon || null)
   const [description, setDescription] = useState(lane.description || '')
-  const [popoverOpen, setPopoverOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const updateLane = useLanesStore((s) => s.updateLane)
@@ -85,40 +83,32 @@ export function InlineEditLane({ lane, isEditing, onEditingChange, readOnly = fa
       <div className="flex-1 space-y-1.5 min-w-0" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-1">
           {/* Emoji Icon Picker */}
-          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-            <PopoverTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-7 shrink-0 text-base p-0 rounded-md"
-                  title="Choose Icon"
-                >
-                  {icon || '😀'}
-                </Button>
-              }
-            />
-            <PopoverContent align="start" className="w-[300px] border-none bg-transparent p-0 shadow-none z-50">
-              <EmojiPicker
-                className="h-[300px] w-full rounded-lg border shadow-md"
-                onEmojiSelect={({ emoji }) => {
-                  setIcon(emoji)
-                  setPopoverOpen(false)
-                }}
+          <InlineEmojiPicker
+            value={icon}
+            onChange={(emoji) => setIcon(emoji)}
+            onClear={() => setIcon(null)}
+            align="start"
+            side="bottom"
+            title="Choose icon"
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-8 shrink-0 text-lg p-0 rounded-md cursor-pointer"
+                title="Choose icon"
               >
-                <EmojiPickerSearch />
-                <EmojiPickerContent />
-              </EmojiPicker>
-            </PopoverContent>
-          </Popover>
+                {icon || '😀'}
+              </Button>
+            }
+          />
 
           <Input
             ref={inputRef}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="h-7 text-xs font-semibold px-2 py-0 bg-background flex-1 min-w-0"
+            className="h-8 text-xs font-semibold px-2 py-0 bg-background flex-1 min-w-0"
             placeholder="Lane Title..."
           />
           <Button
@@ -126,7 +116,7 @@ export function InlineEditLane({ lane, isEditing, onEditingChange, readOnly = fa
             variant="ghost"
             size="icon"
             onClick={handleSave}
-            className="size-6 shrink-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md"
+            className="size-7 shrink-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md cursor-pointer"
             title="Save (Enter)"
           >
             <Check className="size-3.5" />
@@ -136,7 +126,7 @@ export function InlineEditLane({ lane, isEditing, onEditingChange, readOnly = fa
             variant="ghost"
             size="icon"
             onClick={handleCancel}
-            className="size-6 shrink-0 text-muted-foreground hover:text-foreground rounded-md"
+            className="size-7 shrink-0 text-muted-foreground hover:text-foreground rounded-md cursor-pointer"
             title="Cancel (Esc)"
           >
             <X className="size-3.5" />
@@ -162,7 +152,43 @@ export function InlineEditLane({ lane, isEditing, onEditingChange, readOnly = fa
       )}
       title={!readOnly ? 'Double-click to edit title' : undefined}
     >
-      {lane.icon && <span className="text-sm shrink-0">{lane.icon}</span>}
+      {!readOnly ? (
+        <InlineEmojiPicker
+          value={lane.icon}
+          onChange={async (emoji) => {
+            await updateLane(lane.id, { icon: emoji })
+          }}
+          onClear={async () => {
+            await updateLane(lane.id, { icon: null })
+          }}
+          align="start"
+          side="bottom"
+          title="Click to change lane emoji"
+          trigger={
+            lane.icon ? (
+              <button
+                type="button"
+                onClick={(e) => e.stopPropagation()}
+                className="flex size-7 items-center justify-center rounded-md hover:bg-muted/80 text-lg shrink-0 transition-transform active:scale-95 cursor-pointer"
+                title="Click to change lane emoji"
+              >
+                {lane.icon}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => e.stopPropagation()}
+                className="flex size-6 items-center justify-center rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer"
+                title="Add lane emoji"
+              >
+                <Smile className="size-3.5" />
+              </button>
+            )
+          }
+        />
+      ) : (
+        lane.icon && <span className="text-lg shrink-0">{lane.icon}</span>
+      )}
       <div className="min-w-0 flex-1">
         <h3
           className={cn(

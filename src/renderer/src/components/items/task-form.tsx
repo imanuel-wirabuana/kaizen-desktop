@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
+import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { BackgroundPicker } from '@/components/ui/background-picker'
 import { DateTimePicker } from '@/components/ui/date-picker'
 import { Loader2, Palette } from 'lucide-react'
@@ -47,7 +46,6 @@ export function TaskForm({
   const [priority, setPriority] = useState<number>(initialValues?.priority ?? 0)
   const [dueDate, setDueDate] = useState<string>(initialValues?.dueDate || '')
   const [background, setBackground] = useState<string>(initialValues?.background || '')
-  const [popoverOpen, setPopoverOpen] = useState(false)
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -94,33 +92,25 @@ export function TaskForm({
       <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-2">
         {/* Emoji Icon & Title */}
         <div className="flex items-center gap-1.5">
-          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-            <PopoverTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-7 shrink-0 text-base p-0 rounded-md"
-                  title="Choose Icon (optional)"
-                >
-                  {icon || '😀'}
-                </Button>
-              }
-            />
-            <PopoverContent align="start" className="w-[300px] border-none bg-transparent p-0 shadow-none z-50">
-              <EmojiPicker
-                className="h-[300px] w-full rounded-lg border shadow-md"
-                onEmojiSelect={({ emoji }) => {
-                  setIcon(emoji)
-                  setPopoverOpen(false)
-                }}
+          <InlineEmojiPicker
+            value={icon}
+            onChange={(emoji) => setIcon(emoji)}
+            onClear={() => setIcon(null)}
+            align="start"
+            side="bottom"
+            title="Choose Icon (optional)"
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-8 shrink-0 text-lg p-0 rounded-md cursor-pointer"
+                title="Choose Icon (optional)"
               >
-                <EmojiPickerSearch />
-                <EmojiPickerContent />
-              </EmojiPicker>
-            </PopoverContent>
-          </Popover>
+                {icon || '😀'}
+              </Button>
+            }
+          />
 
           <Input
             placeholder="Task title (e.g. Draft new wireframe)..."

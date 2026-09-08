@@ -10,8 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
+import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { useBoardFoldersStore, BoardFolder } from '@/stores/board-folders'
 import { FolderIcon, AlertTriangle } from 'lucide-react'
 
@@ -34,7 +33,6 @@ export function FolderModal({
 
   const [name, setName] = useState('')
   const [icon, setIcon] = useState('📁')
-  const [emojiPopoverOpen, setEmojiPopoverOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -101,33 +99,24 @@ export function FolderModal({
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-foreground">Project Name</label>
             <div className="flex items-center gap-2">
-              <Popover open={emojiPopoverOpen} onOpenChange={setEmojiPopoverOpen}>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="size-8 shrink-0 p-0 text-base cursor-pointer"
-                      title="Choose Emoji"
-                    >
-                      {icon}
-                    </Button>
-                  }
-                />
-                <PopoverContent align="start" className="w-[300px] border-none bg-transparent p-0 shadow-none z-50">
-                  <EmojiPicker
-                    className="h-[300px] w-full rounded-lg border shadow-md"
-                    onEmojiSelect={({ emoji }) => {
-                      setIcon(emoji)
-                      setEmojiPopoverOpen(false)
-                    }}
+              <InlineEmojiPicker
+                value={icon}
+                onChange={(emoji) => setIcon(emoji)}
+                align="start"
+                side="bottom"
+                title="Choose Emoji"
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="size-8 shrink-0 p-0 text-lg cursor-pointer"
+                    title="Choose Emoji"
                   >
-                    <EmojiPickerSearch />
-                    <EmojiPickerContent />
-                  </EmojiPicker>
-                </PopoverContent>
-              </Popover>
+                    {icon}
+                  </Button>
+                }
+              />
 
               <Input
                 placeholder="e.g. Work, Personal, Marketing..."

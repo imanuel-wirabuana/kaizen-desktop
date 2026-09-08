@@ -16,8 +16,7 @@ import { Plus, Loader2, Palette } from 'lucide-react'
 import { useBoardsStore } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { useUser } from '@/providers/auth-provider'
-import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
@@ -49,7 +48,6 @@ export function BoardDrawer({
 
   const isEdit = propMode === 'edit' || !!board
 
-  const [popoverOpen, setPopoverOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [icon, setIcon] = useState('📋')
@@ -161,7 +159,7 @@ export function BoardDrawer({
     <Drawer
       open={open}
       modal={false}
-      disablePointerDismissal
+      // disablePointerDismissal
       onOpenChange={setOpen}
       swipeDirection="right"
     >
@@ -188,39 +186,27 @@ export function BoardDrawer({
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Board Icon</label>
               <div>
-                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                  <PopoverTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex h-9 w-full items-center justify-between px-3 text-left font-normal"
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="flex size-6 items-center justify-center rounded bg-muted/60 text-base">
-                            {icon}
-                          </span>
-                          <span className="text-xs text-muted-foreground">Choose Icon</span>
-                        </span>
-                      </Button>
-                    }
-                  />
-                  <PopoverContent
-                    align="start"
-                    className="w-[300px] border-none bg-transparent p-0 shadow-none"
-                  >
-                    <EmojiPicker
-                      className="h-[326px] w-full rounded-lg border shadow-md"
-                      onEmojiSelect={({ emoji }) => {
-                        setIcon(emoji)
-                        setPopoverOpen(false)
-                      }}
+                <InlineEmojiPicker
+                  value={icon}
+                  onChange={(emoji) => setIcon(emoji)}
+                  align="start"
+                  side="bottom"
+                  title="Choose Icon"
+                  trigger={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex h-10 w-full items-center justify-between px-3 text-left font-normal cursor-pointer"
                     >
-                      <EmojiPickerSearch />
-                      <EmojiPickerContent />
-                    </EmojiPicker>
-                  </PopoverContent>
-                </Popover>
+                      <span className="flex items-center gap-2.5">
+                        <span className="flex size-7 items-center justify-center rounded bg-muted/60 text-xl">
+                          {icon}
+                        </span>
+                        <span className="text-xs text-muted-foreground">Choose Icon</span>
+                      </span>
+                    </Button>
+                  }
+                />
               </div>
             </div>
 

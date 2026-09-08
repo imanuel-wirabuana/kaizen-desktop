@@ -1,4 +1,6 @@
 import { Button } from '@/components/ui/button'
+import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
+import { useBoardsStore } from '@/stores/boards'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -57,6 +59,7 @@ export function BoardDetailHeader({
   onOpenLeave
 }: BoardDetailHeaderProps) {
   const { permissionRole, isOwner, isReadOnly, canEdit } = permissions
+  const updateBoard = useBoardsStore((s) => s.updateBoard)
 
   return (
     <ContextMenu>
@@ -64,9 +67,30 @@ export function BoardDetailHeader({
         render={
           <div className="flex items-center justify-between gap-2.5 px-0.5 py-0 select-none">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="flex size-7 items-center justify-center rounded-lg border bg-background text-sm shadow-2xs shrink-0">
-                {board.icon || '📋'}
-              </div>
+              {canEdit && board.id !== undefined ? (
+                <InlineEmojiPicker
+                  value={board.icon || '📋'}
+                  onChange={async (emoji) => {
+                    await updateBoard(board.id!, { icon: emoji })
+                  }}
+                  align="start"
+                  side="bottom"
+                  title="Click to change board icon"
+                  trigger={
+                    <button
+                      type="button"
+                      className="flex size-8 items-center justify-center rounded-lg border bg-background text-lg shadow-2xs shrink-0 hover:scale-105 active:scale-95 transition-all cursor-pointer hover:border-primary/50"
+                      title="Click to change board icon"
+                    >
+                      {board.icon || '📋'}
+                    </button>
+                  }
+                />
+              ) : (
+                <div className="flex size-8 items-center justify-center rounded-lg border bg-background text-lg shadow-2xs shrink-0">
+                  {board.icon || '📋'}
+                </div>
+              )}
               <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                 <h1 className="text-xs sm:text-sm font-bold tracking-tight text-foreground truncate shrink-0">
                   {board.title || 'Untitled Board'}

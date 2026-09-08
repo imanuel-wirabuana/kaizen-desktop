@@ -1,8 +1,10 @@
 import { create } from 'zustand'
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 import type { View } from './navigation'
 import { useBoardFoldersStore } from './board-folders'
 import { useBoardsStore } from './boards'
+import { queryClient } from '@/lib/query-client'
+import { queryKeys } from '@/queries/query-keys'
 
 export type BreadcrumbItem = {
   label: string
@@ -34,7 +36,7 @@ export function useBreadcrumbs(items?: BreadcrumbItem[]) {
 
   const serialized = items ? JSON.stringify(items) : ''
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!items || items.length === 0) return
 
     setItems(items)
@@ -64,7 +66,9 @@ export function breadcrumbFromView(view: View): BreadcrumbItem[] {
     const project = folderId
       ? useBoardFoldersStore.getState().folders.find((f) => String(f.id) === String(folderId))
       : null
-    const board = useBoardsStore.getState().boards.find((b) => String(b.id) === boardId)
+    const board =
+      useBoardsStore.getState().boards.find((b) => String(b.id) === boardId) ||
+      queryClient.getQueryData<Board>(queryKeys.boards.detail(boardId))
 
     const items: BreadcrumbItem[] = [{ label: 'Boards', view: { name: 'boards' } }]
     if (project) {

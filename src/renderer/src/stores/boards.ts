@@ -6,6 +6,8 @@ import * as itemsService from '@/services/items'
 import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 import { isBoardPinned, setBoardPinned } from '@/lib/pinned-boards'
+import { queryClient } from '@/lib/query-client'
+import { queryKeys } from '@/queries/query-keys'
 
 type BoardsState = {
   boards: Board[]
@@ -136,40 +138,79 @@ export const useBoardsStore = create<BoardsState>()(
 
     // ── Optimistic update ──────────────────────────────────────
     updateBoard: async (id, updates) => {
-      const prev = get().boards.find((b) => String(b.id) === String(id))
-      if (!prev) return null
+      const prevInStore = get().boards.find((b) => String(b.id) === String(id))
+      const detailKey = queryKeys.boards.detail(id)
+      const prevInQuery = queryClient.getQueryData<Board | null>(detailKey)
+      const prev = prevInStore || prevInQuery
 
       if (updates.pinned !== undefined) {
         setBoardPinned(id, Boolean(updates.pinned))
       }
 
-      set((s) => ({
-        boards: s.boards.map((b) =>
-          String(b.id) === String(id) ? { ...b, ...updates, updated_at: new Date().toISOString() } : b
-        )
-      }))
+      const patch = { ...updates, updated_at: new Date().toISOString() }
 
-      broadcastSyncEvent('boards')
+      // 1. Synchronously update Zustand store if populated
+      if (prevInStore) {
+        set((s) => ({
+          boards: s.boards.map((b) =>
+            String(b.id) === String(id) ? { ...b, ...patch } : b
+          )
+        }))
+      }
+
+      // 2. Synchronously update React Query detail cache (for board detail page, header & breadcrumb)
+      if (prevInQuery) {
+        queryClient.setQueryData<Board>(detailKey, {
+          ...prevInQuery,
+          ...patch
+        })
+      } else if (prevInStore) {
+        queryClient.setQueryData<Board>(detailKey, {
+          ...prevInStore,
+          ...patch
+        })
+      }
+
+      // 3. Synchronously update React Query boards list caches
+      queryClient.setQueriesData<Board[]>({ queryKey: queryKeys.boards.all }, (old) => {
+        if (!Array.isArray(old)) return old
+        return old.map((b) =>
+          String(b.id) === String(id) ? { ...b, ...patch } : b
+        )
+      })
+
+      // 4. Broadcast sync event to peer windows/tabs (<50ms delivery)
+      broadcastSyncEvent('boards', { id, updates })
 
       suppressRealtimeRefetch = true
       try {
         const result = await boardsService.updateBoard(id, updates)
 
         if (!result) {
-          if (updates.pinned !== undefined) {
+          // Rollback on failure
+          if (updates.pinned !== undefined && prev) {
             setBoardPinned(id, Boolean(prev.pinned))
           }
-          set((s) => ({
-            boards: s.boards.map((b) => (String(b.id) === String(id) ? prev : b))
-          }))
+          if (prevInStore) {
+            set((s) => ({
+              boards: s.boards.map((b) => (String(b.id) === String(id) ? prevInStore : b))
+            }))
+          }
+          if (prevInQuery) {
+            queryClient.setQueryData(detailKey, prevInQuery)
+          }
+          queryClient.invalidateQueries({ queryKey: queryKeys.boards.all })
           broadcastSyncEvent('boards')
           return null
         }
 
-        const withRole = { ...result, pinned: isBoardPinned(result.id), role: prev.role }
-        set((s) => ({
-          boards: s.boards.map((b) => (String(b.id) === String(id) ? withRole : b))
-        }))
+        const withRole = { ...result, pinned: isBoardPinned(result.id), role: prev?.role || 'owner' }
+        if (prevInStore) {
+          set((s) => ({
+            boards: s.boards.map((b) => (String(b.id) === String(id) ? withRole : b))
+          }))
+        }
+        queryClient.setQueryData<Board>(detailKey, (old) => (old ? { ...old, ...result } : result))
         return withRole
       } finally {
         setTimeout(() => {
@@ -186,6 +227,9 @@ export const useBoardsStore = create<BoardsState>()(
           String(b.id) === String(boardId) ? { ...b, last_activity: now, updated_at: now } : b
         )
       }))
+      queryClient.setQueryData<Board>(queryKeys.boards.detail(boardId), (old) =>
+        old ? { ...old, last_activity: now, updated_at: now } : old
+      )
       await boardsService.touchBoardActivity(boardId)
     },
 
@@ -193,13 +237,13 @@ export const useBoardsStore = create<BoardsState>()(
     removeBoard: async (id) => {
       const prev = get().boards
       const target = prev.find((b) => String(b.id) === String(id))
-      if (!target) return false
 
       const { data: sessionData } = await supabase.auth.getSession()
       const currentUserId = sessionData?.session?.user?.id
 
       // Only owner can delete the board
       const isOwner =
+        !target ||
         target.role === 'owner' ||
         (currentUserId && target.owner === currentUserId)
 
@@ -209,12 +253,18 @@ export const useBoardsStore = create<BoardsState>()(
       }
 
       set((s) => ({ boards: s.boards.filter((b) => String(b.id) !== String(id)) }))
-      broadcastSyncEvent('boards')
+      queryClient.removeQueries({ queryKey: queryKeys.boards.detail(id) })
+      queryClient.setQueriesData<Board[]>({ queryKey: queryKeys.boards.all }, (old) => {
+        if (!Array.isArray(old)) return old
+        return old.filter((b) => String(b.id) !== String(id))
+      })
+      broadcastSyncEvent('boards', { id, deleted: true })
 
       const ok = await boardsService.deleteBoard(id, currentUserId)
 
       if (!ok) {
         set({ boards: prev })
+        queryClient.invalidateQueries({ queryKey: queryKeys.boards.all })
         broadcastSyncEvent('boards')
         return false
       }

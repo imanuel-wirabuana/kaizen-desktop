@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
+import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { DateTimePicker } from '@/components/ui/date-picker'
 import {
@@ -40,7 +40,8 @@ import {
   ArrowRight,
   Inbox,
   FolderInput,
-  CopyPlus
+  CopyPlus,
+  Smile
 } from 'lucide-react'
 import { ItemMenuContent } from '@/components/menus/item-menu-content'
 import { useItemsStore } from '@/stores/items'
@@ -187,12 +188,48 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                         <GripVertical className="size-3.5" />
                       </span>
                     )}
+                    {!readOnly ? (
+                      <InlineEmojiPicker
+                        value={item.icon}
+                        onChange={async (emoji) => {
+                          await updateItem(item.id, { icon: emoji })
+                        }}
+                        onClear={async () => {
+                          await updateItem(item.id, { icon: null })
+                        }}
+                        align="start"
+                        side="bottom"
+                        title="Click to change task emoji"
+                        trigger={
+                          item.icon ? (
+                            <button
+                              type="button"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-lg shrink-0 leading-none hover:scale-110 active:scale-95 transition-transform cursor-pointer mt-0.5"
+                              title="Click to change task emoji"
+                            >
+                              {item.icon}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-muted-foreground/40 hover:text-foreground opacity-0 group-hover/card:opacity-100 transition-opacity shrink-0 cursor-pointer mt-0.5 p-0.5 rounded hover:bg-muted/60"
+                              title="Add task emoji"
+                            >
+                              <Smile className="size-3.5" />
+                            </button>
+                          )
+                        }
+                      />
+                    ) : (
+                      item.icon && <span className="text-lg shrink-0 leading-none mt-0.5">{item.icon}</span>
+                    )}
                     <div
-                      className={cn("flex items-start gap-1.5 min-w-0 flex-1", !readOnly && "cursor-pointer")}
+                      className={cn("flex-1 min-w-0", !readOnly && "cursor-pointer")}
                       onDoubleClick={() => !readOnly && setIsEditing(true)}
                     >
-                      {item.icon && <span className="text-sm shrink-0 leading-tight">{item.icon}</span>}
-                      <span className="text-xs font-medium tracking-tight text-foreground/90 break-words flex-1">
+                      <span className="text-xs font-medium tracking-tight text-foreground/90 break-words block">
                         {item.title || 'Untitled Task'}
                       </span>
                     </div>
@@ -299,10 +336,8 @@ export function TaskCardPreview({ item }: { item: KanbanItem }) {
               <GripVertical className="size-3.5" />
             </span>
             <div className="flex items-start gap-1.5 min-w-0 flex-1">
-              {item.icon && <span className="text-sm shrink-0 leading-tight">{item.icon}</span>}
-              <span className="text-xs font-medium tracking-tight text-foreground/90 break-words flex-1">
-                {item.title || 'Untitled Task'}
-              </span>
+              {item.icon && <span className="text-lg shrink-0 leading-tight">{item.icon}</span>}
+              <span className="text-xs font-medium text-foreground truncate">{item.title || 'Untitled Task'}</span>
             </div>
           </div>
 
