@@ -124,90 +124,105 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
               {/* Column Header */}
               <div
                 className={cn(
-                  'group/header flex h-14 shrink-0 items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200 relative overflow-hidden',
-                  hasCustomBackground ? bgProps.className : isVirtual ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 backdrop-blur-md'
+                  'group/header flex shrink-0 items-center justify-between border-b min-w-0 transition-all duration-200 relative overflow-hidden',
+                  isEditing ? 'p-1.5 bg-transparent border-primary/30' : 'h-14 px-3.5 py-3 gap-2',
+                  hasCustomBackground && !isEditing ? bgProps.className : isVirtual ? 'bg-primary/5 border-primary/20' : !isEditing ? 'bg-muted/30 backdrop-blur-md' : ''
                 )}
-                style={hasCustomBackground ? bgProps.style : undefined}
+                style={hasCustomBackground && !isEditing ? bgProps.style : undefined}
               >
                 {/* Overlay for header background images */}
-                {bgProps.isImage && (
+                {bgProps.isImage && !isEditing && (
                   <div className="absolute inset-0 bg-background/50 pointer-events-none" />
                 )}
-                <div className="flex items-center gap-1.5 min-w-0 flex-1 relative z-10">
-                  {/* Drag Handle Icon or Virtual Inbox Badge */}
-                  {isVirtual ? (
-                    <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0" title="Virtual Draft Lane">
-                      <Inbox className="size-3.5" />
-                    </div>
-                  ) : !readOnly ? (
-                    <span
-                      ref={handleRef}
-                      className="hidden group-hover/header:inline-flex size-6 items-center justify-center rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-background/50 transition-colors cursor-grab active:cursor-grabbing touch-none shrink-0"
-                      title="Drag column to reorder"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <GripVertical className="size-4" />
-                    </span>
-                  ) : (
-                    <span className="size-2 rounded-full bg-primary/40 shrink-0" />
-                  )}
 
-                  {/* Header Title */}
-                  {isVirtual ? (
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className="text-xs font-semibold tracking-tight text-foreground truncate">Draft</span>
-                      <span className="rounded-full bg-primary/15 px-1.5 py-0.2 text-[9px] font-semibold text-primary uppercase tracking-wider">
-                        Virtual
-                      </span>
-                    </div>
-                  ) : (
+                {isEditing ? (
+                  <div className="w-full relative z-10">
                     <InlineEditLane
                       lane={lane}
                       isEditing={isEditing}
                       onEditingChange={setIsEditing}
                       readOnly={readOnly}
                     />
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1 relative z-10">
+                      {/* Drag Handle Icon or Virtual Inbox Badge */}
+                      {isVirtual ? (
+                        <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0" title="Virtual Draft Lane">
+                          <Inbox className="size-3.5" />
+                        </div>
+                      ) : !readOnly ? (
+                        <span
+                          ref={handleRef}
+                          className="hidden group-hover/header:inline-flex size-6 items-center justify-center rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-background/50 transition-colors cursor-grab active:cursor-grabbing touch-none shrink-0"
+                          title="Drag column to reorder"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <GripVertical className="size-4" />
+                        </span>
+                      ) : (
+                        <span className="size-2 rounded-full bg-primary/40 shrink-0" />
+                      )}
 
-                {/* Controls Area */}
-                <div className="flex items-center gap-1 shrink-0 relative z-10">
-                  {/* Item Count Pill Badge */}
-                  <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-background/80 border text-[10px] font-bold text-muted-foreground shadow-2xs backdrop-blur-xs">
-                    {columnItems.length}
-                  </span>
-
-                  {/* Options Dropdown Menu Trigger */}
-                  {!isVirtual && !readOnly && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60"
-                            title="Column options"
-                          >
-                            <MoreHorizontal className="size-3.5" />
-                          </Button>
-                        }
-                      />
-                      <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
-                        <LaneMenuContent
+                      {/* Header Title */}
+                      {isVirtual ? (
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className="text-xs font-semibold tracking-tight text-foreground truncate">Draft</span>
+                          <span className="rounded-full bg-primary/15 px-1.5 py-0.2 text-[9px] font-semibold text-primary uppercase tracking-wider">
+                            Virtual
+                          </span>
+                        </div>
+                      ) : (
+                        <InlineEditLane
                           lane={lane}
-                          index={index}
-                          totalLanes={totalLanes}
-                          columnItemsCount={columnItems.length}
-                          variant="dropdown"
-                          onEditTitle={() => setIsEditing(true)}
-                          onDelete={() => setIsDeleteOpen(true)}
-                          onRequestMoveToBoard={handleRequestMoveToBoard}
-                          onBackgroundChange={handleBackgroundChange}
+                          isEditing={false}
+                          onEditingChange={setIsEditing}
+                          readOnly={readOnly}
                         />
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
+                      )}
+                    </div>
+
+                    {/* Controls Area */}
+                    <div className="flex items-center gap-1 shrink-0 relative z-10">
+                      {/* Item Count Pill Badge */}
+                      <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-background/80 border text-[10px] font-bold text-muted-foreground shadow-2xs backdrop-blur-xs">
+                        {columnItems.length}
+                      </span>
+
+                      {/* Options Dropdown Menu Trigger */}
+                      {!isVirtual && !readOnly && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60"
+                                title="Column options"
+                              >
+                                <MoreHorizontal className="size-3.5" />
+                              </Button>
+                            }
+                          />
+                          <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
+                            <LaneMenuContent
+                              lane={lane}
+                              index={index}
+                              totalLanes={totalLanes}
+                              columnItemsCount={columnItems.length}
+                              variant="dropdown"
+                              onEditTitle={() => setIsEditing(true)}
+                              onDelete={() => setIsDeleteOpen(true)}
+                              onRequestMoveToBoard={handleRequestMoveToBoard}
+                              onBackgroundChange={handleBackgroundChange}
+                            />
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Column Cards Drop Body */}

@@ -126,6 +126,10 @@ export async function idbDelete(key: string): Promise<void> {
 
 /**
  * Zustand StateStorage adapter backed by IndexedDB for board folders.
+ * Persists serialized JSON containing:
+ * - state.folders: Array<BoardFolder> with { id, user_id, name, icon, color, order, isCollapsed, createdAt, updatedAt }
+ * - state.boardFolderMap: Record<boardId, folderId>
+ * - state.boardOrderMap: Record<categoryKey, boardIds>
  */
 export const boardFoldersIndexedDbStorage: StateStorage = {
   getItem: async (key: string): Promise<string | null> => {
@@ -186,9 +190,28 @@ export const boardFoldersIndexedDbStorage: StateStorage = {
       console.error('[Folders DB] Failed to delete from IndexedDB:', err)
       try {
         localStorage.removeItem(key)
-      } catch {
+      } catch (e) {
         // Ignore
       }
     }
+  }
+}
+
+/**
+ * Utility function to clear all board folders from IndexedDB.
+ */
+export async function clearAllBoardFoldersFromDb(): Promise<void> {
+  try {
+    const db = await getDatabase()
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite')
+      const store = transaction.objectStore(STORE_NAME)
+      const request = store.clear()
+
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error)
+    })
+  } catch (err) {
+    console.error('[Folders DB] Failed to clear board folders store:', err)
   }
 }

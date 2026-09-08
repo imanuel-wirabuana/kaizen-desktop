@@ -86,6 +86,7 @@ type TaskCardProps = {
 
 export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const [editingBackground, setEditingBackground] = useState<string | null>(null)
 
   const updateItem = useItemsStore((s) => s.updateItem)
   const removeItem = useItemsStore((s) => s.removeItem)
@@ -95,6 +96,12 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const boards = useBoardsStore((s) => s.boards)
   const currentBoard = boards.find((b) => Number(b.id) === Number(item.board_id))
   const otherBoards = boards.filter((b) => String(b.id) !== String(item.board_id))
+
+  const handleStartEdit = () => {
+    if (readOnly) return
+    setEditingBackground(item.background || '')
+    setIsEditing(true)
+  }
 
   const handleMoveTo = async (targetBoardId: number, targetLaneId: number | null) => {
     if (readOnly) return
@@ -114,6 +121,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const handleSave = async (values: TaskFormValues) => {
     if (readOnly) return
     setIsEditing(false)
+    setEditingBackground(null)
     await updateItem(item.id, {
       title: values.title.trim(),
       icon: values.icon || null,
@@ -122,6 +130,11 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
       due_date: values.dueDate ? new Date(values.dueDate).toISOString() : null,
       background: values.background || null
     })
+  }
+
+  const handleCancel = () => {
+    setIsEditing(false)
+    setEditingBackground(null)
   }
 
   const handleMoveToLane = (targetLaneId: number | null) => {
@@ -139,8 +152,9 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const dueDateInfo = formatDueDate(item.due_date)
   const priorityInfo = PRIORITY_CONFIG[(item.priority ?? 0) as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG[0]
 
-  const bgProps = getBoardBackgroundStyleAndClass(item.background)
-  const hasCustomBackground = Boolean(item.background && item.background.trim())
+  const activeBackground = isEditing ? (editingBackground ?? item.background) : item.background
+  const bgProps = getBoardBackgroundStyleAndClass(activeBackground)
+  const hasCustomBackground = Boolean(activeBackground && activeBackground.trim())
 
   return (
     <ContextMenu>
@@ -149,9 +163,19 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
           <div
             ref={ref}
             className={cn(
-              'group/card relative flex flex-col rounded-xl border border-border/80 bg-background/90 p-3 shadow-2xs transition-all duration-200 hover:border-primary/40 hover:shadow-xs select-none overflow-hidden',
-              isDragSource ? 'opacity-30 ring-2 ring-primary/40 shadow-md scale-[0.98]' : '',
-              hasCustomBackground ? bgProps.className : ''
+              'group/card relative flex flex-col rounded-xl border transition-all duration-200 select-none overflow-hidden',
+              isEditing
+                ? cn(
+                    'border-primary/50 ring-1 ring-primary/30 shadow-md p-3',
+                    hasCustomBackground
+                      ? bgProps.className
+                      : 'bg-neutral-950/10 dark:bg-black/70 backdrop-blur-md'
+                  )
+                : cn(
+                    'border-border/80 bg-background/90 p-3 shadow-2xs hover:border-primary/40 hover:shadow-xs',
+                    hasCustomBackground ? bgProps.className : ''
+                  ),
+              isDragSource ? 'opacity-30 ring-2 ring-primary/40 shadow-md scale-[0.98]' : ''
             )}
             style={hasCustomBackground ? bgProps.style : undefined}
           >
@@ -161,6 +185,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
             {isEditing ? (
               <div className="relative z-10">
                 <TaskForm
+                  embedded
                   initialValues={{
                     title: item.title || '',
                     icon: item.icon || null,
@@ -169,8 +194,9 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                     dueDate: item.due_date ? item.due_date : '',
                     background: item.background || ''
                   }}
+                  onBackgroundChange={setEditingBackground}
                   onSubmit={handleSave}
-                  onCancel={() => setIsEditing(false)}
+                  onCancel={handleCancel}
                   submitLabel="Save"
                 />
               </div>
@@ -227,7 +253,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                     )}
                     <div
                       className={cn("flex-1 min-w-0", !readOnly && "cursor-pointer")}
-                      onDoubleClick={() => !readOnly && setIsEditing(true)}
+                      onDoubleClick={() => !readOnly && handleStartEdit()}
                     >
                       <span className="text-xs font-medium tracking-tight text-foreground/90 break-words block">
                         {item.title || 'Untitled Task'}
@@ -254,7 +280,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                         <ItemMenuContent
                           item={item}
                           variant="dropdown"
-                          onEdit={() => setIsEditing(true)}
+                          onEdit={handleStartEdit}
                         />
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -303,7 +329,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
           <ItemMenuContent
             item={item}
             variant="context"
-            onEdit={() => setIsEditing(true)}
+            onEdit={handleStartEdit}
           />
         </ContextMenuContent>
       )}

@@ -38,7 +38,12 @@ export function ProjectDetailPage({ projectId }: { projectId: string }) {
   const moveBoardToFolder = useBoardFoldersStore((s) => s.moveBoardToFolder)
   const reorderCategoryBoards = useBoardFoldersStore((s) => s.reorderCategoryBoards)
 
-  const folder = folders.find((f) => String(f.id) === String(projectId))
+  const currentUserId = useBoardsStore((s) => s.owner)
+  const folder = folders.find(
+    (f) =>
+      String(f.id) === String(projectId) &&
+      (!f.user_id || !currentUserId || f.user_id === currentUserId)
+  )
 
   // Boards store
   const allBoards = useBoardsStore((s) => s.boards)

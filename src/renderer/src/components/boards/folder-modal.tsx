@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { useBoardFoldersStore, BoardFolder } from '@/stores/board-folders'
+import { useUser } from '@/providers/auth-provider'
 import { FolderIcon, AlertTriangle } from 'lucide-react'
 
 export type FolderModalProps = {
@@ -28,6 +29,7 @@ export function FolderModal({
   onSuccess
 }: FolderModalProps) {
   const isEditing = !!folderToEdit
+  const { user } = useUser()
   const createFolder = useBoardFoldersStore((s) => s.createFolder)
   const updateFolder = useBoardFoldersStore((s) => s.updateFolder)
 
@@ -70,7 +72,7 @@ export function FolderModal({
         })
       }
     } else {
-      const created = createFolder(trimmed, icon)
+      const created = createFolder(trimmed, icon, undefined, user?.id || null)
       onOpenChange(false)
       if (onSuccess) {
         onSuccess(created)

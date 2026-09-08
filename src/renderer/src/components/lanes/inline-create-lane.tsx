@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useUser } from '@/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
-import { Plus, X, Loader2, Palette, Sparkles } from 'lucide-react'
+import { Plus, X, Loader2, Palette, Sparkles, Smile } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 import { BackgroundPicker } from '@/components/ui/background-picker'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
@@ -59,9 +60,19 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit()
+    const isTextArea = (e.target as HTMLElement)?.tagName === 'TEXTAREA'
+    if (e.key === 'Enter') {
+      if (isTextArea) {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault()
+          handleSubmit()
+        }
+        return
+      }
+      if (!e.shiftKey) {
+        e.preventDefault()
+        handleSubmit()
+      }
     } else if (e.key === 'Escape') {
       e.preventDefault()
       handleClose()
@@ -77,7 +88,7 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
         <Button
           variant="outline"
           onClick={handleOpen}
-          className="h-14 w-full justify-start gap-2.5 rounded-lg border-2 border-dashed bg-background/40 border-muted-foreground/25 px-4 text-xs font-medium text-muted-foreground hover:bg-background/80 hover:text-foreground hover:border-primary/50 shadow-2xs transition-all duration-200 cursor-pointer"
+          className="h-14 w-full justify-start gap-2.5 rounded-xl border-2 border-dashed bg-card/40 border-muted-foreground/25 px-4 text-xs font-medium text-muted-foreground hover:bg-card/80 hover:text-foreground hover:border-primary/50 shadow-2xs transition-all duration-200 cursor-pointer"
         >
           <div className="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Plus className="size-3.5" />
@@ -89,13 +100,24 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
   }
 
   return (
-    <div className="w-72 shrink-0 rounded-lg border border-primary/40 bg-card p-3.5 shadow-xl transition-all space-y-3 ring-1 ring-primary/20 overflow-hidden">
-      <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-3">
+    <div
+      className={cn(
+        'w-72 shrink-0 rounded-xl border border-primary/40 p-3 shadow-md space-y-2.5 ring-1 ring-primary/20 transition-all overflow-hidden relative',
+        hasCustomBackground
+          ? bgProps.className
+          : 'bg-neutral-950/10 dark:bg-black/70 backdrop-blur-md'
+      )}
+      style={hasCustomBackground ? bgProps.style : undefined}
+    >
+      {hasCustomBackground && bgProps.isImage && (
+        <div className="absolute inset-0 bg-background/70 dark:bg-background/80 pointer-events-none" />
+      )}
+      <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-2.5 relative z-10">
         {/* Header Title & Color Trigger */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between select-none">
           <div className="flex items-center gap-1.5">
             <Sparkles className="size-3.5 text-primary" />
-            <span className="text-xs font-semibold tracking-tight text-foreground">Create New Lane</span>
+            <span className="text-xs font-semibold tracking-tight text-foreground">New Lane</span>
           </div>
           <div className="flex items-center gap-1">
             <BackgroundPicker
@@ -122,31 +144,31 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
               size="icon"
               onClick={handleClose}
               className="size-6 text-muted-foreground hover:text-foreground rounded-md"
+              title="Close (Esc)"
             >
               <X className="size-3.5" />
             </Button>
           </div>
         </div>
 
-        {/* Icon & Title Inputs */}
-        <div className="space-y-2">
-          {/* Emoji Icon Selector */}
+        {/* Side-by-side Emoji Icon & Title */}
+        <div className="flex items-center gap-1.5">
           <InlineEmojiPicker
             value={icon}
             onChange={(emoji) => setIcon(emoji)}
+            onClear={() => setIcon('📌')}
             align="start"
             side="bottom"
-            title="Choose Emoji Icon"
+            title="Choose icon"
             trigger={
               <Button
                 type="button"
                 variant="outline"
-                className="flex h-9 w-full items-center justify-between px-2.5 text-left font-normal bg-background cursor-pointer"
+                size="icon"
+                className="size-8 shrink-0 text-base p-0 rounded-lg cursor-pointer bg-background hover:bg-muted border-border/80 shadow-2xs transition-transform active:scale-95"
+                title="Choose icon"
               >
-                <span className="flex items-center gap-2">
-                  <span className="text-lg">{icon}</span>
-                  <span className="text-xs text-muted-foreground">Choose Emoji Icon</span>
-                </span>
+                {icon || <Smile className="size-4 text-muted-foreground/60" />}
               </Button>
             }
           />
@@ -157,67 +179,34 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
             onChange={(e) => setTitle(e.target.value)}
             disabled={isSubmitting}
             autoFocus
-            className="h-8 text-xs font-medium bg-background"
-          />
-
-          <Input
-            placeholder="Description (optional)..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={isSubmitting}
-            className="h-7 text-[11px] text-muted-foreground bg-background"
+            className="h-8 text-xs font-medium bg-background rounded-lg border-border/80 flex-1 shadow-2xs"
           />
         </div>
 
-        {/* Live Header Background Accent Preview */}
-        <div className="space-y-1 pt-0.5">
-          <div className="flex items-center justify-between text-[10px] font-medium text-muted-foreground">
-            <span>Header Preview:</span>
-            {hasCustomBackground ? (
-              <button
-                type="button"
-                onClick={() => setBackground('')}
-                className="text-[9px] text-muted-foreground/80 hover:text-foreground underline cursor-pointer"
-              >
-                Reset color
-              </button>
-            ) : (
-              <span className="text-[9px] opacity-70">Default Theme</span>
-            )}
-          </div>
-
-          <div
-            className={cn(
-              'flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-semibold shadow-2xs overflow-hidden transition-all duration-200 gap-1.5',
-              hasCustomBackground ? bgProps.className : 'bg-muted/30 border-border/80'
-            )}
-            style={hasCustomBackground ? { background: background! } : undefined}
-          >
-            <div className="flex items-center gap-1.5 truncate">
-              {icon && <span className="text-sm shrink-0">{icon}</span>}
-              <span className="truncate text-foreground font-semibold">
-                {title.trim() || 'Untitled Lane'}
-              </span>
-            </div>
-            <span className="flex size-4 items-center justify-center rounded-full bg-background/80 text-[9px] font-bold text-muted-foreground border shrink-0">
-              0
-            </span>
-          </div>
-        </div>
+        {/* Description Textarea */}
+        <Textarea
+          placeholder="Description (optional)..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={isSubmitting}
+          className="min-h-[48px] max-h-[120px] text-xs text-muted-foreground bg-background rounded-lg border-border/80 resize-none py-1.5 px-2.5 leading-relaxed focus-visible:ring-1 focus-visible:ring-primary/40 shadow-2xs"
+        />
 
         {/* Action Controls */}
-        <div className="flex items-center justify-between pt-1 border-t border-border/50">
-          <span className="text-[10px] text-muted-foreground/70">
-            Press <kbd className="font-mono text-[9px] bg-muted px-1 py-0.5 rounded border">Enter</kbd>
+        <div className="flex items-center justify-between pt-1.5 border-t border-border/50 gap-2">
+          <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1 select-none shrink-0">
+            <kbd className="font-mono text-[9px] bg-muted px-1 py-0.5 rounded border border-border/60">↵ Enter</kbd>
+            <span className="opacity-40">·</span>
+            <kbd className="font-mono text-[9px] bg-muted px-1 py-0.5 rounded border border-border/60">Esc</kbd>
           </span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="h-7 text-xs px-2.5"
+              className="h-7 text-xs px-2.5 rounded-lg text-muted-foreground hover:text-foreground"
             >
               Cancel
             </Button>
@@ -225,9 +214,9 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
               type="submit"
               size="sm"
               disabled={!title.trim() || isSubmitting}
-              className="h-7 text-xs px-3 font-medium cursor-pointer shadow-2xs"
+              className="h-7 text-xs px-3 font-medium rounded-lg cursor-pointer shadow-2xs gap-1"
             >
-              {isSubmitting ? <Loader2 className="size-3 animate-spin mr-1" /> : null}
+              {isSubmitting ? <Loader2 className="size-3 animate-spin" /> : null}
               Add Lane
             </Button>
           </div>

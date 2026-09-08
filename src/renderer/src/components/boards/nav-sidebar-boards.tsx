@@ -130,6 +130,12 @@ export function NavSidebarBoards() {
     return categorizeBoards(boards, folders, boardFolderMap, boardOrderMap, currentUserId)
   }, [boards, folders, boardFolderMap, boardOrderMap, currentUserId])
 
+  // Filter folders for current user (preserving legacy unassigned folders)
+  const userFolders = useMemo(() => {
+    if (!currentUserId) return folders
+    return folders.filter((f) => !f.user_id || f.user_id === currentUserId)
+  }, [folders, currentUserId])
+
   // Build the multi-container dictionary for @dnd-kit
   const buildContainers = (): Record<string, Board[]> => {
     const containers: Record<string, Board[]> = {
@@ -347,7 +353,7 @@ export function NavSidebarBoards() {
       >
         {/* ── 1. Projects Category (/custom-folder1, /custom-folder2, ...) ── */}
         <CustomFoldersSection
-          folders={folders}
+          folders={userFolders}
           itemsMap={items}
           currentView={currentView}
           isMobile={isMobile}

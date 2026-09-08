@@ -73,7 +73,8 @@ export function InlineCreateTask({ laneId, boardId }: InlineCreateTaskProps) {
     <TaskForm
       onSubmit={handleSubmit}
       onCancel={() => setIsOpen(false)}
-      submitLabel="Add"
+      formTitle="New Task"
+      submitLabel="Add Task"
       isSubmitting={isSubmitting}
       autoFocus
     />

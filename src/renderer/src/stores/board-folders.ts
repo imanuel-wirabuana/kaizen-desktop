@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { boardFoldersIndexedDbStorage } from '@/lib/folders/board-folders-db'
+import { useBoardsStore } from './boards'
 
 export interface BoardFolder {
   id: string
+  user_id?: string | null
   name: string
   icon?: string
   color?: string
@@ -20,7 +22,12 @@ export interface BoardFoldersState {
   isHydrated: boolean
 
   // Actions
-  createFolder: (name: string, icon?: string, color?: string) => BoardFolder
+  createFolder: (
+    name: string,
+    icon?: string,
+    color?: string,
+    userId?: string | null
+  ) => BoardFolder
   updateFolder: (id: string, updates: Partial<Omit<BoardFolder, 'id' | 'createdAt'>>) => void
   deleteFolder: (id: string) => void
   reorderFolders: (folders: BoardFolder[]) => void
@@ -39,11 +46,14 @@ export const useBoardFoldersStore = create<BoardFoldersState>()(
       boardOrderMap: {},
       isHydrated: false,
 
-      createFolder: (name, icon = '📁', color) => {
+      createFolder: (name, icon = '📁', color, userId) => {
         const folders = get().folders
         const maxOrder = folders.length > 0 ? Math.max(...folders.map((f) => f.order ?? 0)) : 0
+        const resolvedUserId =
+          userId !== undefined ? userId : (useBoardsStore.getState().owner || null)
         const newFolder: BoardFolder = {
           id: `folder_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          user_id: resolvedUserId,
           name: name.trim(),
           icon: icon || '📁',
           color: color || '#3b82f6',
@@ -145,6 +155,16 @@ export const useBoardFoldersStore = create<BoardFoldersState>()(
     }),
     {
       name: 'kaizen_board_folders_v1',
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        if (persistedState && Array.isArray(persistedState.folders)) {
+          persistedState.folders = persistedState.folders.map((f: any) => ({
+            ...f,
+            user_id: f.user_id ?? null
+          }))
+        }
+        return persistedState
+      },
       storage: createJSONStorage(() => boardFoldersIndexedDbStorage),
       partialize: (state) => ({
         folders: state.folders,
@@ -198,8 +218,11 @@ export function categorizeBoards(
   // Map of non-pinned boards
   const unpinnedBoards = allBoards.filter((b) => !b.pinned)
 
-  // 2. Custom folders
-  const sortedFolders = [...folders].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  // 2. Custom folders (filtered for current user if currentUserId is set)
+  const userFolders = currentUserId
+    ? folders.filter((f) => !f.user_id || f.user_id === currentUserId)
+    : folders
+  const sortedFolders = [...userFolders].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const customFolders = sortedFolders.map((folder) => {
     const folderBoards = unpinnedBoards.filter(
       (b) => boardFolderMap[String(b.id)] === folder.id

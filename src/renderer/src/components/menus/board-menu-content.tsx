@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   MenuProvider,
   MenuItem,
@@ -60,6 +61,10 @@ export function BoardMenuContent({
   const { user } = useUser()
 
   const folders = useBoardFoldersStore((s) => s.folders)
+  const userFolders = useMemo(
+    () => folders.filter((f) => !f.user_id || !user?.id || f.user_id === user.id),
+    [folders, user?.id]
+  )
   const boardFolderMap = useBoardFoldersStore((s) => s.boardFolderMap)
   const moveBoardToFolder = useBoardFoldersStore((s) => s.moveBoardToFolder)
   const currentFolderId = board.id !== undefined ? boardFolderMap[String(board.id)] : undefined
@@ -116,8 +121,8 @@ export function BoardMenuContent({
             </span>
             <span className="ml-1">None (No Project)</span>
           </MenuItem>
-          {folders.length > 0 && <MenuSeparator />}
-          {folders.map((folder) => {
+          {userFolders.length > 0 && <MenuSeparator />}
+          {userFolders.map((folder) => {
             const isSelected = currentFolderId === folder.id
             return (
               <MenuItem
