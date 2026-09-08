@@ -1,6 +1,27 @@
 import { useDroppable } from '@dnd-kit/react'
 import { CollisionPriority } from '@dnd-kit/abstract'
-import { Pin, FolderOpen } from 'lucide-react'
+import {
+  Pin,
+  FolderIcon,
+  LayoutGrid,
+  Users,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  Pencil,
+  Trash2,
+  MoreVertical
+} from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
+import { BoardFolder, useBoardFoldersStore } from '@/stores/board-folders'
+import { useNavigationStore } from '@/stores/navigation'
 import { cn } from '@/lib/utils'
 import { SortableGridBoardCard, CreateBoardTile } from './grid-board-card'
 
@@ -13,9 +34,10 @@ export type BoardGridSectionProps = {
   onShare: (e: React.MouseEvent, id?: number | string) => void
   onDelete: (board: Board) => void
   onLeave?: (board: Board) => void
+  onCreateFolder?: () => void
 }
 
-// ── Droppable Pinned Grid Section ──
+// ── Droppable Pinned Grid Section (/pinned) ──
 export function PinnedGridSection({
   items,
   copiedId,
@@ -24,7 +46,8 @@ export function PinnedGridSection({
   onEdit,
   onShare,
   onDelete,
-  onLeave
+  onLeave,
+  onCreateFolder
 }: BoardGridSectionProps) {
   const { isDropTarget, ref } = useDroppable({
     id: 'pinned',
@@ -52,7 +75,7 @@ export function PinnedGridSection({
       >
         {items.length === 0 ? (
           <div className="flex h-16 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground/60 bg-muted/5">
-            Drag a board here to pin
+            {isDropTarget ? 'Drop here to pin' : 'Drag a board here to pin'}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -69,6 +92,7 @@ export function PinnedGridSection({
                 onShare={(e) => onShare(e, board.id)}
                 onDelete={() => onDelete(board)}
                 onLeave={() => onLeave && onLeave(board)}
+                onCreateFolder={onCreateFolder}
               />
             ))}
           </div>
@@ -78,8 +102,9 @@ export function PinnedGridSection({
   )
 }
 
-// ── Droppable Unpinned Grid Section ──
-export function UnpinnedGridSection({
+// ── Droppable Custom Folder Grid Section (/custom-folderX) ──
+export function FolderGridSection({
+  folder,
   items,
   copiedId,
   onNavigate,
@@ -88,10 +113,177 @@ export function UnpinnedGridSection({
   onShare,
   onDelete,
   onLeave,
+  onCreateFolder,
+  onEditFolder,
+  onDeleteFolder,
+  onCreateBoardInFolder
+}: BoardGridSectionProps & {
+  folder: BoardFolder
+  onEditFolder: (folder: BoardFolder) => void
+  onDeleteFolder: (folder: BoardFolder) => void
+  onCreateBoardInFolder: (folderId: string) => void
+}) {
+  const navigate = useNavigationStore((s) => s.navigate)
+  const toggleFolderCollapse = useBoardFoldersStore((s) => s.toggleFolderCollapse)
+  const isCollapsed = Boolean(folder.isCollapsed)
+
+  const { isDropTarget, ref } = useDroppable({
+    id: `folder_${folder.id}`,
+    type: 'column',
+    accept: 'board',
+    collisionPriority: CollisionPriority.Low
+  })
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'space-y-2.5 rounded-xl p-2 transition-all',
+        isDropTarget ? 'bg-accent/30 ring-1 ring-primary/30' : ''
+      )}
+    >
+      {/* Folder Header Bar */}
+      <div className="flex items-center justify-between gap-2 border-b pb-1.5">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => toggleFolderCollapse(folder.id)}
+            className="flex size-5 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground cursor-pointer"
+            title={isCollapsed ? 'Expand project' : 'Collapse project'}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="size-4" />
+            ) : (
+              <ChevronDown className="size-4" />
+            )}
+          </button>
+
+          <span
+            onClick={() => navigate({ name: 'project-detail', projectId: folder.id })}
+            className="flex size-5 items-center justify-center rounded text-sm text-muted-foreground cursor-pointer"
+          >
+            {folder.icon || '📁'}
+          </span>
+
+          <span
+            onClick={() => navigate({ name: 'project-detail', projectId: folder.id })}
+            className="text-xs font-semibold text-foreground/90 cursor-pointer select-none"
+          >
+            {folder.name}
+          </span>
+
+          <span className="rounded-full bg-muted px-1.5 py-0.2 text-[10px] font-normal text-muted-foreground">
+            {items.length}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onCreateBoardInFolder(folder.id)}
+            className="h-6 px-1.5 text-[11px] gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Create board in this project"
+          >
+            <Plus className="size-3" />
+            <span className="hidden sm:inline">Add Board</span>
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="size-6 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <MoreVertical className="size-3.5" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end" className="w-40 text-xs">
+              <DropdownMenuItem onClick={() => navigate({ name: 'project-detail', projectId: folder.id })}>
+                <FolderIcon className="mr-2 size-3.5 text-muted-foreground" />
+                <span>Open Project</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEditFolder(folder)}>
+                <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+                <span>Edit Project</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toggleFolderCollapse(folder.id)}>
+                {isCollapsed ? (
+                  <>
+                    <ChevronDown className="mr-2 size-3.5 text-muted-foreground" />
+                    <span>Expand</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronRight className="mr-2 size-3.5 text-muted-foreground" />
+                    <span>Collapse</span>
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDeleteFolder(folder)}
+              >
+                <Trash2 className="mr-2 size-3.5" />
+                <span>Delete Project</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Boards inside folder (collapsible) */}
+      {!isCollapsed && (
+        <div>
+          {items.length === 0 ? (
+            <div className="flex h-20 items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground/60 bg-muted/5">
+              {isDropTarget ? 'Drop here to add to project' : 'No boards in this project yet. Drag boards here or click Add Board.'}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {items.map((board, index) => (
+                <SortableGridBoardCard
+                  key={board.id}
+                  board={board}
+                  index={index}
+                  group={`folder_${folder.id}`}
+                  copiedId={copiedId}
+                  onNavigate={() => board.id !== undefined && onNavigate(board.id)}
+                  onTogglePin={(e) => onTogglePin(e, board)}
+                  onEdit={() => onEdit(board)}
+                  onShare={(e) => onShare(e, board.id)}
+                  onDelete={() => onDelete(board)}
+                  onLeave={() => onLeave && onLeave(board)}
+                  onCreateFolder={onCreateFolder}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Droppable My Boards Grid Section (/my boards) ──
+export function MyBoardsGridSection({
+  items,
+  copiedId,
+  onNavigate,
+  onTogglePin,
+  onEdit,
+  onShare,
+  onDelete,
+  onLeave,
+  onCreateFolder,
   onCreateClick
 }: BoardGridSectionProps & { onCreateClick: () => void }) {
   const { isDropTarget, ref } = useDroppable({
-    id: 'unpinned',
+    id: 'my-boards',
     type: 'column',
     accept: 'board',
     collisionPriority: CollisionPriority.Low
@@ -100,8 +292,8 @@ export function UnpinnedGridSection({
   return (
     <div className="space-y-2.5">
       <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/80">
-        <FolderOpen className="size-3.5 text-muted-foreground" />
-        <span>All Boards</span>
+        <LayoutGrid className="size-3.5 text-muted-foreground" />
+        <span>My Boards</span>
         <span className="rounded-full bg-muted px-1.5 py-0.2 text-[10px] font-normal text-muted-foreground">
           {items.length}
         </span>
@@ -123,7 +315,7 @@ export function UnpinnedGridSection({
               key={board.id}
               board={board}
               index={index}
-              group="unpinned"
+              group="my-boards"
               copiedId={copiedId}
               onNavigate={() => board.id !== undefined && onNavigate(board.id)}
               onTogglePin={(e) => onTogglePin(e, board)}
@@ -131,9 +323,77 @@ export function UnpinnedGridSection({
               onShare={(e) => onShare(e, board.id)}
               onDelete={() => onDelete(board)}
               onLeave={() => onLeave && onLeave(board)}
+              onCreateFolder={onCreateFolder}
             />
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Droppable Shared Boards Grid Section (/shared boards) ──
+export function SharedBoardsGridSection({
+  items,
+  copiedId,
+  onNavigate,
+  onTogglePin,
+  onEdit,
+  onShare,
+  onDelete,
+  onLeave,
+  onCreateFolder
+}: BoardGridSectionProps) {
+  const { isDropTarget, ref } = useDroppable({
+    id: 'shared-boards',
+    type: 'column',
+    accept: 'board',
+    collisionPriority: CollisionPriority.Low
+  })
+
+  if (items.length === 0 && !isDropTarget) return null
+
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/80">
+        <Users className="size-3.5 text-muted-foreground" />
+        <span>Shared Boards</span>
+        <span className="rounded-full bg-muted px-1.5 py-0.2 text-[10px] font-normal text-muted-foreground">
+          {items.length}
+        </span>
+      </div>
+
+      <div
+        ref={ref}
+        className={cn(
+          'min-h-[70px] rounded-xl p-1.5 transition-colors',
+          isDropTarget ? 'bg-accent/40 ring-1 ring-accent-foreground/20' : ''
+        )}
+      >
+        {items.length === 0 ? (
+          <div className="flex h-16 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground/60 bg-muted/5">
+            Drop here to move to Shared Boards
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {items.map((board, index) => (
+              <SortableGridBoardCard
+                key={board.id}
+                board={board}
+                index={index}
+                group="shared-boards"
+                copiedId={copiedId}
+                onNavigate={() => board.id !== undefined && onNavigate(board.id)}
+                onTogglePin={(e) => onTogglePin(e, board)}
+                onEdit={() => onEdit(board)}
+                onShare={(e) => onShare(e, board.id)}
+                onDelete={() => onDelete(board)}
+                onLeave={() => onLeave && onLeave(board)}
+                onCreateFolder={onCreateFolder}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

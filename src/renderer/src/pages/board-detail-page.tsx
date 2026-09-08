@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
-import { useBreadcrumbs } from '@/stores/dynamic-breadcrumb'
+import { useBreadcrumbs, BreadcrumbItem } from '@/stores/dynamic-breadcrumb'
+import { useBoardFoldersStore } from '@/stores/board-folders'
 import { useDraftSidebarStore } from '@/stores/draft-sidebar'
 import { useBoardAiStore } from '@/stores/board-ai'
 import { DraftSidebar } from '@/components/items'
@@ -24,6 +25,10 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const toggleAiSidebar = useBoardAiStore((s) => s.toggleSidebar)
   const closeAiSidebar = useBoardAiStore((s) => s.closeSidebar)
 
+  // Board folders store
+  const boardFolderMap = useBoardFoldersStore((s) => s.boardFolderMap)
+  const folders = useBoardFoldersStore((s) => s.folders)
+
   // Data fetching, realtime sync & permissions
   const {
     board,
@@ -42,11 +47,21 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   // Breadcrumb synchronization
   const breadcrumbItems = useMemo(() => {
     if (!board) return undefined
-    return [
-      { label: 'Boards', view: { name: 'boards' as const } },
-      { label: `${board.icon || '📋'} ${board.title || 'Untitled Board'}` }
+    const folderId = boardFolderMap[String(board.id)]
+    const folder = folderId ? folders.find((f) => String(f.id) === String(folderId)) : null
+
+    const items: BreadcrumbItem[] = [
+      { label: 'Boards', view: { name: 'boards' as const } }
     ]
-  }, [board])
+    if (folder) {
+      items.push({
+        label: `${folder.icon || '📁'} ${folder.name}`,
+        view: { name: 'project-detail' as const, projectId: folder.id }
+      })
+    }
+    items.push({ label: `${board.icon || '📋'} ${board.title || 'Untitled Board'}` })
+    return items
+  }, [board, boardFolderMap, folders])
 
   useBreadcrumbs(breadcrumbItems)
 

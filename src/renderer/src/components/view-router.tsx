@@ -4,6 +4,7 @@ import { useNavigationStore } from '@/stores/navigation'
 import { LandingPage } from '@/pages/landing-page'
 import { BoardsPage } from '@/pages/boards-page'
 import { BoardDetailPage } from '@/pages/board-detail-page'
+import { ProjectDetailPage } from '@/pages/project-detail-page'
 import { AuthSuccessPage } from '@/pages/auth-success-page'
 import { BoardsLayout } from '@/layouts/boards-layout'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -61,6 +62,12 @@ export function ViewRouter() {
       return (
         <BoardsLayout>
           <BoardDetailPage key={currentView.boardId} boardId={currentView.boardId} />
+        </BoardsLayout>
+      )
+    case 'project-detail':
+      return (
+        <BoardsLayout>
+          <ProjectDetailPage key={currentView.projectId} projectId={currentView.projectId} />
         </BoardsLayout>
       )
     default:

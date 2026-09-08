@@ -17,9 +17,13 @@ import {
   LayersIcon,
   LogOutIcon,
   DownloadIcon,
-  UploadIcon
+  UploadIcon,
+  FolderIcon,
+  FolderPlusIcon,
+  CheckIcon
 } from 'lucide-react'
 import { useBoardsStore } from '@/stores/boards'
+import { useBoardFoldersStore } from '@/stores/board-folders'
 import { useUser } from '@/providers/auth-provider'
 
 export type BoardMenuContentProps = {
@@ -34,6 +38,7 @@ export type BoardMenuContentProps = {
   onExport?: (e?: any) => void
   onImport?: (e?: any) => void
   onTogglePin?: (e?: any) => void
+  onCreateFolder?: () => void
 }
 
 export function BoardMenuContent({
@@ -47,11 +52,17 @@ export function BoardMenuContent({
   onLeave,
   onExport,
   onImport,
-  onTogglePin
+  onTogglePin,
+  onCreateFolder
 }: BoardMenuContentProps) {
   const updateBoard = useBoardsStore((s) => s.updateBoard)
   const duplicateBoard = useBoardsStore((s) => s.duplicateBoard)
   const { user } = useUser()
+
+  const folders = useBoardFoldersStore((s) => s.folders)
+  const boardFolderMap = useBoardFoldersStore((s) => s.boardFolderMap)
+  const moveBoardToFolder = useBoardFoldersStore((s) => s.moveBoardToFolder)
+  const currentFolderId = board.id !== undefined ? boardFolderMap[String(board.id)] : undefined
 
   const isOwner =
     propIsOwner ??
@@ -85,6 +96,63 @@ export function BoardMenuContent({
           </>
         )}
       </MenuItem>
+
+      {/* Move to Project Submenu */}
+      <MenuSub>
+        <MenuSubTrigger>
+          <FolderIcon className="text-muted-foreground" />
+          <span>Move to Project</span>
+        </MenuSubTrigger>
+        <MenuSubContent className="w-52 text-xs shadow-xl">
+          <MenuItem
+            onClick={() => {
+              if (board.id !== undefined) {
+                moveBoardToFolder(board.id, null)
+              }
+            }}
+          >
+            <span className="flex size-4 items-center justify-center">
+              {!currentFolderId && <CheckIcon className="size-3 text-primary" />}
+            </span>
+            <span className="ml-1">None (No Project)</span>
+          </MenuItem>
+          {folders.length > 0 && <MenuSeparator />}
+          {folders.map((folder) => {
+            const isSelected = currentFolderId === folder.id
+            return (
+              <MenuItem
+                key={folder.id}
+                onClick={() => {
+                  if (board.id !== undefined) {
+                    if (board.pinned) {
+                      updateBoard(board.id, { pinned: false })
+                    }
+                    moveBoardToFolder(board.id, folder.id)
+                  }
+                }}
+              >
+                <span className="flex size-4 items-center justify-center">
+                  {isSelected ? (
+                    <CheckIcon className="size-3 text-primary" />
+                  ) : (
+                    <span className="text-xs">{folder.icon || '📁'}</span>
+                  )}
+                </span>
+                <span className="ml-1 truncate">{folder.name}</span>
+              </MenuItem>
+            )
+          })}
+          {onCreateFolder && (
+            <>
+              <MenuSeparator />
+              <MenuItem onClick={onCreateFolder}>
+                <FolderPlusIcon className="size-3.5 text-muted-foreground" />
+                <span className="ml-1">New Project...</span>
+              </MenuItem>
+            </>
+          )}
+        </MenuSubContent>
+      </MenuSub>
 
       {canEdit && onEdit && (
         <MenuItem onClick={onEdit}>

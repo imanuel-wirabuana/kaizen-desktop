@@ -209,6 +209,60 @@
   }
 }
 
+@utility category-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 9999px;
+    transition: background-color 0.15s ease-in-out;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+}
+
+.group\/category:hover .category-scroll {
+  scrollbar-color: var(--border) transparent;
+}
+
+.group\/category:hover .category-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+}
+
+.group\/category:hover .category-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
+}
+
+.group\/folder:hover .folder-scroll {
+  scrollbar-color: var(--border) transparent;
+}
+
+.group\/folder:hover .folder-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+}
+
+.group\/folder:hover .folder-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
+}
+
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;

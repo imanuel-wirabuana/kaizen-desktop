@@ -178,7 +178,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                     {!readOnly && (
                       <span
                         ref={handleRef}
-                        className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-colors p-0.5 rounded touch-none shrink-0 mt-0.5"
+                        className="hidden group-hover/card:inline-flex items-center cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-colors p-0.5 rounded touch-none shrink-0 mt-0.5"
                         title="Drag to reorder task"
                         onClick={(e) => e.stopPropagation()}
                       >

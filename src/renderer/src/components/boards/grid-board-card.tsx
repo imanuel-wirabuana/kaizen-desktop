@@ -32,7 +32,7 @@ import { BoardMenuContent } from '@/components/menus/board-menu-content'
 export type SortableGridBoardCardProps = {
   board: Board
   index: number
-  group: 'pinned' | 'unpinned'
+  group: string
   copiedId: number | string | null
   onNavigate: () => void
   onTogglePin: (e: React.MouseEvent) => void
@@ -40,6 +40,7 @@ export type SortableGridBoardCardProps = {
   onShare: (e: React.MouseEvent) => void
   onDelete: () => void
   onLeave?: () => void
+  onCreateFolder?: () => void
 }
 
 export function SortableGridBoardCard({
@@ -52,7 +53,8 @@ export function SortableGridBoardCard({
   onEdit,
   onShare,
   onDelete,
-  onLeave
+  onLeave,
+  onCreateFolder
 }: SortableGridBoardCardProps) {
   const { user } = useUser()
   const isOwner =
@@ -241,7 +243,7 @@ export function SortableGridBoardCard({
             {/* Drag Handle Icon inside footer */}
             <span
               ref={handleRef}
-              className="cursor-grab touch-none active:cursor-grabbing p-0.5 text-muted-foreground/40 hover:text-foreground transition-colors"
+              className="hidden group-hover:inline-flex items-center cursor-grab touch-none active:cursor-grabbing p-0.5 text-muted-foreground/40 hover:text-foreground transition-colors"
               onClick={(e) => e.stopPropagation()}
               title="Drag to reorder"
             >
@@ -259,6 +261,7 @@ export function SortableGridBoardCard({
           onDelete={onDelete}
           onLeave={onLeave}
           onTogglePin={onTogglePin}
+          onCreateFolder={onCreateFolder}
         />
       </ContextMenuContent>
     </ContextMenu>

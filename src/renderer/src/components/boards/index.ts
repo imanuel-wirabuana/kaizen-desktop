@@ -12,5 +12,6 @@ export * from './share-board-modal'
 export * from './join-board-modal'
 export * from './export-board-modal'
 export * from './import-board-modal'
+export * from './folder-modal'
 
 

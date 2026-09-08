@@ -123,7 +123,7 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
               {/* Column Header */}
               <div
                 className={cn(
-                  'flex h-14 shrink-0 items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200 relative overflow-hidden',
+                  'group/header flex h-14 shrink-0 items-center justify-between border-b px-3.5 py-3 gap-2 min-w-0 transition-all duration-200 relative overflow-hidden',
                   hasCustomBackground ? bgProps.className : isVirtual ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 backdrop-blur-md'
                 )}
                 style={hasCustomBackground ? bgProps.style : undefined}
@@ -141,7 +141,7 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
                   ) : !readOnly ? (
                     <span
                       ref={handleRef}
-                      className="flex size-6 items-center justify-center rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-background/50 transition-colors cursor-grab active:cursor-grabbing touch-none shrink-0"
+                      className="hidden group-hover/header:inline-flex size-6 items-center justify-center rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-background/50 transition-colors cursor-grab active:cursor-grabbing touch-none shrink-0"
                       title="Drag column to reorder"
                       onClick={(e) => e.stopPropagation()}
                     >

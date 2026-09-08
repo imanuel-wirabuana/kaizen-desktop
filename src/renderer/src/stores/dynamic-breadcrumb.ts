@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { useEffect } from 'react'
 import type { View } from './navigation'
+import { useBoardFoldersStore } from './board-folders'
+import { useBoardsStore } from './boards'
 
 export type BreadcrumbItem = {
   label: string
@@ -49,8 +51,32 @@ export function breadcrumbFromView(view: View): BreadcrumbItem[] {
   if (view.name === 'boards') {
     return [{ label: 'Boards', view: { name: 'boards' } }]
   }
+  if (view.name === 'project-detail') {
+    const project = useBoardFoldersStore.getState().folders.find((f) => String(f.id) === String(view.projectId))
+    return [
+      { label: 'Boards', view: { name: 'boards' } },
+      { label: project ? `${project.icon || '📁'} ${project.name}` : 'Project' }
+    ]
+  }
   if (view.name === 'board-detail') {
-    return [{ label: 'Boards', view: { name: 'boards' } }]
+    const boardId = String(view.boardId)
+    const folderId = useBoardFoldersStore.getState().boardFolderMap[boardId]
+    const project = folderId
+      ? useBoardFoldersStore.getState().folders.find((f) => String(f.id) === String(folderId))
+      : null
+    const board = useBoardsStore.getState().boards.find((b) => String(b.id) === boardId)
+
+    const items: BreadcrumbItem[] = [{ label: 'Boards', view: { name: 'boards' } }]
+    if (project) {
+      items.push({
+        label: `${project.icon || '📁'} ${project.name}`,
+        view: { name: 'project-detail', projectId: project.id }
+      })
+    }
+    if (board) {
+      items.push({ label: `${board.icon || '📋'} ${board.title || 'Untitled Board'}` })
+    }
+    return items
   }
   return []
 }

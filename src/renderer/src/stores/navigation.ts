@@ -6,6 +6,7 @@ export type View =
   | { name: 'success' }
   | { name: 'boards' }
   | { name: 'board-detail'; boardId: number | string }
+  | { name: 'project-detail'; projectId: string }
 
 type NavigationState = {
   currentView: View
@@ -23,7 +24,8 @@ export const useNavigationStore = create<NavigationState>()(
         const current = get().currentView
         if (
           current.name === view.name &&
-          (current as any).boardId === (view as any).boardId
+          (current as any).boardId === (view as any).boardId &&
+          (current as any).projectId === (view as any).projectId
         ) {
           return
         }
