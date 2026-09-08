@@ -4,12 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  EmojiPicker,
-  EmojiPickerSearch,
-  EmojiPickerContent,
-  EmojiPickerFooter
-} from '@/components/ui/emoji-picker'
+import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { DateTimePicker } from '@/components/ui/date-picker'
 import {
@@ -45,8 +40,7 @@ import {
   ArrowRight,
   Inbox,
   FolderInput,
-  CopyPlus,
-  Smile
+  CopyPlus
 } from 'lucide-react'
 import { ItemMenuContent } from '@/components/menus/item-menu-content'
 import { useItemsStore } from '@/stores/items'
@@ -91,7 +85,6 @@ type TaskCardProps = {
 
 export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [directPickerOpen, setDirectPickerOpen] = useState(false)
 
   const updateItem = useItemsStore((s) => s.updateItem)
   const removeItem = useItemsStore((s) => s.removeItem)
@@ -192,63 +185,12 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                         <GripVertical className="size-3.5" />
                       </span>
                     )}
-                    {!readOnly && (
-                      <Popover open={directPickerOpen} onOpenChange={setDirectPickerOpen}>
-                        <PopoverTrigger
-                          render={
-                            item.icon ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setDirectPickerOpen(true)
-                                }}
-                                className="text-lg shrink-0 leading-none hover:scale-110 active:scale-95 transition-transform cursor-pointer"
-                                title="Change task emoji"
-                              >
-                                {item.icon}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setDirectPickerOpen(true)
-                                }}
-                                className="text-muted-foreground/40 hover:text-foreground opacity-0 group-hover/card:opacity-100 transition-opacity shrink-0 cursor-pointer mt-0.5"
-                                title="Add task emoji"
-                              >
-                                <Smile className="size-3.5" />
-                              </button>
-                            )
-                          }
-                        />
-                        <PopoverContent align="start" className="w-fit p-0 z-50">
-                          <EmojiPicker
-                            className="h-[342px]"
-                            onEmojiSelect={async ({ emoji }) => {
-                              await updateItem(item.id, { icon: emoji })
-                              setDirectPickerOpen(false)
-                            }}
-                          >
-                            <EmojiPickerSearch />
-                            <EmojiPickerContent />
-                            <EmojiPickerFooter />
-                          </EmojiPicker>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                    {readOnly && item.icon && (
-                      <span className="text-lg shrink-0 leading-none">{item.icon}</span>
-                    )}
-
                     <div
-                      className={cn("flex-1 min-w-0", !readOnly && "cursor-pointer")}
-                      onClick={() => !readOnly && setIsEditing(true)}
+                      className={cn("flex items-start gap-1.5 min-w-0 flex-1", !readOnly && "cursor-pointer")}
                       onDoubleClick={() => !readOnly && setIsEditing(true)}
-                      title={!readOnly ? "Click to edit task" : undefined}
                     >
-                      <span className="text-xs font-medium tracking-tight text-foreground/90 break-words block hover:text-primary transition-colors">
+                      {item.icon && <span className="text-sm shrink-0 leading-tight">{item.icon}</span>}
+                      <span className="text-xs font-medium tracking-tight text-foreground/90 break-words flex-1">
                         {item.title || 'Untitled Task'}
                       </span>
                     </div>
@@ -282,15 +224,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
 
                 {/* Description */}
                 {item.description ? (
-                  <p
-                    onClick={() => !readOnly && setIsEditing(true)}
-                    onDoubleClick={() => !readOnly && setIsEditing(true)}
-                    className={cn(
-                      "text-[11px] text-muted-foreground/80 line-clamp-2 pl-5 font-normal",
-                      !readOnly && "cursor-pointer hover:text-foreground/90 transition-colors"
-                    )}
-                    title={!readOnly ? "Click to edit task" : undefined}
-                  >
+                  <p className="text-[11px] text-muted-foreground/80 line-clamp-2 pl-5 font-normal">
                     {item.description}
                   </p>
                 ) : null}
@@ -355,7 +289,7 @@ export function TaskCardPreview({ item }: { item: KanbanItem }) {
         <GripVertical className="size-3.5 text-primary shrink-0 mt-0.5" />
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-start gap-1.5">
-            {item.icon && <span className="text-lg shrink-0 leading-tight">{item.icon}</span>}
+            {item.icon && <span className="text-sm shrink-0 leading-tight">{item.icon}</span>}
             <span className="text-xs font-medium text-foreground truncate">{item.title || 'Untitled Task'}</span>
           </div>
 

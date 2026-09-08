@@ -1,13 +1,4 @@
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  EmojiPicker,
-  EmojiPickerSearch,
-  EmojiPickerContent,
-  EmojiPickerFooter
-} from '@/components/ui/emoji-picker'
-import { useBoardsStore } from '@/stores/boards'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -66,62 +57,18 @@ export function BoardDetailHeader({
   onOpenLeave
 }: BoardDetailHeaderProps) {
   const { permissionRole, isOwner, isReadOnly, canEdit } = permissions
-  const [iconPickerOpen, setIconPickerOpen] = useState(false)
-  const updateBoard = useBoardsStore((s) => s.updateBoard)
 
   return (
     <ContextMenu>
       <ContextMenuTrigger
         render={
           <div className="flex items-center justify-between gap-2.5 px-0.5 py-0 select-none">
-            <div className="flex items-center gap-2.5 min-w-0">
-              {canEdit ? (
-                <Popover open={iconPickerOpen} onOpenChange={setIconPickerOpen}>
-                  <PopoverTrigger
-                    render={
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setIconPickerOpen(true)
-                        }}
-                        className="flex size-8.5 items-center justify-center rounded-lg border bg-background text-xl shadow-2xs shrink-0 hover:scale-105 active:scale-95 transition-all cursor-pointer hover:border-primary/50"
-                        title="Change board icon"
-                      >
-                        {board.icon || '📋'}
-                      </button>
-                    }
-                  />
-                  <PopoverContent align="start" className="w-fit p-0 z-50">
-                    <EmojiPicker
-                      className="h-[342px]"
-                      onEmojiSelect={async ({ emoji }) => {
-                        if (board.id !== undefined) {
-                          await updateBoard(board.id, { icon: emoji })
-                        }
-                        setIconPickerOpen(false)
-                      }}
-                    >
-                      <EmojiPickerSearch />
-                      <EmojiPickerContent />
-                      <EmojiPickerFooter />
-                    </EmojiPicker>
-                  </PopoverContent>
-                </Popover>
-              ) : (
-                <div className="flex size-8.5 items-center justify-center rounded-lg border bg-background text-xl shadow-2xs shrink-0">
-                  {board.icon || '📋'}
-                </div>
-              )}
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="flex size-7 items-center justify-center rounded-lg border bg-background text-sm shadow-2xs shrink-0">
+                {board.icon || '📋'}
+              </div>
               <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                <h1
-                  onClick={canEdit ? onOpenEdit : undefined}
-                  className={cn(
-                    "text-xs sm:text-sm font-bold tracking-tight text-foreground truncate shrink-0",
-                    canEdit && "cursor-pointer hover:text-primary transition-colors"
-                  )}
-                  title={canEdit ? "Click to edit board details" : undefined}
-                >
+                <h1 className="text-xs sm:text-sm font-bold tracking-tight text-foreground truncate shrink-0">
                   {board.title || 'Untitled Board'}
                 </h1>
                 {isReadOnly && (

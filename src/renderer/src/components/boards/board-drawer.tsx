@@ -16,12 +16,7 @@ import { Plus, Loader2, Palette } from 'lucide-react'
 import { useBoardsStore } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { useUser } from '@/providers/auth-provider'
-import {
-  EmojiPicker,
-  EmojiPickerSearch,
-  EmojiPickerContent,
-  EmojiPickerFooter
-} from '@/components/ui/emoji-picker'
+import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
@@ -199,10 +194,10 @@ export function BoardDrawer({
                       <Button
                         type="button"
                         variant="outline"
-                        className="flex h-10 w-full items-center justify-between px-3 text-left font-normal cursor-pointer"
+                        className="flex h-9 w-full items-center justify-between px-3 text-left font-normal"
                       >
-                        <span className="flex items-center gap-2.5">
-                          <span className="flex size-7 items-center justify-center rounded bg-muted/60 text-xl">
+                        <span className="flex items-center gap-2">
+                          <span className="flex size-6 items-center justify-center rounded bg-muted/60 text-base">
                             {icon}
                           </span>
                           <span className="text-xs text-muted-foreground">Choose Icon</span>
@@ -212,10 +207,10 @@ export function BoardDrawer({
                   />
                   <PopoverContent
                     align="start"
-                    className="w-fit p-0 z-50"
+                    className="w-[300px] border-none bg-transparent p-0 shadow-none"
                   >
                     <EmojiPicker
-                      className="h-[342px]"
+                      className="h-[326px] w-full rounded-lg border shadow-md"
                       onEmojiSelect={({ emoji }) => {
                         setIcon(emoji)
                         setPopoverOpen(false)
@@ -223,7 +218,6 @@ export function BoardDrawer({
                     >
                       <EmojiPickerSearch />
                       <EmojiPickerContent />
-                      <EmojiPickerFooter />
                     </EmojiPicker>
                   </PopoverContent>
                 </Popover>

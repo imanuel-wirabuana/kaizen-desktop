@@ -2,13 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  EmojiPicker,
-  EmojiPickerSearch,
-  EmojiPickerContent,
-  EmojiPickerFooter
-} from '@/components/ui/emoji-picker'
-import { Check, X, Smile } from 'lucide-react'
+import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
+import { Check, X } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 
 type InlineEditLaneProps = {
@@ -22,7 +17,6 @@ export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditL
   const [icon, setIcon] = useState<string | null>(lane.icon || null)
   const [description, setDescription] = useState(lane.description || '')
   const [popoverOpen, setPopoverOpen] = useState(false)
-  const [directPickerOpen, setDirectPickerOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const updateLane = useLanesStore((s) => s.updateLane)
@@ -92,16 +86,16 @@ export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditL
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="size-8 shrink-0 text-lg p-0 rounded-md"
+                  className="size-7 shrink-0 text-base p-0 rounded-md"
                   title="Choose Icon"
                 >
                   {icon || '😀'}
                 </Button>
               }
             />
-            <PopoverContent align="start" className="w-fit p-0 z-50">
+            <PopoverContent align="start" className="w-[300px] border-none bg-transparent p-0 shadow-none z-50">
               <EmojiPicker
-                className="h-[342px]"
+                className="h-[300px] w-full rounded-lg border shadow-md"
                 onEmojiSelect={({ emoji }) => {
                   setIcon(emoji)
                   setPopoverOpen(false)
@@ -109,7 +103,6 @@ export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditL
               >
                 <EmojiPickerSearch />
                 <EmojiPickerContent />
-                <EmojiPickerFooter />
               </EmojiPicker>
             </PopoverContent>
           </Popover>
@@ -119,7 +112,7 @@ export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditL
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="h-8 text-xs font-semibold px-2 py-0 bg-background flex-1 min-w-0"
+            className="h-7 text-xs font-semibold px-2 py-0 bg-background flex-1 min-w-0"
             placeholder="Lane Title..."
           />
           <Button
@@ -127,7 +120,7 @@ export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditL
             variant="ghost"
             size="icon"
             onClick={handleSave}
-            className="size-7 shrink-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md cursor-pointer"
+            className="size-6 shrink-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md"
             title="Save (Enter)"
           >
             <Check className="size-3.5" />
@@ -137,7 +130,7 @@ export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditL
             variant="ghost"
             size="icon"
             onClick={handleCancel}
-            className="size-7 shrink-0 text-muted-foreground hover:text-foreground rounded-md cursor-pointer"
+            className="size-6 shrink-0 text-muted-foreground hover:text-foreground rounded-md"
             title="Cancel (Esc)"
           >
             <X className="size-3.5" />
@@ -155,60 +148,13 @@ export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditL
   }
 
   return (
-    <div className="group flex-1 min-w-0 select-none flex items-center gap-1.5">
-      {/* Clickable Emoji Button to directly pick emoji in view mode */}
-      <Popover open={directPickerOpen} onOpenChange={setDirectPickerOpen}>
-        <PopoverTrigger
-          render={
-            lane.icon ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setDirectPickerOpen(true)
-                }}
-                className="flex size-7 items-center justify-center rounded-md hover:bg-muted/80 text-lg shrink-0 transition-transform active:scale-95 cursor-pointer"
-                title="Click to change lane emoji"
-              >
-                {lane.icon}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setDirectPickerOpen(true)
-                }}
-                className="flex size-6 items-center justify-center rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer"
-                title="Add lane emoji"
-              >
-                <Smile className="size-3.5" />
-              </button>
-            )
-          }
-        />
-        <PopoverContent align="start" className="w-fit p-0 z-50">
-          <EmojiPicker
-            className="h-[342px]"
-            onEmojiSelect={async ({ emoji }) => {
-              await updateLane(lane.id, { icon: emoji })
-              setDirectPickerOpen(false)
-            }}
-          >
-            <EmojiPickerSearch />
-            <EmojiPickerContent />
-            <EmojiPickerFooter />
-          </EmojiPicker>
-        </PopoverContent>
-      </Popover>
-
-      {/* Clickable Title & Description Area to inline edit */}
-      <div
-        onClick={() => onEditingChange(true)}
-        onDoubleClick={() => onEditingChange(true)}
-        className="min-w-0 flex-1 cursor-pointer py-0.5 rounded px-1 -mx-1 hover:bg-muted/40 transition-colors"
-        title="Click to edit lane"
-      >
+    <div
+      onDoubleClick={() => onEditingChange(true)}
+      className="group flex-1 min-w-0 cursor-pointer select-none flex items-center gap-1.5"
+      title="Double-click to edit title"
+    >
+      {lane.icon && <span className="text-sm shrink-0">{lane.icon}</span>}
+      <div className="min-w-0 flex-1">
         <h3 className="truncate text-xs font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">
           {lane.title || 'Untitled Lane'}
         </h3>
