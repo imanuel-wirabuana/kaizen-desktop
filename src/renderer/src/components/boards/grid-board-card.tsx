@@ -30,6 +30,7 @@ import {
 import { useUser } from '@/providers/auth-provider'
 import { cn } from '@/lib/utils'
 import { BoardMenuContent } from '@/components/menus/board-menu-content'
+import { useActiveBoardWithPreview } from '@/stores/board-preview'
 
 export type SortableGridBoardCardProps = {
   board: Board
@@ -46,7 +47,7 @@ export type SortableGridBoardCardProps = {
 }
 
 export function SortableGridBoardCard({
-  board,
+  board: initialBoard,
   index,
   group,
   copiedId,
@@ -58,6 +59,7 @@ export function SortableGridBoardCard({
   onLeave,
   onCreateFolder
 }: SortableGridBoardCardProps) {
+  const board = useActiveBoardWithPreview(initialBoard)
   const { user } = useUser()
   const isOwner =
     board.role === 'owner' ||

@@ -20,6 +20,7 @@ import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
+import { useBoardPreviewStore, type BoardPreviewData } from '@/stores/board-preview'
 
 export type BoardDrawerProps = {
   mode?: 'create' | 'edit'
@@ -28,6 +29,7 @@ export type BoardDrawerProps = {
   onOpenChange?: (open: boolean) => void
   trigger?: React.ReactElement | null
   onSuccess?: (board: Board) => void
+  onPreviewChange?: (preview: BoardPreviewData | null) => void
 }
 
 export function BoardDrawer({
@@ -36,7 +38,8 @@ export function BoardDrawer({
   open: propOpen,
   onOpenChange: propOnOpenChange,
   trigger,
-  onSuccess
+  onSuccess,
+  onPreviewChange
 }: BoardDrawerProps) {
   const isControlled = propOpen !== undefined
   const [internalOpen, setInternalOpen] = useState(false)
@@ -78,6 +81,36 @@ export function BoardDrawer({
     }
   }, [open, board])
 
+  // Synchronize live preview whenever form fields change while editing an existing board
+  useEffect(() => {
+    if (open && isEdit && board?.id !== undefined) {
+      const preview: BoardPreviewData = {
+        title: title.trim() || undefined,
+        description: description.trim() || undefined,
+        icon,
+        background: background || undefined,
+        pinned
+      }
+      useBoardPreviewStore.getState().setPreview(board.id, preview)
+      onPreviewChange?.(preview)
+    }
+  }, [open, isEdit, board?.id, title, description, icon, background, pinned, onPreviewChange])
+
+  // Clear live preview when drawer closes
+  useEffect(() => {
+    if (!open) {
+      useBoardPreviewStore.getState().clearPreview()
+      onPreviewChange?.(null)
+    }
+  }, [open, onPreviewChange])
+
+  // Clear live preview on unmount
+  useEffect(() => {
+    return () => {
+      useBoardPreviewStore.getState().clearPreview()
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) {
@@ -110,6 +143,7 @@ export function BoardDrawer({
           return
         }
 
+        useBoardPreviewStore.getState().clearPreview()
         if (onSuccess) onSuccess(updated)
         setOpen(false)
       } else {

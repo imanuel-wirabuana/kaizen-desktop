@@ -3,6 +3,7 @@ import { useBreadcrumbs, BreadcrumbItem } from '@/stores/dynamic-breadcrumb'
 import { useBoardFoldersStore } from '@/stores/board-folders'
 import { useDraftSidebarStore } from '@/stores/draft-sidebar'
 import { useBoardAiStore } from '@/stores/board-ai'
+import { useActiveBoardWithPreview } from '@/stores/board-preview'
 import { DraftSidebar } from '@/components/items'
 import { BoardAiSidebar } from '@/components/ai'
 import {
@@ -41,13 +42,16 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     permissions
   } = useBoardDetailData(boardId)
 
+  // Live board preview when editing
+  const activeBoard = useActiveBoardWithPreview(board)
+
   // Modal dialog states
   const dialogs = useBoardDetailDialogs()
 
   // Breadcrumb synchronization
   const breadcrumbItems = useMemo(() => {
-    if (!board) return undefined
-    const folderId = boardFolderMap[String(board.id)]
+    if (!activeBoard) return undefined
+    const folderId = boardFolderMap[String(activeBoard.id)]
     const folder = folderId ? folders.find((f) => String(f.id) === String(folderId)) : null
 
     const items: BreadcrumbItem[] = [
@@ -59,9 +63,9 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         view: { name: 'project-detail' as const, projectId: folder.id }
       })
     }
-    items.push({ label: `${board.icon || '📋'} ${board.title || 'Untitled Board'}` })
+    items.push({ label: `${activeBoard.icon || '📋'} ${activeBoard.title || 'Untitled Board'}` })
     return items
-  }, [board, boardFolderMap, folders])
+  }, [activeBoard, boardFolderMap, folders])
 
   useBreadcrumbs(breadcrumbItems)
 
@@ -87,7 +91,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
       {/* Board Header Bar */}
       <BoardDetailHeader
-        board={board}
+        board={activeBoard || board}
         permissions={permissions}
         draftItemsCount={draftItemsCount}
         isDraftOpen={isDraftOpen}
@@ -106,7 +110,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       <div className="flex flex-1 min-h-0 w-full gap-3 overflow-hidden">
         <BoardDetailCanvas
           boardId={boardId}
-          board={board}
+          board={activeBoard || board}
           canvasLanes={canvasLanes}
           lanesLoading={lanesLoading}
           isReadOnly={permissions.isReadOnly}
@@ -118,7 +122,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
         {/* AI Assistant Sidebar */}
         <BoardAiSidebar
-          board={board}
+          board={activeBoard || board}
           lanes={lanes}
           items={items}
           permissionRole={permissions.permissionRole}

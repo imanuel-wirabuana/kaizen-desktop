@@ -31,7 +31,7 @@ export function App() {
   }, [])
 
   return (
-    <ThemeProvider>
+    <ThemeProvider defaultTheme="system" enableSystem>
       <ViewRouter />
       <JoinBoardModal />
     </ThemeProvider>

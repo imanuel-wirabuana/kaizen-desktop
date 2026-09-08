@@ -5,7 +5,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 let mainWindow: BrowserWindow | null = null
 
 // Set explicit application name
-app.setName('Kaizen')
+app.setName('kaizen33')
 
 // Register custom protocol for deep linking
 if (process.defaultApp || is.dev) {
@@ -44,7 +44,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    title: 'Kaizen',
+    title: 'kaizen33',
     icon: iconPath,
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),

@@ -21,7 +21,7 @@ export function Navbar() {
             className="cursor-pointer flex items-center gap-2 text-left"
           >
             <img src="/icon.ico" alt="Kaizen" className="size-6 object-contain rounded-md shadow-sm" />
-            <h1 className="text-xl font-semibold">Kaizen</h1>
+            <h1 className="font-brand text-xl tracking-wide text-foreground/75">kaizen33</h1>
           </button>
         </div>
         <div className="flex items-center gap-2">

@@ -42,7 +42,7 @@ export function AuthSuccessPage() {
             Authentication Successful
           </h1>
           <p className="text-sm text-muted-foreground">
-            Your Google login was verified. Launching Kaizen Desktop App...
+            Your Google login was verified. Launching kaizen33 Desktop App...
           </p>
         </div>
 
@@ -53,11 +53,11 @@ export function AuthSuccessPage() {
             size="lg"
           >
             <ExternalLink className="h-4 w-4" />
-            Open Kaizen Desktop
+            Open kaizen33 Desktop
           </Button>
 
           <p className="text-xs text-muted-foreground/80">
-            You can safely close this browser window once Kaizen opens.
+            You can safely close this browser window once kaizen33 opens.
           </p>
         </div>
       </div>

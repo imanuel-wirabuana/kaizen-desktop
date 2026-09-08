@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { useBoardsStore } from '@/stores/boards'
+import { useBoardPreviewStore } from '@/stores/board-preview'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -60,6 +61,9 @@ export function BoardDetailHeader({
 }: BoardDetailHeaderProps) {
   const { permissionRole, isOwner, isReadOnly, canEdit } = permissions
   const updateBoard = useBoardsStore((s) => s.updateBoard)
+  const isPreviewing = useBoardPreviewStore((s) =>
+    board.id !== undefined && s.activePreviewBoardId !== null && String(s.activePreviewBoardId) === String(board.id)
+  )
 
   return (
     <ContextMenu>
@@ -95,6 +99,11 @@ export function BoardDetailHeader({
                 <h1 className="text-xs sm:text-sm font-bold tracking-tight text-foreground truncate shrink-0">
                   {board.title || 'Untitled Board'}
                 </h1>
+                {isPreviewing && (
+                  <span className="flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 shrink-0 animate-pulse">
+                    <Sparkles className="size-2.5" /> Live Preview
+                  </span>
+                )}
                 {isReadOnly && (
                   <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
                     <Eye className="size-2.5" /> View Only

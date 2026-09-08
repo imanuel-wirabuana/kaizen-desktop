@@ -22,8 +22,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               onClick={() => navigate({ name: 'landing' })}
               className="flex w-full cursor-pointer items-center gap-2.5 text-left py-0.5"
             >
-              <img src="/icon.ico" alt="Kaizen" className="size-7.5 object-contain rounded-lg shadow-sm" />
-              <span className="text-base font-bold tracking-tight">Kaizen</span>
+              <img
+                src="/icon.ico"
+                alt="Kaizen"
+                className="size-8 object-contain shadow-sm"
+              />
+              <span className="font-brand text-base tracking-wide text-foreground/75 select-none">
+                kaizen33
+              </span>
             </button>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -35,7 +41,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarFooter className="p-2">
         <span className="text-[10px] text-muted-foreground/70">
-          Kaizen · 2026
+          kaizen33 · 2026
         </span>
       </SidebarFooter>
     </Sidebar>

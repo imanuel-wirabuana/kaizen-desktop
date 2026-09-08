@@ -1,7 +1,7 @@
 {
   "name": "kaizen-desktop",
   "version": "1.0.0",
-  "description": "Kaizen - Kanban for Continuous Improvement (Desktop)",
+  "description": "kaizen33 - Kanban for Continuous Improvement (Desktop)",
   "main": "./out/main/index.js",
   "author": "Kaizen Team",
   "type": "module",
@@ -38,6 +38,7 @@
     "frimousse": "^0.3.0",
     "lucide-react": "^1.28.0",
     "motion": "^12.43.0",
+    "ogl": "^1.0.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.6.0",

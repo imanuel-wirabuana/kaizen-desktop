@@ -161,7 +161,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
           <DialogDescription className="text-center text-xs text-muted-foreground">
             {tab === 'signin'
               ? 'Sign in to access your Kanban boards'
-              : 'Start organizing your tasks with Kaizen'}
+              : 'Start organizing your tasks with kaizen33'}
           </DialogDescription>
         </DialogHeader>
 
