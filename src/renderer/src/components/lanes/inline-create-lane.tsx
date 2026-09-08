@@ -3,7 +3,12 @@ import { useUser } from '@/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
+import {
+  EmojiPicker,
+  EmojiPickerSearch,
+  EmojiPickerContent,
+  EmojiPickerFooter
+} from '@/components/ui/emoji-picker'
 import { Plus, X, Loader2, Palette, Sparkles } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 import { BackgroundPicker } from '@/components/ui/background-picker'
@@ -139,18 +144,18 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex h-8 w-full items-center justify-between px-2.5 text-left font-normal bg-background"
+                  className="flex h-9 w-full items-center justify-between px-2.5 text-left font-normal bg-background cursor-pointer"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="text-sm">{icon}</span>
+                    <span className="text-lg">{icon}</span>
                     <span className="text-xs text-muted-foreground">Choose Emoji Icon</span>
                   </span>
                 </Button>
               }
             />
-            <PopoverContent align="start" className="w-[300px] border-none bg-transparent p-0 shadow-none z-50">
+            <PopoverContent align="start" className="w-fit p-0 z-50">
               <EmojiPicker
-                className="h-[300px] w-full rounded-lg border shadow-md"
+                className="h-[342px]"
                 onEmojiSelect={({ emoji }) => {
                   setIcon(emoji)
                   setPopoverOpen(false)
@@ -158,6 +163,7 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
               >
                 <EmojiPickerSearch />
                 <EmojiPickerContent />
+                <EmojiPickerFooter />
               </EmojiPicker>
             </PopoverContent>
           </Popover>

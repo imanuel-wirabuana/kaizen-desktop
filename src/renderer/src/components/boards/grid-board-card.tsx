@@ -1,5 +1,14 @@
+import { useState } from 'react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  EmojiPicker,
+  EmojiPickerSearch,
+  EmojiPickerContent,
+  EmojiPickerFooter
+} from '@/components/ui/emoji-picker'
+import { useBoardsStore } from '@/stores/boards'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +70,8 @@ export function SortableGridBoardCard({
     (!board.role && !board.owner)
   const canEdit = isOwner || board.role === 'edit'
   const isPinned = !!board.pinned
+  const [iconPickerOpen, setIconPickerOpen] = useState(false)
+  const updateBoard = useBoardsStore((s) => s.updateBoard)
   const bgProps = getBoardBackgroundStyleAndClass(board.background)
   const hasBackground = bgProps.isImage || bgProps.className
 
@@ -197,9 +208,42 @@ export function SortableGridBoardCard({
         {/* Card Main Body */}
         <div className="flex items-start gap-2.5 p-2.5 -mt-3 relative z-[1]">
           {/* Emoji Badge - overlapping the banner */}
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border-2 border-card bg-background text-sm shadow-sm">
-            {board.icon || '📋'}
-          </div>
+          {canEdit ? (
+            <Popover open={iconPickerOpen} onOpenChange={setIconPickerOpen}>
+              <PopoverTrigger
+                render={
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIconPickerOpen(true)
+                    }}
+                    className="flex size-9 shrink-0 items-center justify-center rounded-xl border-2 border-card bg-background text-xl shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer hover:border-primary/50"
+                    title="Change board icon"
+                  >
+                    {board.icon || '📋'}
+                  </button>
+                }
+              />
+              <PopoverContent align="start" className="w-fit p-0 z-50">
+                <EmojiPicker
+                  className="h-[342px]"
+                  onEmojiSelect={async ({ emoji }) => {
+                    await updateBoard(board.id!, { icon: emoji })
+                    setIconPickerOpen(false)
+                  }}
+                >
+                  <EmojiPickerSearch />
+                  <EmojiPickerContent />
+                  <EmojiPickerFooter />
+                </EmojiPicker>
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border-2 border-card bg-background text-xl shadow-sm">
+              {board.icon || '📋'}
+            </div>
+          )}
 
           <div className="flex flex-1 flex-col min-w-0 pt-0.5 space-y-1">
             <div className="flex items-center justify-between gap-1">

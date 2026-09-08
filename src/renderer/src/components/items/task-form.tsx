@@ -3,7 +3,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
+import {
+  EmojiPicker,
+  EmojiPickerSearch,
+  EmojiPickerContent,
+  EmojiPickerFooter
+} from '@/components/ui/emoji-picker'
 import { BackgroundPicker } from '@/components/ui/background-picker'
 import { DateTimePicker } from '@/components/ui/date-picker'
 import { Loader2, Palette } from 'lucide-react'
@@ -101,16 +106,16 @@ export function TaskForm({
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="size-7 shrink-0 text-base p-0 rounded-md"
+                  className="size-8 shrink-0 text-lg p-0 rounded-md cursor-pointer"
                   title="Choose Icon (optional)"
                 >
                   {icon || '😀'}
                 </Button>
               }
             />
-            <PopoverContent align="start" className="w-[300px] border-none bg-transparent p-0 shadow-none z-50">
+            <PopoverContent align="start" className="w-fit p-0 z-50">
               <EmojiPicker
-                className="h-[300px] w-full rounded-lg border shadow-md"
+                className="h-[342px]"
                 onEmojiSelect={({ emoji }) => {
                   setIcon(emoji)
                   setPopoverOpen(false)
@@ -118,6 +123,7 @@ export function TaskForm({
               >
                 <EmojiPickerSearch />
                 <EmojiPickerContent />
+                <EmojiPickerFooter />
               </EmojiPicker>
             </PopoverContent>
           </Popover>
