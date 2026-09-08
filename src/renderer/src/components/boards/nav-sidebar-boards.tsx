@@ -415,17 +415,29 @@ export function NavSidebarBoards() {
         <DragOverlay dropAnimation={null}>
           {(source) => {
             if (!source) return null
+            const width = source.element ? source.element.getBoundingClientRect().width : undefined
 
             if (source.type === 'folder') {
               const activeFolder = folders.find((f) => String(f.id) === String(source.id))
               if (!activeFolder) return null
-              return <FolderDragPreview folder={activeFolder} />
+              const folderBoards =
+                categorized.customFolders.find((cf) => String(cf.folder.id) === String(source.id))
+                  ?.boards || []
+              return (
+                <div style={{ width: width ? `${width}px` : undefined }}>
+                  <FolderDragPreview folder={activeFolder} boardCount={folderBoards.length} />
+                </div>
+              )
             }
 
             if (source.type === 'board') {
               const activeBoard = boards.find((b) => String(b.id) === String(source.id))
               if (!activeBoard) return null
-              return <BoardDragPreview item={activeBoard} />
+              return (
+                <div style={{ width: width ? `${width}px` : undefined }}>
+                  <BoardDragPreview item={activeBoard} />
+                </div>
+              )
             }
 
             return null
@@ -1216,32 +1228,49 @@ function SortableSidebarBoardItem({
 // ── Drag Preview for Boards ──
 export function BoardDragPreview({ item }: { item: Board }) {
   return (
-    <div className="w-56 pointer-events-none select-none list-none">
+    <div className="w-full pointer-events-none select-none list-none">
       <SidebarMenuButton
-        className="flex w-full items-center justify-start gap-1.5 border border-primary/40 bg-sidebar-accent text-sidebar-accent-foreground shadow-xl ring-1 ring-primary/30 rounded-md"
+        className="flex w-full items-center justify-start gap-1.5 border border-primary/40 bg-sidebar-accent text-sidebar-accent-foreground shadow-xl ring-1 ring-primary/30 rounded-md h-7.5"
       >
         <span className="text-primary cursor-grabbing shrink-0">
           <GripVerticalIcon className="size-3.5" />
         </span>
         <span className="shrink-0 text-xs">{item.icon || '📋'}</span>
-        <span className="truncate text-xs font-medium flex-1 min-w-0">{item.title}</span>
+        <span className="truncate text-xs font-medium flex-1 min-w-0">{item.title || 'Untitled Board'}</span>
+        {item.role && item.role !== 'owner' && (
+          <span className="text-[9px] px-1 py-0.2 rounded bg-muted text-muted-foreground font-medium capitalize shrink-0 ml-auto">
+            {item.role}
+          </span>
+        )}
       </SidebarMenuButton>
     </div>
   )
 }
 
 // ── Drag Preview for Folders ──
-export function FolderDragPreview({ folder }: { folder: BoardFolder }) {
+export function FolderDragPreview({
+  folder,
+  boardCount = 0
+}: {
+  folder: BoardFolder
+  boardCount?: number
+}) {
   return (
-    <div className="w-56 pointer-events-none select-none list-none">
-      <div className="flex w-full items-center gap-1.5 px-2 py-1.5 border border-primary/40 bg-sidebar-accent text-sidebar-accent-foreground shadow-xl ring-1 ring-primary/30 rounded-md text-xs font-medium">
+    <div className="w-full pointer-events-none select-none list-none">
+      <div className="flex w-full items-center gap-1 px-1.5 h-7 border border-primary/40 bg-sidebar-accent text-sidebar-accent-foreground shadow-xl ring-1 ring-primary/30 rounded-md text-xs font-medium">
         <span className="text-primary cursor-grabbing shrink-0">
-          <GripVerticalIcon className="size-3.5" />
+          <GripVerticalIcon className="size-3" />
+        </span>
+        <span className="flex size-4 items-center justify-center rounded-sm text-muted-foreground shrink-0">
+          <ChevronDownIcon className="size-3.5" />
         </span>
         <span className="flex size-4 items-center justify-center rounded-xs text-xs shrink-0 text-muted-foreground">
           {folder.icon || '📁'}
         </span>
-        <span className="truncate flex-1 min-w-0">{folder.name}</span>
+        <span className="truncate flex-1 min-w-0 font-medium">{folder.name}</span>
+        <span className="text-[10px] text-muted-foreground/70 font-normal shrink-0 px-1 rounded-sm bg-muted/40">
+          {boardCount}
+        </span>
       </div>
     </div>
   )

@@ -34,7 +34,8 @@ import {
   Sparkles,
   FolderInput,
   Copy,
-  CopyPlus
+  CopyPlus,
+  Plus
 } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
@@ -301,13 +302,52 @@ export function LaneColumnPreview({ lane }: { lane: Lane }) {
         {bgProps.isImage && (
           <div className="absolute inset-0 bg-background/50 pointer-events-none" />
         )}
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <GripVertical className="size-4 text-primary shrink-0" />
-          <span className="text-xs font-semibold text-foreground truncate">{lane.title || 'Untitled Lane'}</span>
+        <div className="flex items-center gap-1.5 min-w-0 flex-1 relative z-10">
+          {isVirtual ? (
+            <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0" title="Virtual Draft Lane">
+              <Inbox className="size-3.5" />
+            </div>
+          ) : (
+            <span className="size-6 inline-flex items-center justify-center text-primary shrink-0">
+              <GripVertical className="size-4" />
+            </span>
+          )}
+
+          {isVirtual ? (
+            <div className="flex items-center gap-1.5 truncate">
+              <span className="text-xs font-semibold tracking-tight text-foreground truncate">Draft</span>
+              <span className="rounded-full bg-primary/15 px-1.5 py-0.2 text-[9px] font-semibold text-primary uppercase tracking-wider">
+                Virtual
+              </span>
+            </div>
+          ) : (
+            <div className="flex-1 min-w-0 select-none flex items-center gap-1.5">
+              {lane.icon && <span className="text-sm shrink-0">{lane.icon}</span>}
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-xs font-semibold tracking-tight text-foreground">
+                  {lane.title || 'Untitled Lane'}
+                </h3>
+                {lane.description ? (
+                  <p className="truncate text-[11px] text-muted-foreground font-normal">
+                    {lane.description}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          )}
         </div>
-        <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-background/80 border text-[10px] font-bold text-muted-foreground shadow-2xs">
-          {columnItems.length}
-        </span>
+
+        {/* Controls Area Placeholder */}
+        <div className="flex items-center gap-1 shrink-0 relative z-10">
+          <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-background/80 border text-[10px] font-bold text-muted-foreground shadow-2xs backdrop-blur-xs">
+            {columnItems.length}
+          </span>
+          {!isVirtual && (
+            <div className="size-6 flex items-center justify-center text-muted-foreground/30">
+              <MoreHorizontal className="size-3.5" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Column Cards Preview Body */}
@@ -323,6 +363,18 @@ export function LaneColumnPreview({ lane }: { lane: Lane }) {
           </div>
         )}
       </div>
+
+      {/* Footer Add Task Placeholder */}
+      {!isVirtual && (
+        <div className="p-2 border-t border-border/50 bg-muted/20 backdrop-blur-xs">
+          <div className="flex h-8 w-full items-center justify-start gap-2 rounded-xl px-3 text-xs font-medium text-muted-foreground/70 shadow-2xs">
+            <div className="flex size-4 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <Plus className="size-3" />
+            </div>
+            <span>Add Task</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

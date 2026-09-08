@@ -270,35 +270,74 @@ export function SortableGridBoardCard({
 
 // ── Drag Overlay Preview Component ──
 export function BoardCardPreview({ board }: { board: Board }) {
+  const isPinned = !!board.pinned
   const bgProps = getBoardBackgroundStyleAndClass(board.background)
   const hasBackground = bgProps.isImage || bgProps.className
 
   return (
     <div className="flex min-h-[160px] w-full flex-col overflow-hidden rounded-2xl border border-primary/50 bg-card text-card-foreground shadow-2xl ring-2 ring-primary/30 opacity-95 pointer-events-none select-none">
+      {/* Banner Area */}
       <div
         className={cn(
           'relative h-20 w-full overflow-hidden shrink-0',
-          hasBackground ? '' : 'bg-gradient-to-br from-muted/60 via-muted/30 to-muted/50',
-          bgProps.className
+          hasBackground ? '' : 'bg-gradient-to-br from-muted/60 via-muted/30 to-muted/50'
         )}
         style={bgProps.style}
       >
-        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card/80 to-transparent" />
+        <div className={cn('absolute inset-0', bgProps.className)} />
+
+        {isPinned && (
+          <div className="absolute left-1.5 top-1.5 z-10 flex size-5 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-xs">
+            <Pin className="size-2.5 fill-current" />
+          </div>
+        )}
       </div>
+
+      {/* Card Main Body */}
       <div className="flex items-start gap-2.5 p-2.5 -mt-3 relative z-[1]">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border-2 border-card bg-background text-sm shadow-sm">
           {board.icon || '📋'}
         </div>
-        <div className="min-w-0 flex-1 pt-0.5">
-          <h3 className="text-xs font-semibold text-foreground truncate">{board.title}</h3>
-          <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-1">
-            {board.description || 'No description'}
-          </p>
+
+        <div className="flex flex-1 flex-col min-w-0 pt-0.5 space-y-1">
+          <div className="flex items-center justify-between gap-1">
+            <h3 className="font-semibold text-xs text-foreground truncate">
+              {board.title || 'Untitled Board'}
+            </h3>
+            {board.role && board.role !== 'owner' && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium capitalize shrink-0">
+                {board.role}
+              </span>
+            )}
+          </div>
+
+          {board.description && (
+            <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+              {board.description}
+            </p>
+          )}
         </div>
       </div>
-      <div className="flex items-center justify-between border-t bg-muted/20 px-2.5 py-1 text-[10px] text-muted-foreground mt-auto">
-        <span>Moving board...</span>
-        <GripVertical className="size-3 text-primary" />
+
+      {/* Card Footer Row */}
+      <div className="flex items-center justify-between border-t border-border/40 px-2.5 py-1.5 text-[10px] text-muted-foreground/70 bg-card/50 mt-auto">
+        <span className="truncate">
+          {board.last_activity
+            ? `Active ${new Date(board.last_activity).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric'
+              })}`
+            : board.updated_at
+            ? `Updated ${new Date(board.updated_at).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric'
+              })}`
+            : 'Recent'}
+        </span>
+
+        <div className="flex items-center gap-1.5">
+          <GripVertical className="size-3 text-primary" />
+        </div>
       </div>
     </div>
   )

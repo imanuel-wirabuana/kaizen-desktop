@@ -280,37 +280,61 @@ export function TaskCardPreview({ item }: { item: KanbanItem }) {
   return (
     <div
       className={cn(
-        'flex flex-col rounded-xl border border-primary/50 bg-background p-3 shadow-xl ring-2 ring-primary/30 opacity-95 pointer-events-none select-none overflow-hidden',
+        'relative flex flex-col rounded-xl border border-primary/50 bg-background p-3 shadow-xl ring-2 ring-primary/30 opacity-95 pointer-events-none select-none overflow-hidden',
         hasCustomBackground ? bgProps.className : ''
       )}
       style={hasCustomBackground ? bgProps.style : undefined}
     >
-      <div className="flex items-start gap-1.5 min-w-0">
-        <GripVertical className="size-3.5 text-primary shrink-0 mt-0.5" />
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-start gap-1.5">
-            {item.icon && <span className="text-sm shrink-0 leading-tight">{item.icon}</span>}
-            <span className="text-xs font-medium text-foreground truncate">{item.title || 'Untitled Task'}</span>
+      {bgProps.isImage && (
+        <div className="absolute inset-0 bg-background/70 dark:bg-background/80 pointer-events-none" />
+      )}
+      <div className="space-y-1.5 relative z-10">
+        <div className="flex items-start justify-between gap-1.5 min-w-0">
+          <div className="flex items-start gap-1.5 min-w-0 flex-1">
+            <span className="inline-flex items-center text-primary transition-colors p-0.5 rounded touch-none shrink-0 mt-0.5">
+              <GripVertical className="size-3.5" />
+            </span>
+            <div className="flex items-start gap-1.5 min-w-0 flex-1">
+              {item.icon && <span className="text-sm shrink-0 leading-tight">{item.icon}</span>}
+              <span className="text-xs font-medium tracking-tight text-foreground/90 break-words flex-1">
+                {item.title || 'Untitled Task'}
+              </span>
+            </div>
           </div>
 
-          {((item.priority ?? 0) > 0 || dueDateInfo) && (
-            <div className="flex items-center gap-1.5 pt-0.5">
-              {(item.priority ?? 0) > 0 && (
-                <span className={cn('inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-semibold border', priorityInfo.badge)}>
-                  <span className={cn('size-1.5 rounded-full', priorityInfo.dot)} />
-                  {priorityInfo.label}
-                </span>
-              )}
-
-              {dueDateInfo && (
-                <span className={cn('inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-medium border bg-muted/60 text-muted-foreground border-border')}>
-                  <Calendar className="size-2.5" />
-                  {dueDateInfo.formatted}
-                </span>
-              )}
-            </div>
-          )}
+          <div className="size-5 shrink-0" />
         </div>
+
+        {/* Description */}
+        {item.description ? (
+          <p className="text-[11px] text-muted-foreground/80 line-clamp-2 pl-5 font-normal">
+            {item.description}
+          </p>
+        ) : null}
+
+        {/* Badges Footer (Priority & Due Date) */}
+        {((item.priority ?? 0) > 0 || dueDateInfo) && (
+          <div className="flex items-center gap-1.5 pt-1 pl-5">
+            {/* Priority Badge */}
+            {(item.priority ?? 0) > 0 && (
+              <span className={cn('inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-semibold border', priorityInfo.badge)}>
+                <span className={cn('size-1.5 rounded-full', priorityInfo.dot)} />
+                {priorityInfo.label}
+              </span>
+            )}
+
+            {/* Due Date Badge */}
+            {dueDateInfo && (
+              <span className={cn(
+                'inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-medium border bg-muted/60 text-muted-foreground border-border',
+                dueDateInfo.isOverdue ? 'bg-destructive/15 text-destructive border-destructive/30 font-semibold' : ''
+              )}>
+                <Calendar className="size-2.5" />
+                {dueDateInfo.formatted}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
