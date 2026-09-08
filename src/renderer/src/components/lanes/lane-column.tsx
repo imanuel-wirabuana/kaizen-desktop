@@ -165,6 +165,7 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
                       lane={lane}
                       isEditing={isEditing}
                       onEditingChange={setIsEditing}
+                      readOnly={readOnly}
                     />
                   )}
                 </div>
@@ -240,8 +241,8 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
           }
         />
 
-        {/* Right-click Context Menu */}
-        {!isVirtual && (
+        {/* Right-click Context Menu (only when editable) */}
+        {!isVirtual && !readOnly && (
           <ContextMenuContent className="w-48 text-xs shadow-xl">
             <LaneMenuContent
               lane={lane}
@@ -258,8 +259,8 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
         )}
       </ContextMenu>
 
-      {/* Delete Confirmation Modal */}
-      {!isVirtual && (
+      {/* Delete and Move Confirmation Modals */}
+      {!isVirtual && !readOnly && (
         <>
           <DeleteLaneDialog
             lane={lane}

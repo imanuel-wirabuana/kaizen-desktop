@@ -114,7 +114,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         />
 
         {/* Draft Items Sidebar */}
-        <DraftSidebar />
+        <DraftSidebar readOnly={permissions.isReadOnly} />
 
         {/* AI Assistant Sidebar */}
         <BoardAiSidebar

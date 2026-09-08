@@ -15,10 +15,31 @@ export function useBoardPermissions(
   userId?: string | null
 ): BoardPermissions {
   const permissionRole = useMemo<PermissionRole>(() => {
-    if (dbPermission) return dbPermission
-    if (board?.role) return board.role
-    if (userId && board?.owner === userId) return 'owner'
-    return board ? 'view' : null
+    if (!board) return null
+
+    // 1. User is explicitly the board owner
+    if (userId && board.owner && board.owner === userId) {
+      return 'owner'
+    }
+
+    // 2. Unowned boards (local offline or demo boards)
+    if (!board.owner) {
+      return 'owner'
+    }
+
+    // 3. Database permission query explicitly completed
+    // (if null, user is unauthorized - neither owner nor in board_members)
+    if (dbPermission !== undefined) {
+      return dbPermission
+    }
+
+    // 4. Fallback while database query is still in flight
+    if (board.role) {
+      return board.role
+    }
+
+    // 5. Pending resolution for shared board
+    return 'view'
   }, [dbPermission, board?.role, board?.owner, board, userId])
 
   const isOwner = permissionRole === 'owner'

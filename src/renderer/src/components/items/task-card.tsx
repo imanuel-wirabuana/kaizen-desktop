@@ -111,6 +111,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   })
 
   const handleSave = async (values: TaskFormValues) => {
+    if (readOnly) return
     setIsEditing(false)
     await updateItem(item.id, {
       title: values.title.trim(),
@@ -123,6 +124,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   }
 
   const handleMoveToLane = (targetLaneId: number | null) => {
+    if (readOnly) return
     const allItems = useItemsStore.getState().items
     const targetLaneItems = allItems.filter(
       (i) => (targetLaneId === null && i.lane_id === null) || (targetLaneId !== null && i.lane_id === targetLaneId)
@@ -258,14 +260,16 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
         }
       />
 
-      {/* Right-click Context Menu */}
-      <ContextMenuContent className="w-48 text-xs shadow-xl">
-        <ItemMenuContent
-          item={item}
-          variant="context"
-          onEdit={() => setIsEditing(true)}
-        />
-      </ContextMenuContent>
+      {/* Right-click Context Menu (only when editable) */}
+      {!readOnly && (
+        <ContextMenuContent className="w-48 text-xs shadow-xl">
+          <ItemMenuContent
+            item={item}
+            variant="context"
+            onEdit={() => setIsEditing(true)}
+          />
+        </ContextMenuContent>
+      )}
     </ContextMenu>
   )
 }

@@ -5,14 +5,16 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { EmojiPicker, EmojiPickerSearch, EmojiPickerContent } from '@/components/ui/emoji-picker'
 import { Check, X } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
+import { cn } from '@/lib/utils'
 
 type InlineEditLaneProps = {
   lane: Lane
   isEditing: boolean
   onEditingChange: (editing: boolean) => void
+  readOnly?: boolean
 }
 
-export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditLaneProps) {
+export function InlineEditLane({ lane, isEditing, onEditingChange, readOnly = false }: InlineEditLaneProps) {
   const [title, setTitle] = useState(lane.title || '')
   const [icon, setIcon] = useState<string | null>(lane.icon || null)
   const [description, setDescription] = useState(lane.description || '')
@@ -34,6 +36,10 @@ export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditL
   }, [isEditing])
 
   const handleSave = async () => {
+    if (readOnly) {
+      onEditingChange(false)
+      return
+    }
     const trimmedTitle = title.trim()
     if (!trimmedTitle) {
       // Revert if empty
@@ -149,13 +155,21 @@ export function InlineEditLane({ lane, isEditing, onEditingChange }: InlineEditL
 
   return (
     <div
-      onDoubleClick={() => onEditingChange(true)}
-      className="group flex-1 min-w-0 cursor-pointer select-none flex items-center gap-1.5"
-      title="Double-click to edit title"
+      onDoubleClick={() => !readOnly && onEditingChange(true)}
+      className={cn(
+        'group flex-1 min-w-0 select-none flex items-center gap-1.5',
+        !readOnly && 'cursor-pointer'
+      )}
+      title={!readOnly ? 'Double-click to edit title' : undefined}
     >
       {lane.icon && <span className="text-sm shrink-0">{lane.icon}</span>}
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-xs font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">
+        <h3
+          className={cn(
+            'truncate text-xs font-semibold tracking-tight text-foreground transition-colors',
+            !readOnly && 'group-hover:text-primary'
+          )}
+        >
           {lane.title || 'Untitled Lane'}
         </h3>
         {lane.description ? (

@@ -9,7 +9,7 @@ import { TaskCard } from './task-card'
 import { InlineCreateTask } from './inline-create-task'
 import { cn } from '@/lib/utils'
 
-export function DraftSidebar() {
+export function DraftSidebar({ readOnly = false }: { readOnly?: boolean }) {
   const isOpen = useDraftSidebarStore((s) => s.isOpen)
   const close = useDraftSidebarStore((s) => s.close)
   const currentView = useNavigationStore((s) => s.currentView)
@@ -24,7 +24,8 @@ export function DraftSidebar() {
     id: 'draft-sidebar-drop-target',
     type: 'item',
     accept: 'item',
-    data: { type: 'lane', laneId: null }
+    data: { type: 'lane', laneId: null },
+    disabled: readOnly
   })
 
   // Only render when accessing board detail view
@@ -86,12 +87,12 @@ export function DraftSidebar() {
           ref={dropRef}
           className={cn(
             'flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5 transition-all rounded-xl',
-            isDropTarget ? 'bg-primary/10 ring-2 ring-primary/40 border-2 border-dashed border-primary/50' : ''
+            isDropTarget && !readOnly ? 'bg-primary/10 ring-2 ring-primary/40 border-2 border-dashed border-primary/50' : ''
           )}
         >
           {draftItems.length > 0 ? (
             draftItems.map((item, idx) => (
-              <TaskCard key={item.id} item={item} index={idx} />
+              <TaskCard key={item.id} item={item} index={idx} readOnly={readOnly} />
             ))
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/20 bg-muted/10 p-6 text-center transition-all">
@@ -101,7 +102,9 @@ export function DraftSidebar() {
               <div>
                 <p className="text-xs font-semibold text-foreground/80">No draft tasks</p>
                 <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                  Drag cards here or add one below to save draft tasks
+                  {readOnly
+                    ? 'No unassigned draft tasks on this board'
+                    : 'Drag cards here or add one below to save draft tasks'}
                 </p>
               </div>
             </div>
@@ -109,9 +112,11 @@ export function DraftSidebar() {
         </div>
 
         {/* Sidebar Footer Inline Task Creator */}
-        <div className="p-2.5 border-t border-border/50 bg-sidebar/50">
-          <InlineCreateTask laneId={null} />
-        </div>
+        {!readOnly && (
+          <div className="p-2.5 border-t border-border/50 bg-sidebar/50">
+            <InlineCreateTask laneId={null} />
+          </div>
+        )}
       </div>
     </aside>
   )
