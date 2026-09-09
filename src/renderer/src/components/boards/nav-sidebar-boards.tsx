@@ -4,11 +4,7 @@ import { useSortable } from '@dnd-kit/react/sortable'
 import { move } from '@dnd-kit/helpers'
 import { CollisionPriority } from '@dnd-kit/abstract'
 import { RestrictToVerticalAxis } from '@dnd-kit/abstract/modifiers'
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuTrigger
-} from '@/components/ui/context-menu'
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,12 +49,7 @@ import { useBoardFoldersStore, BoardFolder, categorizeBoards } from '@/stores/bo
 import { useNavigationStore } from '@/stores/navigation'
 import { useJoinModalStore } from '@/stores/join-modal'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -102,11 +93,7 @@ function TruncatedText({ text, className }: { text: string; className?: string }
   }
 
   return (
-    <span
-      ref={textRef}
-      onMouseEnter={checkTruncation}
-      className={cn('truncate', className)}
-    >
+    <span ref={textRef} onMouseEnter={checkTruncation} className={cn('truncate', className)}>
       {text}
     </span>
   )
@@ -513,10 +500,7 @@ export function NavSidebarBoards() {
       />
 
       {/* Folder Modals */}
-      <FolderModal
-        open={createFolderModalOpen}
-        onOpenChange={setCreateFolderModalOpen}
-      />
+      <FolderModal open={createFolderModalOpen} onOpenChange={setCreateFolderModalOpen} />
 
       <FolderModal
         open={!!activeFolderForEdit}
@@ -667,11 +651,7 @@ function CustomFoldersSection({
             </span>
           )}
         </SidebarGroupLabel>
-        <SidebarGroupAction
-          onClick={onCreateFolder}
-          title="New Project"
-          className="cursor-pointer"
-        >
+        <SidebarGroupAction onClick={onCreateFolder} title="New Project" className="cursor-pointer">
           <PlusIcon className="size-3.5" />
         </SidebarGroupAction>
       </div>
@@ -841,71 +821,6 @@ function SortableFolderItem({
           <span className="text-[10px] text-muted-foreground/60 font-normal shrink-0 px-1 rounded-sm bg-muted/30">
             {boards.length}
           </span>
-        </div>
-
-        {/* Hover Actions: Quick Add Board & Folder Menu */}
-        <div className="flex items-center gap-0.5 opacity-0 group-hover/folder:opacity-100 transition-opacity">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => onCreateBoardInFolder(folder.id)}
-            className="size-5 text-muted-foreground hover:text-foreground cursor-pointer"
-            title="Create board in this project"
-          >
-            <PlusIcon className="size-3" />
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="size-5 text-muted-foreground hover:text-foreground cursor-pointer"
-                  title="Project actions"
-                >
-                  <MoreVerticalIcon className="size-3" />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end" className="w-40 text-xs">
-              <DropdownMenuItem onClick={() => navigate({ name: 'project-detail', projectId: folder.id })}>
-                <FolderIcon className="mr-2 size-3.5 text-muted-foreground" />
-                <span>Open Project</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEditFolder(folder)}>
-                <PencilIcon className="mr-2 size-3.5 text-muted-foreground" />
-                <span>Edit Project</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toggleFolderCollapse(folder.id)}>
-                {isCollapsed ? (
-                  <>
-                    <ChevronDownIcon className="mr-2 size-3.5 text-muted-foreground" />
-                    <span>Expand Project</span>
-                  </>
-                ) : (
-                  <>
-                    <ChevronRightIcon className="mr-2 size-3.5 text-muted-foreground" />
-                    <span>Collapse Project</span>
-                  </>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onCreateBoardInFolder(folder.id)}>
-                <PlusIcon className="mr-2 size-3.5 text-muted-foreground" />
-                <span>New Board Here</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => onDeleteFolder(folder)}
-              >
-                <Trash2Icon className="mr-2 size-3.5" />
-                <span>Delete Project</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
@@ -1083,11 +998,7 @@ function SharedBoardsGroup({
           <span>Shared Boards</span>
         </SidebarGroupLabel>
         {onJoinBoard && (
-          <SidebarGroupAction
-            onClick={onJoinBoard}
-            title="Join Board"
-            className="cursor-pointer"
-          >
+          <SidebarGroupAction onClick={onJoinBoard} title="Join Board" className="cursor-pointer">
             <LogIn className="size-3.5" />
           </SidebarGroupAction>
         )}
@@ -1246,14 +1157,14 @@ function SortableSidebarBoardItem({
 export function BoardDragPreview({ item }: { item: Board }) {
   return (
     <div className="w-full pointer-events-none select-none list-none">
-      <SidebarMenuButton
-        className="flex w-full items-center justify-start gap-1.5 border border-primary/40 bg-sidebar-accent text-sidebar-accent-foreground shadow-xl ring-1 ring-primary/30 rounded-md h-7.5"
-      >
+      <SidebarMenuButton className="flex w-full items-center justify-start gap-1.5 border border-primary/40 bg-sidebar-accent text-sidebar-accent-foreground shadow-xl ring-1 ring-primary/30 rounded-md h-7.5">
         <span className="text-primary cursor-grabbing shrink-0">
           <GripVerticalIcon className="size-3.5" />
         </span>
         <span className="shrink-0 text-xs">{item.icon || '📋'}</span>
-        <span className="truncate text-xs font-medium flex-1 min-w-0">{item.title || 'Untitled Board'}</span>
+        <span className="truncate text-xs font-medium flex-1 min-w-0">
+          {item.title || 'Untitled Board'}
+        </span>
         {item.role && item.role !== 'owner' && (
           <span className="text-[9px] px-1 py-0.2 rounded bg-muted text-muted-foreground font-medium capitalize shrink-0 ml-auto">
             {item.role}

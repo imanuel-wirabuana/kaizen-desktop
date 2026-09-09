@@ -80,19 +80,50 @@ function formatDateRange(
     now.setHours(0, 0, 0, 0)
     const isOverdue = !isCompleted && validDue ? validDue < now : false
 
-    if (validStart && validDue) {
-      const sameYear = validStart.getFullYear() === validDue.getFullYear()
-      const startFormatted = validStart.toLocaleDateString(undefined, {
+    const hasTime = Boolean(
+      (validStart && (validStart.getHours() !== 0 || validStart.getMinutes() !== 0)) ||
+      (validDue && (validDue.getHours() !== 0 || validDue.getMinutes() !== 0))
+    )
+
+    const formatShortWithTime = (d: Date, showTime: boolean) => {
+      const datePart = d.toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric'
       })
-      const dueFormatted = validDue.toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: sameYear ? undefined : '2-digit'
+      if (!showTime) return datePart
+      const timePart = d.toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
       })
+      return `${datePart}, ${timePart}`
+    }
+
+    if (validStart && validDue) {
+      const isSameDay =
+        validStart.getFullYear() === validDue.getFullYear() &&
+        validStart.getMonth() === validDue.getMonth() &&
+        validStart.getDate() === validDue.getDate()
+
+      if (isSameDay) {
+        if (hasTime) {
+          const sTime = validStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
+          const dTime = validDue.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
+          return {
+            formatted: `${validStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${sTime} – ${dTime}`,
+            isOverdue,
+            isRange: true
+          }
+        }
+        return {
+          formatted: validStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          isOverdue,
+          isRange: true
+        }
+      }
+
       return {
-        formatted: `${startFormatted} – ${dueFormatted}`,
+        formatted: `${formatShortWithTime(validStart, hasTime)} – ${formatShortWithTime(validDue, hasTime)}`,
         isOverdue,
         isRange: true
       }
@@ -102,7 +133,7 @@ function formatDateRange(
     if (!singleDate) return null
 
     return {
-      formatted: singleDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      formatted: formatShortWithTime(singleDate, hasTime),
       isOverdue,
       isRange: false
     }
@@ -244,22 +275,17 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
               isSelectionMode && (isSelected ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'),
               isSelected && !isBeingDragged && 'ring-2 ring-primary border-primary bg-primary/5 dark:bg-primary/10 shadow-sm',
               isEditing
-                ? cn(
-                    'border-primary/50 ring-1 ring-primary/30 shadow-md p-2.5',
-                    hasCustomBackground
-                      ? bgProps.className
-                      : 'bg-neutral-950/10 dark:bg-black/70 backdrop-blur-md'
-                  )
+                ? 'border-primary/50 ring-1 ring-primary/30 shadow-md p-2.5 bg-card/95 backdrop-blur-md'
                 : cn(
                     'border-border/80 bg-background/90 p-2.5 shadow-2xs hover:border-primary/40 hover:shadow-xs',
                     hasCustomBackground ? bgProps.className : '',
-                    item.status && !isEditing && 'opacity-40 hover:opacity-80'
+                    item.status && 'opacity-40 hover:opacity-80'
                   ),
               isBeingDragged ? 'opacity-30 ring-2 ring-primary/40 shadow-md scale-[0.98]' : ''
             )}
-            style={hasCustomBackground ? bgProps.style : undefined}
+            style={!isEditing && hasCustomBackground ? bgProps.style : undefined}
           >
-            {bgProps.isImage && (
+            {!isEditing && bgProps.isImage && (
               <div className="absolute inset-0 bg-background/70 dark:bg-background/80 pointer-events-none" />
             )}
             {isEditing ? (

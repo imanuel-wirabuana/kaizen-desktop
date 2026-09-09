@@ -121,34 +121,36 @@ export function TaskForm({
     <div
       className={cn(
         embedded
-          ? 'space-y-2.5 transition-all'
-          : cn(
-              'rounded-xl border border-primary/40 p-3 shadow-md space-y-2.5 ring-1 ring-primary/20 transition-all overflow-hidden relative',
-              hasCustomBackground
-                ? bgProps.className
-                : 'bg-neutral-950/10 dark:bg-black/70 backdrop-blur-md'
-            ),
+          ? 'space-y-1.5 transition-all'
+          : 'rounded-xl border border-primary/40 bg-card p-2.5 shadow-md space-y-1.5 ring-1 ring-primary/20 transition-all overflow-hidden relative',
         className
       )}
-      style={!embedded && hasCustomBackground ? bgProps.style : undefined}
     >
-      {!embedded && hasCustomBackground && bgProps.isImage && (
-        <div className="absolute inset-0 bg-background/70 dark:bg-background/80 pointer-events-none" />
-      )}
-      <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-2.5 relative z-10">
-        {/* Form Header */}
-        <div className="flex items-center justify-between select-none">
-          <div className="flex items-center gap-1.5">
+      <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-1.5 relative z-10">
+        {/* Form Header (Previews background only on this header banner) */}
+        <div
+          className={cn(
+            'relative flex items-center justify-between select-none -mx-2.5 -mt-2.5 px-2.5 py-1.5 rounded-t-[10px] border-b border-border/40 overflow-hidden transition-all',
+            hasCustomBackground
+              ? bgProps.className
+              : 'bg-muted/40'
+          )}
+          style={hasCustomBackground ? bgProps.style : undefined}
+        >
+          {hasCustomBackground && bgProps.isImage && (
+            <div className="absolute inset-0 bg-background/60 dark:bg-background/70 pointer-events-none" />
+          )}
+          <div className="flex items-center gap-1.5 relative z-10">
             {isEditMode ? (
-              <Pencil className="size-3.5 text-primary" />
+              <Pencil className="size-3 text-primary" />
             ) : (
-              <Sparkles className="size-3.5 text-primary" />
+              <Sparkles className="size-3 text-primary" />
             )}
-            <span className="text-xs font-semibold tracking-tight text-foreground">
+            <span className="text-[11px] font-semibold tracking-tight text-foreground">
               {displayTitle}
             </span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 relative z-10">
             <BackgroundPicker
               value={background}
               onChange={handleBackgroundSelect}
@@ -156,32 +158,32 @@ export function TaskForm({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
+                  size="icon-xs"
                   className={cn(
-                    'size-6 rounded-md text-muted-foreground hover:text-foreground',
-                    hasCustomBackground ? 'text-primary bg-primary/10' : ''
+                    'size-5 rounded-md text-muted-foreground/80 hover:text-foreground hover:bg-background/60 shrink-0',
+                    hasCustomBackground ? 'text-primary bg-background/50 font-bold' : ''
                   )}
                   title="Choose Task Background Accent"
                 >
-                  <Palette className="size-3.5" />
+                  <Palette className="size-3" />
                 </Button>
               }
             />
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size="icon-xs"
               onClick={onCancel}
-              className="size-6 text-muted-foreground hover:text-foreground rounded-md"
+              className="size-5 text-muted-foreground/80 hover:text-foreground hover:bg-background/60 rounded-md shrink-0"
               title="Close (Esc)"
             >
-              <X className="size-3.5" />
+              <X className="size-3" />
             </Button>
           </div>
         </div>
 
         {/* Emoji Icon & Title */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 pt-0.5">
           <InlineEmojiPicker
             value={icon}
             onChange={(emoji) => setIcon(emoji)}
@@ -194,21 +196,21 @@ export function TaskForm({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="size-8 shrink-0 text-base p-0 rounded-lg cursor-pointer bg-background hover:bg-muted border-border/80 shadow-2xs transition-transform active:scale-95"
+                className="size-7 shrink-0 text-sm p-0 rounded-md cursor-pointer bg-transparent hover:bg-muted/50 border-border/70 shadow-none transition-transform active:scale-95"
                 title="Choose icon"
               >
-                {icon || <Smile className="size-4 text-muted-foreground/60" />}
+                {icon || <Smile className="size-3.5 text-muted-foreground/60" />}
               </Button>
             }
           />
 
           <Input
-            placeholder="Task title (e.g. Draft new wireframe)..."
+            placeholder="Task title..."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={isSubmitting}
             autoFocus={autoFocus}
-            className="h-8 text-xs font-medium bg-background rounded-lg border-border/80 flex-1 shadow-2xs"
+            className="h-7 text-xs font-medium bg-transparent rounded-md border border-border/70 flex-1 px-2.5 shadow-none focus-visible:border-primary/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:bg-transparent"
           />
         </div>
 
@@ -218,11 +220,11 @@ export function TaskForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           disabled={isSubmitting}
-          className="min-h-[48px] max-h-[120px] text-xs text-muted-foreground bg-background rounded-lg border-border/80 resize-none py-1.5 px-2.5 leading-relaxed focus-visible:ring-1 focus-visible:ring-primary/40 shadow-2xs"
+          className="min-h-[38px] max-h-[90px] text-xs text-muted-foreground bg-transparent rounded-md border border-border/70 resize-none py-1.5 px-2.5 leading-snug focus-visible:border-primary/60 focus-visible:ring-1 focus-visible:ring-primary/40 shadow-none focus-visible:bg-transparent"
         />
 
         {/* Priority Selector Pills */}
-        <div className="space-y-1.5 pt-0.5">
+        <div className="space-y-1">
           <div className="flex items-center gap-1">
             {([0, 1, 2, 3] as const).map((p) => {
               const pCfg = PRIORITY_CONFIG[p]
@@ -233,21 +235,28 @@ export function TaskForm({
                   type="button"
                   onClick={() => setPriority(p)}
                   className={cn(
-                    'flex-1 py-1 rounded-md text-[9.5px] font-medium border transition-all cursor-pointer text-center select-none',
+                    'flex-1 h-7 rounded-md text-xs font-medium border transition-all cursor-pointer flex items-center justify-center gap-1.5 select-none',
+                    pCfg.badge,
                     isSelected
-                      ? 'ring-2 ring-primary border-primary font-bold shadow-2xs opacity-100'
-                      : 'opacity-80 hover:opacity-100 bg-background',
-                    pCfg.badge
+                      ? cn(
+                          'font-bold shadow-xs ring-2 opacity-100',
+                          p === 0 && 'bg-muted text-foreground border-foreground/40 ring-muted-foreground/30',
+                          p === 1 && 'bg-amber-500/30 text-amber-700 dark:text-amber-300 border-amber-500 ring-amber-500/50',
+                          p === 2 && 'bg-orange-500/30 text-orange-700 dark:text-orange-300 border-orange-500 ring-orange-500/50',
+                          p === 3 && 'bg-rose-500/30 text-rose-700 dark:text-rose-300 border-rose-500 ring-rose-500/50'
+                        )
+                      : 'opacity-60 hover:opacity-90'
                   )}
                 >
-                  {pCfg.label}
+                  <span className={cn('size-1.5 rounded-full shrink-0', pCfg.dot)} />
+                  <span>{pCfg.label}</span>
                 </button>
               )
             })}
           </div>
 
-          {/* Date Range Picker & Assignee Combobox Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+          {/* Date Range Picker & Assignee Combobox Stacked */}
+          <div className="space-y-1 pt-0.5">
             <DateRangePicker
               startDate={startDate}
               dueDate={dueDate}
@@ -256,14 +265,14 @@ export function TaskForm({
                 setDueDate(range.dueDate)
               }}
               placeholder="Start & due date..."
-              className="h-7 text-[11px] w-full"
+              className="h-7 text-xs px-2.5 w-full bg-transparent"
             />
             <AssigneeCombobox
               value={assignee}
               onChange={setAssignee}
               boardId={boardId}
               placeholder="Assignee (optional)..."
-              className="h-7 text-[11px] w-full"
+              className="h-7 text-xs px-2.5 w-full bg-transparent"
             />
           </div>
 
@@ -275,17 +284,17 @@ export function TaskForm({
             >
               <span
                 className={cn(
-                  'size-4 rounded-full border flex items-center justify-center transition-colors shrink-0',
+                  'size-3.5 rounded-md border flex items-center justify-center transition-colors shrink-0',
                   status
                     ? 'bg-primary border-primary text-primary-foreground shadow-2xs'
-                    : 'border-muted-foreground/40 hover:border-primary bg-background'
+                    : 'border-muted-foreground/40 hover:border-primary bg-transparent'
                 )}
               >
-                {status && <Check className="size-2.5 stroke-[3]" />}
+                {status && <Check className="size-2 stroke-[3]" />}
               </span>
               <span
                 className={cn(
-                  'text-[11px]',
+                  'text-xs',
                   status ? 'text-foreground font-semibold' : 'text-muted-foreground'
                 )}
               >
@@ -296,28 +305,28 @@ export function TaskForm({
         </div>
 
         {/* Footer Action Controls */}
-        <div className="flex items-center justify-between pt-1.5 border-t border-border/50 gap-2">
-          <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1 select-none shrink-0">
-            <kbd className="font-mono text-[9px] bg-muted px-1 py-0.5 rounded border border-border/60">↵ Enter</kbd>
+        <div className="flex items-center justify-between pt-1 border-t border-border/40 gap-2">
+          <span className="text-[9.5px] text-muted-foreground/70 flex items-center gap-1 select-none shrink-0">
+            <kbd className="font-mono text-[8.5px] bg-muted px-1 py-0.5 rounded border border-border/50">↵ Enter</kbd>
             <span className="opacity-40">·</span>
-            <kbd className="font-mono text-[9px] bg-muted px-1 py-0.5 rounded border border-border/60">Esc</kbd>
+            <kbd className="font-mono text-[8.5px] bg-muted px-1 py-0.5 rounded border border-border/50">Esc</kbd>
           </span>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="xs"
               onClick={onCancel}
               disabled={isSubmitting}
-              className="h-7 text-xs px-2.5 rounded-lg text-muted-foreground hover:text-foreground"
+              className="h-7 text-xs px-2.5 rounded-md text-muted-foreground hover:text-foreground"
             >
               {cancelLabel || 'Cancel'}
             </Button>
             <Button
               type="submit"
-              size="sm"
+              size="xs"
               disabled={!title.trim() || isSubmitting}
-              className="h-7 text-xs px-3 font-medium rounded-lg cursor-pointer shadow-2xs gap-1"
+              className="h-7 text-xs px-3 font-medium rounded-md cursor-pointer shadow-2xs gap-1"
             >
               {isSubmitting ? <Loader2 className="size-3 animate-spin" /> : null}
               {submitLabel || (isEditMode ? 'Save' : 'Add Task')}

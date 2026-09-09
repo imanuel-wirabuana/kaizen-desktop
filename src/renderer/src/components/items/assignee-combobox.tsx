@@ -99,7 +99,7 @@ export function AssigneeCombobox({
             variant="outline"
             disabled={disabled}
             className={cn(
-              'flex items-center justify-between text-left font-normal h-8 text-xs px-2.5 rounded-lg border-border/80 bg-background hover:bg-muted/60 transition-colors shadow-2xs group/combobox cursor-pointer',
+              'flex items-center justify-between text-left font-normal h-7 text-xs px-2.5 rounded-md border border-border/70 bg-transparent hover:bg-muted/40 hover:border-border/80 transition-colors shadow-none group/combobox cursor-pointer w-full',
               !value && 'text-muted-foreground',
               value && 'text-foreground font-medium border-primary/40',
               className
@@ -120,7 +120,7 @@ export function AssigneeCombobox({
                 role="button"
                 tabIndex={0}
                 onClick={handleClear}
-                className="size-4 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted ml-1 transition-colors"
+                className="size-3.5 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted ml-1 transition-colors"
                 title="Unassign"
               >
                 <X className="size-2.5" />
@@ -132,24 +132,24 @@ export function AssigneeCombobox({
       <PopoverContent
         align="start"
         side="bottom"
-        className="w-[230px] p-0 shadow-2xl rounded-xl border border-border/80 overflow-hidden"
+        className="w-[205px] p-0 shadow-2xl rounded-xl border border-border/80 overflow-hidden text-xs"
       >
         <Command>
           <CommandInput
             placeholder="Search or type name..."
             value={search}
             onValueChange={setSearch}
-            className="h-8 text-xs"
+            className="h-7 text-[11px] px-2"
           />
-          <CommandList className="max-h-56 p-1 text-xs">
-            <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
+          <CommandList className="max-h-48 p-0.5 text-[11px]">
+            <CommandEmpty className="py-1.5 px-2 text-[10.5px] text-muted-foreground">
               {search.trim() ? (
                 <div
                   role="button"
                   onClick={() => handleSelect(search.trim())}
-                  className="flex items-center gap-2 p-1.5 rounded-md hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors"
+                  className="flex items-center gap-1.5 p-1 rounded-md hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors"
                 >
-                  <UserPlus className="size-3.5 text-primary" />
+                  <UserPlus className="size-3 text-primary shrink-0" />
                   <span className="truncate">Assign to "{search.trim()}"</span>
                 </div>
               ) : (
@@ -161,21 +161,21 @@ export function AssigneeCombobox({
             <CommandGroup>
               <CommandItem
                 onSelect={() => handleSelect(null)}
-                className="flex items-center justify-between text-xs cursor-pointer py-1.5 px-2 rounded-md"
+                className="flex items-center justify-between text-[11px] cursor-pointer py-1 px-1.5 rounded-md gap-1.5"
               >
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <X className="size-3" />
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <X className="size-2.5" />
                   <span>Unassigned</span>
                 </div>
-                {!value && <Check className="size-3 text-primary" />}
+                {!value && <Check className="size-2.5 text-primary" />}
               </CommandItem>
             </CommandGroup>
 
-            <CommandSeparator className="my-1" />
+            <CommandSeparator className="my-0.5" />
 
             {/* Board Members Group */}
             {memberList.length > 0 && (
-              <CommandGroup heading="Board Members">
+              <CommandGroup heading="Board Members" className="[&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:px-1.5 [&_[cmdk-group-heading]]:py-0.5 [&_[cmdk-group-heading]]:text-muted-foreground/70">
                 {memberList.map((m) => {
                   const isSelected =
                     value === m.label ||
@@ -192,22 +192,22 @@ export function AssigneeCombobox({
                           : m.label
                         handleSelect(cleanName)
                       }}
-                      className="flex items-center justify-between text-xs cursor-pointer py-1.5 px-2 rounded-md"
+                      className="flex items-center justify-between text-[11px] cursor-pointer py-1 px-1.5 rounded-md gap-1.5"
                     >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="size-5 rounded-full bg-muted flex items-center justify-center shrink-0 text-[9px] font-bold text-muted-foreground border border-border/60">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <div className="size-4 rounded-full bg-muted flex items-center justify-center shrink-0 text-[8px] font-bold text-muted-foreground border border-border/60">
                           {m.label.charAt(0).toUpperCase()}
                         </div>
                         <div className="truncate flex flex-col">
                           <span className="truncate font-medium">{m.label}</span>
                           {m.email && m.label !== m.email && (
-                            <span className="text-[10px] text-muted-foreground truncate leading-tight">
+                            <span className="text-[9px] text-muted-foreground truncate leading-tight">
                               {m.email}
                             </span>
                           )}
                         </div>
                       </div>
-                      {isSelected && <Check className="size-3 text-primary shrink-0 ml-1" />}
+                      {isSelected && <Check className="size-2.5 text-primary shrink-0 ml-1" />}
                     </CommandItem>
                   )
                 })}
@@ -217,13 +217,13 @@ export function AssigneeCombobox({
             {/* Custom Assignee Option if typed name is not an exact match */}
             {search.trim() && !hasExactMatch && (
               <>
-                <CommandSeparator className="my-1" />
-                <CommandGroup heading="Custom Assignee">
+                <CommandSeparator className="my-0.5" />
+                <CommandGroup heading="Custom Assignee" className="[&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:px-1.5 [&_[cmdk-group-heading]]:py-0.5 [&_[cmdk-group-heading]]:text-muted-foreground/70">
                   <CommandItem
                     onSelect={() => handleSelect(search.trim())}
-                    className="flex items-center gap-2 text-xs cursor-pointer py-1.5 px-2 rounded-md text-primary font-medium"
+                    className="flex items-center gap-1.5 text-[11px] cursor-pointer py-1 px-1.5 rounded-md text-primary font-medium"
                   >
-                    <UserPlus className="size-3.5 shrink-0" />
+                    <UserPlus className="size-3 shrink-0" />
                     <span className="truncate">Assign to "{search.trim()}"</span>
                   </CommandItem>
                 </CommandGroup>

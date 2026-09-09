@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, CalendarRange } from 'lucide-react'
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, CalendarRange, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type DateRangePickerProps = {
@@ -42,6 +42,32 @@ function formatShortDate(d: Date): string {
   })
 }
 
+function formatShortDateTime(d: Date, withTime: boolean): string {
+  const dateStr = d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric'
+  })
+  if (!withTime) return dateStr
+  const timeStr = d.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+  return `${dateStr}, ${timeStr}`
+}
+
+function extractTimeStr(d: Date | null, fallback = '09:00'): string {
+  if (!d) return fallback
+  const h = String(d.getHours()).padStart(2, '0')
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${h}:${m}`
+}
+
+function hasSpecificTime(d: Date | null): boolean {
+  if (!d) return false
+  return d.getHours() !== 0 || d.getMinutes() !== 0
+}
+
 export function DateRangePicker({
   startDate,
   dueDate,
@@ -62,13 +88,29 @@ export function DateRangePicker({
   const [tempStart, setTempStart] = React.useState<Date | null>(parsedStart)
   const [tempDue, setTempDue] = React.useState<Date | null>(parsedDue)
 
+  // Time state
+  const [includeTime, setIncludeTime] = React.useState(() => {
+    return Boolean(
+      (parsedStart && hasSpecificTime(parsedStart)) ||
+      (parsedDue && hasSpecificTime(parsedDue))
+    )
+  })
+  const [startTime, setStartTime] = React.useState(() => extractTimeStr(parsedStart, '09:00'))
+  const [dueTime, setDueTime] = React.useState(() => extractTimeStr(parsedDue, '18:00'))
+
   React.useEffect(() => {
     setTempStart(parsedStart)
     setTempDue(parsedDue)
     if (parsedStart) {
       setCurrentMonth(parsedStart)
-    } else if (parsedDue) {
-      setCurrentMonth(parsedDue)
+      setStartTime(extractTimeStr(parsedStart, '09:00'))
+    }
+    if (parsedDue) {
+      if (!parsedStart) setCurrentMonth(parsedDue)
+      setDueTime(extractTimeStr(parsedDue, '18:00'))
+    }
+    if ((parsedStart && hasSpecificTime(parsedStart)) || (parsedDue && hasSpecificTime(parsedDue))) {
+      setIncludeTime(true)
     }
   }, [parsedStart, parsedDue, open])
 
@@ -113,15 +155,26 @@ export function DateRangePicker({
     }
   }
 
+  const buildIso = (date: Date | null, timeStr: string, isDueDefault = false) => {
+    if (!date) return null
+    const y = date.getFullYear()
+    const m = date.getMonth()
+    const d = date.getDate()
+    if (includeTime && timeStr) {
+      const [h, min] = timeStr.split(':').map(Number)
+      return new Date(y, m, d, isNaN(h) ? 0 : h, isNaN(min) ? 0 : min, 0).toISOString()
+    }
+    return new Date(y, m, d, isDueDefault ? 23 : 0, isDueDefault ? 59 : 0, 0).toISOString()
+  }
+
   const handleApply = () => {
-    onChange({
-      startDate: tempStart ? new Date(tempStart.getFullYear(), tempStart.getMonth(), tempStart.getDate(), 9, 0).toISOString() : null,
-      dueDate: tempDue
-        ? new Date(tempDue.getFullYear(), tempDue.getMonth(), tempDue.getDate(), 18, 0).toISOString()
-        : tempStart
-          ? new Date(tempStart.getFullYear(), tempStart.getMonth(), tempStart.getDate(), 18, 0).toISOString()
-          : null
-    })
+    const startIso = tempStart ? buildIso(tempStart, startTime, false) : null
+    const dueIso = tempDue
+      ? buildIso(tempDue, dueTime, true)
+      : tempStart
+        ? buildIso(tempStart, dueTime, true)
+        : null
+    onChange({ startDate: startIso, dueDate: dueIso })
     setOpen(false)
   }
 
@@ -137,10 +190,9 @@ export function DateRangePicker({
     const today = new Date()
     setTempStart(today)
     setTempDue(today)
-    onChange({
-      startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0).toISOString(),
-      dueDate: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0).toISOString()
-    })
+    const startIso = buildIso(today, startTime || '09:00', false)
+    const dueIso = buildIso(today, dueTime || '18:00', true)
+    onChange({ startDate: startIso, dueDate: dueIso })
     setOpen(false)
   }
 
@@ -153,10 +205,9 @@ export function DateRangePicker({
 
     setTempStart(today)
     setTempDue(friday)
-    onChange({
-      startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0).toISOString(),
-      dueDate: new Date(friday.getFullYear(), friday.getMonth(), friday.getDate(), 18, 0).toISOString()
-    })
+    const startIso = buildIso(today, startTime || '09:00', false)
+    const dueIso = buildIso(friday, dueTime || '18:00', true)
+    onChange({ startDate: startIso, dueDate: dueIso })
     setOpen(false)
   }
 
@@ -169,23 +220,32 @@ export function DateRangePicker({
 
     setTempStart(nextMonday)
     setTempDue(nextFriday)
-    onChange({
-      startDate: new Date(nextMonday.getFullYear(), nextMonday.getMonth(), nextMonday.getDate(), 9, 0).toISOString(),
-      dueDate: new Date(nextFriday.getFullYear(), nextFriday.getMonth(), nextFriday.getDate(), 18, 0).toISOString()
-    })
+    const startIso = buildIso(nextMonday, startTime || '09:00', false)
+    const dueIso = buildIso(nextFriday, dueTime || '18:00', true)
+    onChange({ startDate: startIso, dueDate: dueIso })
     setOpen(false)
   }
 
   // Label text
   const labelText = React.useMemo(() => {
+    const withTime = Boolean(
+      (parsedStart && hasSpecificTime(parsedStart)) ||
+      (parsedDue && hasSpecificTime(parsedDue))
+    )
+
     if (parsedStart && parsedDue) {
       if (isSameDay(parsedStart, parsedDue)) {
+        if (withTime) {
+          const sTime = parsedStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
+          const dTime = parsedDue.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
+          return `${formatShortDate(parsedStart)}, ${sTime} – ${dTime}`
+        }
         return formatShortDate(parsedStart)
       }
-      return `${formatShortDate(parsedStart)} – ${formatShortDate(parsedDue)}`
+      return `${formatShortDateTime(parsedStart, withTime)} – ${formatShortDateTime(parsedDue, withTime)}`
     }
-    if (parsedStart) return `From ${formatShortDate(parsedStart)}`
-    if (parsedDue) return `Due ${formatShortDate(parsedDue)}`
+    if (parsedStart) return `From ${formatShortDateTime(parsedStart, withTime)}`
+    if (parsedDue) return `Due ${formatShortDateTime(parsedDue, withTime)}`
     return placeholder
   }, [parsedStart, parsedDue, placeholder])
 
@@ -200,7 +260,7 @@ export function DateRangePicker({
             variant="outline"
             disabled={disabled}
             className={cn(
-              'flex items-center justify-between text-left font-normal h-8 text-xs px-2.5 rounded-lg border-border/80 bg-background hover:bg-muted/60 transition-colors shadow-2xs group/picker cursor-pointer',
+              'flex items-center justify-between text-left font-normal h-7 text-xs px-2.5 rounded-md border border-border/70 bg-transparent hover:bg-muted/40 hover:border-border/80 transition-colors group/picker cursor-pointer w-full',
               !hasValue && 'text-muted-foreground',
               hasValue && 'text-foreground font-medium border-primary/40',
               className
@@ -219,7 +279,7 @@ export function DateRangePicker({
                 role="button"
                 tabIndex={0}
                 onClick={handleClear}
-                className="size-4 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted ml-1 transition-colors"
+                className="size-3.5 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted ml-1 transition-colors"
                 title="Clear dates"
               >
                 <X className="size-2.5" />
@@ -231,16 +291,16 @@ export function DateRangePicker({
       <PopoverContent
         align="start"
         side="bottom"
-        className="w-[280px] p-2.5 shadow-2xl rounded-xl border border-border/80 text-xs select-none"
+        className="w-[240px] p-2 shadow-2xl rounded-xl border border-border/80 text-xs select-none"
       >
         {/* Quick Presets */}
-        <div className="flex items-center gap-1 pb-2 border-b border-border/60">
+        <div className="flex items-center gap-1 pb-1.5 mb-1 border-b border-border/50">
           <Button
             type="button"
             variant="ghost"
             size="xs"
             onClick={setTodayPreset}
-            className="h-6 text-[10.5px] px-2 rounded-md hover:bg-primary/10 hover:text-primary flex-1 cursor-pointer"
+            className="h-5 text-[9.5px] px-1.5 rounded hover:bg-primary/10 hover:text-primary flex-1 cursor-pointer font-medium"
           >
             Today
           </Button>
@@ -249,7 +309,7 @@ export function DateRangePicker({
             variant="ghost"
             size="xs"
             onClick={setThisWeekPreset}
-            className="h-6 text-[10.5px] px-2 rounded-md hover:bg-primary/10 hover:text-primary flex-1 cursor-pointer"
+            className="h-5 text-[9.5px] px-1.5 rounded hover:bg-primary/10 hover:text-primary flex-1 cursor-pointer font-medium"
           >
             This Week
           </Button>
@@ -258,16 +318,16 @@ export function DateRangePicker({
             variant="ghost"
             size="xs"
             onClick={setNextWeekPreset}
-            className="h-6 text-[10.5px] px-2 rounded-md hover:bg-primary/10 hover:text-primary flex-1 cursor-pointer"
+            className="h-5 text-[9.5px] px-1.5 rounded hover:bg-primary/10 hover:text-primary flex-1 cursor-pointer font-medium"
           >
             Next Week
           </Button>
         </div>
 
         {/* Calendar Header Month Navigation */}
-        <div className="flex items-center justify-between pt-2 pb-1 px-1">
-          <span className="font-semibold text-foreground text-xs">
-            {currentMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+        <div className="flex items-center justify-between px-1 mb-1">
+          <span className="font-semibold text-foreground text-[11px]">
+            {currentMonth.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
           </span>
           <div className="flex items-center gap-0.5">
             <Button
@@ -275,36 +335,36 @@ export function DateRangePicker({
               variant="ghost"
               size="icon"
               onClick={prevMonth}
-              className="size-6 rounded-md text-muted-foreground hover:text-foreground"
+              className="size-5 rounded text-muted-foreground hover:text-foreground"
             >
-              <ChevronLeft className="size-3.5" />
+              <ChevronLeft className="size-3" />
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="icon"
               onClick={nextMonth}
-              className="size-6 rounded-md text-muted-foreground hover:text-foreground"
+              className="size-5 rounded text-muted-foreground hover:text-foreground"
             >
-              <ChevronRight className="size-3.5" />
+              <ChevronRight className="size-3" />
             </Button>
           </div>
         </div>
 
         {/* Days of Week */}
-        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-muted-foreground/70 py-1">
+        <div className="grid grid-cols-7 gap-0.5 text-center text-[9px] font-semibold text-muted-foreground/70 mb-0.5">
           {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-            <div key={day} className="size-7 flex items-center justify-center">
+            <div key={day} className="size-6 flex items-center justify-center">
               {day}
             </div>
           ))}
         </div>
 
         {/* Days Grid */}
-        <div className="grid grid-cols-7 gap-y-1 text-center text-xs">
+        <div className="grid grid-cols-7 gap-y-0.5 gap-x-0.5 text-center text-xs">
           {daysInMonth.map((day, idx) => {
             if (!day) {
-              return <div key={`empty-${idx}`} className="size-7" />
+              return <div key={`empty-${idx}`} className="size-6" />
             }
 
             const isStart = isSameDay(day, tempStart)
@@ -330,9 +390,9 @@ export function DateRangePicker({
                   }
                 }}
                 className={cn(
-                  'size-7 text-xs flex items-center justify-center transition-all cursor-pointer select-none font-medium',
+                  'size-6 text-[10.5px] flex items-center justify-center transition-all cursor-pointer select-none font-medium',
                   // Default styling
-                  'hover:bg-muted/80 rounded-md',
+                  'hover:bg-muted/80 rounded',
                   isToday && 'font-bold border border-primary/40 text-primary',
                   // In range styling
                   isInRange && 'bg-primary/15 text-primary rounded-none',
@@ -340,13 +400,13 @@ export function DateRangePicker({
                   isStart &&
                     cn(
                       'bg-primary text-primary-foreground font-bold hover:bg-primary shadow-2xs',
-                      tempDue ? 'rounded-l-md rounded-r-none' : 'rounded-md'
+                      tempDue ? 'rounded-l rounded-r-none' : 'rounded'
                     ),
                   // End point
                   isDue &&
                     cn(
                       'bg-primary text-primary-foreground font-bold hover:bg-primary shadow-2xs',
-                      tempStart ? 'rounded-r-md rounded-l-none' : 'rounded-md'
+                      tempStart ? 'rounded-r rounded-l-none' : 'rounded'
                     )
                 )}
               >
@@ -356,9 +416,54 @@ export function DateRangePicker({
           })}
         </div>
 
+        {/* Compact Time Controls */}
+        <div className="pt-1.5 mt-1 border-t border-border/50 space-y-1">
+          <div className="flex items-center justify-between text-[10px] px-0.5">
+            <label className="flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={includeTime}
+                onChange={(e) => setIncludeTime(e.target.checked)}
+                className="size-3 rounded border-border/70 accent-primary cursor-pointer"
+              />
+              <Clock className="size-3 text-primary shrink-0" />
+              <span className="font-medium">Include time</span>
+            </label>
+            {includeTime && (
+              <span className="text-[8.5px] text-muted-foreground/60">24h</span>
+            )}
+          </div>
+
+          {includeTime && (
+            <div className="flex items-center gap-1 text-[10px]">
+              <div className="flex-1 flex items-center gap-1 bg-transparent border border-border/60 rounded px-1.5 py-0.5">
+                <span className="text-[8.5px] text-muted-foreground shrink-0">Start:</span>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  disabled={!tempStart}
+                  className="w-full bg-transparent text-foreground text-[10px] outline-none disabled:opacity-40"
+                />
+              </div>
+              <span className="text-muted-foreground/60 text-[9px]">–</span>
+              <div className="flex-1 flex items-center gap-1 bg-transparent border border-border/60 rounded px-1.5 py-0.5">
+                <span className="text-[8.5px] text-muted-foreground shrink-0">Due:</span>
+                <input
+                  type="time"
+                  value={dueTime}
+                  onChange={(e) => setDueTime(e.target.value)}
+                  disabled={!tempDue && !tempStart}
+                  className="w-full bg-transparent text-foreground text-[10px] outline-none disabled:opacity-40"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Range Summary & Apply Footer */}
-        <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-border/60">
-          <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">
+        <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-border/50">
+          <div className="text-[9.5px] text-muted-foreground truncate max-w-[130px]">
             {tempStart && tempDue ? (
               <span>
                 {formatShortDate(tempStart)} – {formatShortDate(tempDue)}
@@ -378,7 +483,7 @@ export function DateRangePicker({
                 handleClear()
                 setOpen(false)
               }}
-              className="h-6 text-[10.5px] px-2 rounded-md text-muted-foreground hover:text-foreground"
+              className="h-5.5 text-[10px] px-2 rounded text-muted-foreground hover:text-foreground"
             >
               Clear
             </Button>
@@ -386,7 +491,7 @@ export function DateRangePicker({
               type="button"
               size="xs"
               onClick={handleApply}
-              className="h-6 text-[10.5px] px-2.5 rounded-md font-semibold cursor-pointer shadow-2xs"
+              className="h-5.5 text-[10px] px-2.5 rounded font-semibold cursor-pointer shadow-2xs"
             >
               Apply
             </Button>
