@@ -1,16 +1,15 @@
-import { useState } from 'react'
 import { Navbar } from '@/components/navbar'
 import { Button } from '@/components/ui/button'
 import { SignedIn, SignedOut } from '@/providers/auth-provider'
-import { AuthModal } from '@/components/auth/auth-modal'
 import { ArrowRight } from 'lucide-react'
 import { useNavigationStore } from '@/stores/navigation'
+import { useAuthModalStore } from '@/stores/auth-modal'
 import { useTheme } from '@/components/theme-provider'
 import { GradientWaves } from '@/components/ui/gradient-waves'
 
 export function LandingPage() {
   const navigate = useNavigationStore((s) => s.navigate)
-  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const openAuthModal = useAuthModalStore((s) => s.openModal)
   const { resolvedTheme, preset } = useTheme()
 
   const isDark = resolvedTheme === 'dark'
@@ -67,7 +66,7 @@ export function LandingPage() {
                 <Button
                   size="lg"
                   className="font-semibold cursor-pointer shadow-lg"
-                  onClick={() => setAuthModalOpen(true)}
+                  onClick={() => openAuthModal('signup')}
                 >
                   Get started <ArrowRight className="ml-2 size-4" />
                 </Button>
@@ -76,8 +75,6 @@ export function LandingPage() {
           </div>
         </main>
       </div>
-
-      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -9,15 +9,26 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase'
-import { Loader2, LogIn, UserPlus } from 'lucide-react'
+import { Loader2, LogIn, UserPlus, KeyRound } from 'lucide-react'
+import { useAuthModalStore } from '@/stores/auth-modal'
+import { useJoinModalStore } from '@/stores/join-modal'
 
 type AuthModalProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   defaultTab?: 'signin' | 'signup'
 }
 
-export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthModalProps) {
+export function AuthModal(props: AuthModalProps = {}) {
+  const storeIsOpen = useAuthModalStore((s) => s.isOpen)
+  const storeDefaultTab = useAuthModalStore((s) => s.defaultTab)
+  const closeStoreModal = useAuthModalStore((s) => s.closeModal)
+  const pendingInviteCode = useJoinModalStore((s) => s.pendingInviteCode)
+
+  const isControlled = props.open !== undefined
+  const open = isControlled ? props.open! : storeIsOpen
+  const defaultTab = props.defaultTab || storeDefaultTab
+
   const [tab, setTab] = useState<'signin' | 'signup'>(defaultTab)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,6 +37,12 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      setTab(defaultTab)
+    }
+  }, [open, defaultTab])
 
   const resetForm = () => {
     setEmail('')
@@ -40,7 +57,11 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     if (!newOpen) {
       resetForm()
     }
-    onOpenChange(newOpen)
+    if (props.onOpenChange) {
+      props.onOpenChange(newOpen)
+    } else if (!newOpen) {
+      closeStoreModal()
+    }
   }
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -164,6 +185,17 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
               : 'Start organizing your tasks with kaizen33'}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Pending Invite Code Notification Banner */}
+        {pendingInviteCode && (
+          <div className="flex items-center gap-2.5 rounded-xl bg-primary/10 border border-primary/20 p-2.5 text-xs text-primary font-medium shadow-2xs">
+            <KeyRound className="size-4 shrink-0 text-primary" />
+            <div className="flex-1 min-w-0 leading-snug">
+              <span>Sign in to join board with code </span>
+              <span className="font-bold underline tracking-wider">{pendingInviteCode}</span>
+            </div>
+          </div>
+        )}
 
         {/* Google OAuth Button */}
         <Button

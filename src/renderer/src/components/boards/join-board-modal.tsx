@@ -13,6 +13,7 @@ import { redeemInviteCode } from '@/services/invites'
 import { useBoardsStore } from '@/stores/boards'
 import { useNavigationStore } from '@/stores/navigation'
 import { useJoinModalStore } from '@/stores/join-modal'
+import { useAuthModalStore } from '@/stores/auth-modal'
 import { useUser } from '@/providers/auth-provider'
 import { LogIn, Loader2, CheckCircle2, AlertCircle, Info } from 'lucide-react'
 
@@ -81,6 +82,9 @@ export function JoinBoardModal(props: JoinBoardModalProps) {
 
     if (!user?.id) {
       setFeedback({ type: 'error', message: 'You must be logged in to join a board.' })
+      useJoinModalStore.getState().setPendingInviteCode(cleanCode)
+      useJoinModalStore.getState().closeModal()
+      useAuthModalStore.getState().openModal('signin')
       return
     }
 

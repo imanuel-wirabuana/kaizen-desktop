@@ -106,15 +106,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             useNavigationStore.getState().navigate({ name: 'boards' })
           }
         } else if (code) {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-          if (!error && data.session) {
-            setSession(data.session)
-            setUser(formatAppUser(data.session.user))
-            useNavigationStore.getState().navigate({ name: 'boards' })
+          // Do not attempt to exchange Kaizen board invite codes (e.g. 5C4M-FVB7) for auth session
+          const isInviteCode = /^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(code.trim())
+          if (!isInviteCode) {
+            const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+            if (!error && data.session) {
+              setSession(data.session)
+              setUser(formatAppUser(data.session.user))
+              useNavigationStore.getState().navigate({ name: 'boards' })
+            }
           }
         }
 
-        if (typeof window !== 'undefined' && !window.api && (access_token || code)) {
+        if (typeof window !== 'undefined' && !window.api && (access_token || (code && !/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(code.trim())))) {
           window.history.replaceState({}, '', window.location.pathname)
         }
       } catch (err) {
@@ -125,7 +129,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check for web URL auth parameters on mount
     if (typeof window !== 'undefined' && !window.api) {
       const currentUrl = window.location.href
-      if (currentUrl.includes('#access_token') || currentUrl.includes('?code=') || currentUrl.includes('&code=')) {
+      const searchParams = new URLSearchParams(window.location.search)
+      const urlCode = searchParams.get('code')
+      const isInviteCode = urlCode ? /^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(urlCode.trim()) : false
+
+      if (currentUrl.includes('#access_token') || (!isInviteCode && (currentUrl.includes('?code=') || currentUrl.includes('&code=')))) {
         handleDeepLink(currentUrl)
       }
     }
