@@ -2,7 +2,7 @@ export const getShareUrl = (code: string): string => {
   const origin =
     typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
       ? window.location.origin
-      : 'https://kaizen33.vercel.app'
+      : import.meta.env.VITE_APP_URL || 'https://kaizen33.space'
   return `${origin}?code=${code}`
 }
 

@@ -1,26 +1,38 @@
 import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModel } from 'ai'
 
-export const AI_BASE_URL = 'https://imanuelcdw-dawra.hf.space/v1'
+export const AI_BASE_URL =
+  import.meta.env.VITE_AI_BASE_URL || 'https://imanuelcdw-dawra.hf.space/v1'
 
-export const AI_API_KEYS = [
-  'sk-6bfffd4f7d73aaad-b8j4vt-d126e60c',
-  'sk-6bfffd4f7d73aaad-oo2jsg-4181a2f8',
-  'sk-6bfffd4f7d73aaad-w2kegj-45bed3fa',
-  'sk-6bfffd4f7d73aaad-qn3jag-39cfde90',
-  'sk-6bfffd4f7d73aaad-zdo4cf-ddd5b512'
-] as const
+const rawApiKeys = import.meta.env.VITE_AI_API_KEYS
+const singleApiKey = import.meta.env.VITE_AI_API_KEY
+
+export const AI_API_KEYS: readonly string[] = rawApiKeys
+  ? rawApiKeys
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean)
+  : singleApiKey
+    ? [singleApiKey.trim()]
+    : [
+        'sk-6bfffd4f7d73aaad-b8j4vt-d126e60c',
+        'sk-6bfffd4f7d73aaad-oo2jsg-4181a2f8',
+        'sk-6bfffd4f7d73aaad-w2kegj-45bed3fa',
+        'sk-6bfffd4f7d73aaad-qn3jag-39cfde90',
+        'sk-6bfffd4f7d73aaad-zdo4cf-ddd5b512'
+      ]
 
 /**
  * Returns a randomly selected AI API key from the key pool.
  */
 export function getRandomApiKey(): string {
+  if (AI_API_KEYS.length === 0) return ''
   const index = Math.floor(Math.random() * AI_API_KEYS.length)
   return AI_API_KEYS[index]
 }
 
-export const AI_API_KEY = AI_API_KEYS[0]
-export const AI_MODEL_NAME = 'kaizen'
+export const AI_API_KEY = AI_API_KEYS[0] || ''
+export const AI_MODEL_NAME = import.meta.env.VITE_AI_MODEL_NAME || 'kaizen'
 
 export function getLanguageModel(): LanguageModel {
   const customOpenAi = createOpenAI({

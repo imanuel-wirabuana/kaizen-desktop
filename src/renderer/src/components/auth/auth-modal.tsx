@@ -138,8 +138,9 @@ export function AuthModal(props: AuthModalProps = {}) {
     setError(null)
     try {
       const isElectron = Boolean(window.api)
+      const appUrl = import.meta.env.VITE_APP_URL || 'https://kaizen33.space'
       const redirectUrl = isElectron
-        ? 'https://kaizen33.vercel.app/success'
+        ? `${appUrl}/success`
         : window.location.origin
 
       const { data, error: err } = await supabase.auth.signInWithOAuth({
