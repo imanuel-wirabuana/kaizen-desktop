@@ -37,13 +37,20 @@ export function ShareMembersColumn({
   handleMemberPermissionChange,
   handleRemoveMember
 }: ShareMembersColumnProps) {
-  const isCurrentUserOwner = board?.owner === user?.id
-  const ownerName = isCurrentUserOwner ? `${user?.fullName || 'You'} (You)` : 'Board Owner'
+  const isCurrentUserOwner = Boolean(user?.id && board?.owner === user?.id)
+  const boardOwnerInfo = board?.owner_info
+
+  const ownerName = isCurrentUserOwner
+    ? `${user?.fullName || boardOwnerInfo?.name || 'You'} (You)`
+    : boardOwnerInfo?.name || 'Board Owner'
+
   const ownerEmail = isCurrentUserOwner
-    ? user?.email
-    : board?.owner
-      ? `ID: ${board.owner.slice(0, 16)}...`
-      : 'Owner'
+    ? user?.email || boardOwnerInfo?.email || ''
+    : boardOwnerInfo?.email || (board?.owner ? `ID: ${board.owner.slice(0, 16)}...` : 'Owner')
+
+  const ownerAvatarUrl = isCurrentUserOwner
+    ? user?.imageUrl || boardOwnerInfo?.avatar_url || null
+    : boardOwnerInfo?.avatar_url || null
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 sm:p-5 space-y-4">
@@ -118,8 +125,8 @@ export function ShareMembersColumn({
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="relative shrink-0">
                     <Avatar size="default" className="size-8">
-                      {isCurrentUserOwner && user?.imageUrl && (
-                        <AvatarImage src={user.imageUrl} alt={ownerName} />
+                      {ownerAvatarUrl && (
+                        <AvatarImage src={ownerAvatarUrl} alt={ownerName} />
                       )}
                       <AvatarFallback
                         className={`text-xs font-semibold ring-1 ring-inset ${getAvatarColor(

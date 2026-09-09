@@ -54,6 +54,7 @@ import { supabase } from '@/lib/supabase'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
 import { useItemSelectionStore } from '@/stores/item-selection'
+import { OwnerAvatar } from '@/components/ui/owner-avatar'
 
 export const PRIORITY_CONFIG = {
   0: { label: 'Low', badge: 'bg-muted text-muted-foreground border-border', dot: 'bg-slate-400' },
@@ -469,8 +470,8 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                   </p>
                 ) : null}
 
-                {/* Badges Footer (Priority, Date Range & Assignee) */}
-                {((item.priority ?? 0) > 0 || dateRangeInfo || item.assignee) && (
+                {/* Badges Footer (Priority, Date Range, Assignee & Creator) */}
+                {((item.priority ?? 0) > 0 || dateRangeInfo || item.assignee || item.owner_info) && (
                   <div className="flex flex-wrap items-center gap-1 pt-0.5">
                     {/* Priority Badge */}
                     {(item.priority ?? 0) > 0 && (
@@ -504,6 +505,16 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                         <User className="size-2.5 shrink-0" />
                         <span className="truncate">{item.assignee}</span>
                       </span>
+                    )}
+
+                    {/* Creator Avatar */}
+                    {item.owner_info && (
+                      <OwnerAvatar
+                        ownerInfo={item.owner_info}
+                        size="xs"
+                        prefix="Created by"
+                        className="ml-auto shrink-0 opacity-85 hover:opacity-100 transition-opacity"
+                      />
                     )}
                   </div>
                 )}

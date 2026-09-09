@@ -106,6 +106,7 @@ export const useBoardsStore = create<BoardsState>()(
         pinned: draft.pinned ?? false,
         background: draft.background ?? null,
         owner: draft.owner ?? null,
+        owner_info: draft.owner_info ?? null,
         order,
         role: 'owner',
         created_at: new Date().toISOString(),
@@ -311,7 +312,8 @@ export const useBoardsStore = create<BoardsState>()(
         icon: target.icon,
         pinned: target.pinned,
         background: target.background,
-        owner: currentUser ?? target.owner
+        owner: currentUser ?? target.owner,
+        owner_info: target.owner_info ?? null
       })
 
       if (!newBoard || !newBoard.id) return null
@@ -329,6 +331,7 @@ export const useBoardsStore = create<BoardsState>()(
             description: lane.description,
             background: lane.background,
             owner: currentUser ?? lane.owner,
+            owner_info: lane.owner_info ?? null,
             order: idx + 1
           })
 
@@ -351,6 +354,7 @@ export const useBoardsStore = create<BoardsState>()(
                 assignee: item.assignee,
                 background: item.background,
                 owner: currentUser ?? item.owner,
+                owner_info: item.owner_info ?? null,
                 order: itemIdx + 1
               })
             }
@@ -377,6 +381,7 @@ export const useBoardsStore = create<BoardsState>()(
             assignee: item.assignee,
             background: item.background,
             owner: currentUser ?? item.owner,
+            owner_info: item.owner_info ?? null,
             order: draftIdx + 1
           })
         }

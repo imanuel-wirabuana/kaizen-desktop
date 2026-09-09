@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { useItemsStore } from '@/stores/items'
 import { TaskForm, TaskFormValues } from './task-form'
+import { getOwnerInfoFromUser } from '@/lib/owner-info'
 
 type InlineCreateTaskProps = {
   laneId: number | null
@@ -48,7 +49,8 @@ export function InlineCreateTask({ laneId, boardId }: InlineCreateTaskProps) {
         status: values.status,
         assignee: values.assignee || null,
         background: values.background || null,
-        owner: user?.id || null
+        owner: user?.id || null,
+        owner_info: getOwnerInfoFromUser(user)
       })
 
       if (!created) {

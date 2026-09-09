@@ -21,6 +21,7 @@ import { BackgroundPickerContent } from '@/components/ui/background-picker'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
 import { useBoardPreviewStore, type BoardPreviewData } from '@/stores/board-preview'
+import { getOwnerInfoFromUser } from '@/lib/owner-info'
 
 export type BoardDrawerProps = {
   mode?: 'create' | 'edit'
@@ -153,7 +154,8 @@ export function BoardDrawer({
           icon,
           pinned: false,
           background: background || undefined,
-          owner: user?.id || undefined
+          owner: user?.id || undefined,
+          owner_info: getOwnerInfoFromUser(user)
         })
 
         if (!newBoard) {

@@ -1,3 +1,11 @@
+type OwnerInfo = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  avatar_url?: string | null
+  [key: string]: any
+} | null
+
 type Board = {
   id?: number
   title?: string | null
@@ -8,6 +16,7 @@ type Board = {
   updated_at?: string | null
   background?: string | null
   owner?: string | null
+  owner_info?: OwnerInfo
   order?: number
   last_activity?: string | null
   role?: 'owner' | 'edit' | 'view'
@@ -48,6 +57,7 @@ type Lane = {
   background?: string | null
   order?: number | null
   owner?: string | null
+  owner_info?: OwnerInfo
   updated_at?: string | null
   created_at?: string
   isVirtual?: boolean
@@ -68,6 +78,8 @@ type KanbanItem = {
   assignee?: string | null
   background?: string | null
   owner?: string | null
+  owner_info?: OwnerInfo
   created_at?: string
   updated_at?: string | null
 }
+

@@ -89,6 +89,7 @@ export function useCreateBoardMutation(userId?: string) {
         pinned: draft.pinned ?? false,
         background: draft.background ?? null,
         owner: draft.owner ?? userId ?? null,
+        owner_info: draft.owner_info ?? null,
         order: draft.order ?? maxOrder + 1,
         role: 'owner',
         created_at: new Date().toISOString(),

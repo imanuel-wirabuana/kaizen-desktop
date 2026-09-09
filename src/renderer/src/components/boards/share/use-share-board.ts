@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 import { getShareUrl } from './utils'
 import { ShareRole, PermissionRole } from './types'
+import { getOwnerInfoFromUser } from '@/lib/owner-info'
 
 export function useShareBoard(
   board: Board | null,
@@ -66,6 +67,19 @@ export function useShareBoard(
       setGeneratedCode(null)
       setSearchQuery('')
       fetchInvitesAndMembers()
+
+      // Ensure board has current owner_info when owner opens share dialog
+      if (user?.id && (board.owner === user.id || !board.owner)) {
+        const currentOwnerInfo = getOwnerInfoFromUser(user)
+        if (
+          !board.owner_info ||
+          board.owner_info.name !== currentOwnerInfo?.name ||
+          board.owner_info.email !== currentOwnerInfo?.email ||
+          board.owner_info.avatar_url !== currentOwnerInfo?.avatar_url
+        ) {
+          useBoardsStore.getState().updateBoard(boardId, { owner_info: currentOwnerInfo })
+        }
+      }
 
       const memChannel = subscribeBoardMembers(boardId, () => {
         getBoardMembers(boardId).then(setMembers)

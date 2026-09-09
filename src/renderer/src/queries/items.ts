@@ -54,6 +54,7 @@ export function useCreateItemMutation(boardId: number | string) {
         assignee: draft.assignee ?? null,
         background: draft.background ?? null,
         owner: draft.owner ?? null,
+        owner_info: draft.owner_info ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }

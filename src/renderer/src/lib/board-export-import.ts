@@ -14,6 +14,7 @@ export type ParsedImportItem = {
   status?: boolean | null
   assignee?: string | null
   background?: string | null
+  owner_info?: OwnerInfo
 }
 
 export type ParsedImportLane = {
@@ -21,6 +22,7 @@ export type ParsedImportLane = {
   icon?: string | null
   description?: string | null
   background?: string | null
+  owner_info?: OwnerInfo
   items: ParsedImportItem[]
 }
 
@@ -66,6 +68,7 @@ export function exportBoardToJson(_board: Board | null | undefined, lanes: Lane[
       icon: lane.icon || null,
       description: lane.description || null,
       background: lane.background || null,
+      owner_info: lane.owner_info ?? null,
       items: laneItems.map((item) => ({
         title: item.title || 'Untitled Task',
         icon: item.icon || null,
@@ -75,13 +78,15 @@ export function exportBoardToJson(_board: Board | null | undefined, lanes: Lane[
         due_date: item.due_date || null,
         status: item.status ?? null,
         assignee: item.assignee || null,
-        background: item.background || null
+        background: item.background || null,
+        owner_info: item.owner_info ?? null
       }))
     }
   })
 
   const exportObj = {
     board: _board?.title || 'Board',
+    owner_info: _board?.owner_info ?? null,
     lanes: lanesData
   }
 
@@ -476,6 +481,7 @@ export async function importContentIntoBoard(
           status: itemData.status ?? undefined,
           assignee: itemData.assignee ?? undefined,
           background: itemData.background ?? undefined,
+          owner_info: itemData.owner_info ?? undefined,
           order: (iIdx + 1) * 100
         })
         if (!createdItem) {

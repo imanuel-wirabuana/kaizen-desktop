@@ -32,6 +32,7 @@ import { useUser } from '@/providers/auth-provider'
 import { cn } from '@/lib/utils'
 import { BoardMenuContent } from '@/components/menus/board-menu-content'
 import { useActiveBoardWithPreview } from '@/stores/board-preview'
+import { OwnerAvatar } from '@/components/ui/owner-avatar'
 
 export type SortableGridBoardCardProps = {
   board: Board
@@ -265,7 +266,17 @@ export function SortableGridBoardCard({
               : 'Recent'}
           </span>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Owner avatar for shared boards */}
+            {board.role && board.role !== 'owner' && board.owner_info && (
+              <OwnerAvatar
+                ownerInfo={board.owner_info}
+                size="xs"
+                prefix="Board Owner"
+                className="opacity-80 hover:opacity-100 transition-opacity"
+              />
+            )}
+
             {/* Drag Handle Icon inside footer */}
             <span
               ref={handleRef}

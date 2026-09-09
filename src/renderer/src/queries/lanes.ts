@@ -50,6 +50,8 @@ export function useCreateLaneMutation(boardId: number | string) {
         title: draft.title ?? 'New Column',
         description: draft.description ?? null,
         background: draft.background ?? null,
+        owner: draft.owner ?? null,
+        owner_info: draft.owner_info ?? null,
         order,
         created_at: new Date().toISOString()
       }

@@ -67,7 +67,8 @@ export async function createItem(
     status: item.status ?? false,
     assignee: item.assignee ?? null,
     background: item.background ?? null,
-    owner: item.owner ?? null
+    owner: item.owner ?? null,
+    owner_info: item.owner_info ?? null
   }
 
   const { data, error } = await supabase

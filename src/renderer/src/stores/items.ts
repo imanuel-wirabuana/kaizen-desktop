@@ -141,6 +141,7 @@ export const useItemsStore = create<ItemsState>()(
         assignee: draft.assignee ?? null,
         background: draft.background ?? null,
         owner: draft.owner ?? null,
+        owner_info: draft.owner_info ?? null,
         order,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -305,6 +306,7 @@ export const useItemsStore = create<ItemsState>()(
         assignee: target.assignee,
         background: target.background,
         owner: target.owner,
+        owner_info: target.owner_info ?? null,
         order
       })
     },
@@ -336,6 +338,7 @@ export const useItemsStore = create<ItemsState>()(
           assignee: target.assignee,
           background: target.background,
           owner: target.owner,
+          owner_info: target.owner_info ?? null,
           order: maxOrder
         }
       })

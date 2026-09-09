@@ -16,7 +16,8 @@ export async function createLanesBulk(
     description: lane.description || null,
     background: lane.background || null,
     order: lane.order ?? 100,
-    owner: lane.owner || null
+    owner: lane.owner || null,
+    owner_info: lane.owner_info ?? null
   }))
 
   const { data, error } = await supabase.from('lanes').insert(payload).select()

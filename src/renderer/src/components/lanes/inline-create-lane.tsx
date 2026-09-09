@@ -9,6 +9,7 @@ import { useLanesStore } from '@/stores/lanes'
 import { BackgroundPicker } from '@/components/ui/background-picker'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
+import { getOwnerInfoFromUser } from '@/lib/owner-info'
 
 export function InlineCreateLane({ boardId }: { boardId: number | string }) {
   const { user } = useUser()
@@ -49,7 +50,8 @@ export function InlineCreateLane({ boardId }: { boardId: number | string }) {
         icon: icon || null,
         description: description.trim() || null,
         background: background || null,
-        owner: user?.id || null
+        owner: user?.id || null,
+        owner_info: getOwnerInfoFromUser(user)
       })
       handleClose()
     } catch (err) {

@@ -122,6 +122,7 @@ export const useLanesStore = create<LanesState>()(
         description: draft.description ?? null,
         background: draft.background ?? null,
         owner: draft.owner ?? null,
+        owner_info: draft.owner_info ?? null,
         order,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -347,6 +348,7 @@ export const useLanesStore = create<LanesState>()(
         description: target.description,
         background: target.background,
         owner: target.owner,
+        owner_info: target.owner_info ?? null,
         order
       })
 
@@ -370,6 +372,7 @@ export const useLanesStore = create<LanesState>()(
             assignee: item.assignee,
             background: item.background,
             owner: item.owner,
+            owner_info: item.owner_info ?? null,
             order: idx + 1
           })
         }
