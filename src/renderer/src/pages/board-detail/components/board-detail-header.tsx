@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { useBoardsStore } from '@/stores/boards'
 import { useBoardPreviewStore } from '@/stores/board-preview'
+import { useItemSelectionStore } from '@/stores/item-selection'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -19,7 +20,8 @@ import {
   Share2,
   MoreHorizontal,
   Sparkles,
-  Inbox
+  Inbox,
+  CheckSquare
 } from 'lucide-react'
 import { BoardMenuContent } from '@/components/menus/board-menu-content'
 import { cn } from '@/lib/utils'
@@ -64,6 +66,16 @@ export function BoardDetailHeader({
   const isPreviewing = useBoardPreviewStore((s) =>
     board.id !== undefined && s.activePreviewBoardId !== null && String(s.activePreviewBoardId) === String(board.id)
   )
+
+  const isSelectionMode = useItemSelectionStore((s) => s.isSelectionMode)
+  const selectedIds = useItemSelectionStore((s) => s.selectedIds)
+  const toggleSelectionMode = useItemSelectionStore((s) => s.toggleSelectionMode)
+
+  const handleToggleSelectMode = () => {
+    if (board.id !== undefined) {
+      toggleSelectionMode(board.id)
+    }
+  }
 
   const handleExportImport = onOpenExportImport || onOpenExport || onOpenImport
 
@@ -176,6 +188,33 @@ export function BoardDetailHeader({
                   />
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* Select Mode Toggle Button (Editable only) */}
+              {!isReadOnly && (
+                <Button
+                  variant={isSelectionMode ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={handleToggleSelectMode}
+                  className={cn(
+                    'h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs transition-all cursor-pointer',
+                    isSelectionMode && 'bg-primary/15 text-primary border-primary/30'
+                  )}
+                  title={isSelectionMode ? 'Exit Selection Mode (Esc)' : 'Select Tasks'}
+                >
+                  <CheckSquare
+                    className={cn(
+                      'size-3.5',
+                      isSelectionMode ? 'text-primary' : 'text-muted-foreground'
+                    )}
+                  />
+                  <span>Select</span>
+                  {isSelectionMode && selectedIds.length > 0 && (
+                    <span className="flex h-3.5 min-w-[14px] px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
+                      {selectedIds.length}
+                    </span>
+                  )}
+                </Button>
+              )}
 
               {/* AI Assistant Toggle Button */}
               <Button

@@ -9,6 +9,7 @@ export interface ItemSelectionState {
   // Actions
   enterSelectionMode: (boardId: number | string, initialItemId?: number | string) => void
   exitSelectionMode: () => void
+  toggleSelectionMode: (boardId: number | string) => void
   toggleItem: (itemId: number | string) => void
   selectItem: (itemId: number | string) => void
   deselectItem: (itemId: number | string) => void
@@ -38,6 +39,21 @@ export const useItemSelectionStore = create<ItemSelectionState>((set, get) => ({
       isSelectionMode: false,
       selectedIds: []
     })
+  },
+
+  toggleSelectionMode: (boardId) => {
+    if (get().isSelectionMode) {
+      set({
+        isSelectionMode: false,
+        selectedIds: []
+      })
+    } else {
+      set({
+        boardId,
+        isSelectionMode: true,
+        selectedIds: []
+      })
+    }
   },
 
   toggleItem: (itemId) => {

@@ -52,7 +52,6 @@ import { supabase } from '@/lib/supabase'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
 import { useItemSelectionStore } from '@/stores/item-selection'
-import { useLongPress } from '@/hooks/use-long-press'
 
 export const PRIORITY_CONFIG = {
   0: { label: 'Low', badge: 'bg-muted text-muted-foreground border-border', dot: 'bg-slate-400' },
@@ -106,15 +105,6 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const enterSelectionMode = useItemSelectionStore((s) => s.enterSelectionMode)
   const toggleItem = useItemSelectionStore((s) => s.toggleItem)
 
-  const longPressHandlers = useLongPress({
-    disabled: readOnly || isEditing || isSelectionMode,
-    onLongPress: () => {
-      if (!readOnly && !isEditing && !isSelectionMode) {
-        enterSelectionMode(item.board_id, item.id)
-      }
-    }
-  })
-
   const { ref, handleRef, isDragSource } = useSortable({
     id: item.id,
     index,
@@ -152,7 +142,6 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
       enterSelectionMode(item.board_id, item.id)
       return
     }
-    longPressHandlers.onClick(e)
   }
 
   const handleStartEdit = () => {
@@ -210,10 +199,6 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
         render={
           <div
             ref={ref}
-            onPointerDown={!isSelectionMode ? longPressHandlers.onPointerDown : undefined}
-            onPointerMove={!isSelectionMode ? longPressHandlers.onPointerMove : undefined}
-            onPointerUp={!isSelectionMode ? longPressHandlers.onPointerUp : undefined}
-            onPointerCancel={!isSelectionMode ? longPressHandlers.onPointerCancel : undefined}
             onClick={handleCardClick}
             className={cn(
               'group/card relative flex flex-col rounded-xl border transition-all duration-200 select-none overflow-hidden',
