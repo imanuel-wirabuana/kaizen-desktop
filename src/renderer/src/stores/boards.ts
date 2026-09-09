@@ -345,7 +345,10 @@ export const useBoardsStore = create<BoardsState>()(
                 icon: item.icon,
                 description: item.description,
                 priority: item.priority,
+                start_date: item.start_date,
                 due_date: item.due_date,
+                status: item.status,
+                assignee: item.assignee,
                 background: item.background,
                 owner: currentUser ?? item.owner,
                 order: itemIdx + 1
@@ -368,7 +371,10 @@ export const useBoardsStore = create<BoardsState>()(
             icon: item.icon,
             description: item.description,
             priority: item.priority,
+            start_date: item.start_date,
             due_date: item.due_date,
+            status: item.status,
+            assignee: item.assignee,
             background: item.background,
             owner: currentUser ?? item.owner,
             order: draftIdx + 1

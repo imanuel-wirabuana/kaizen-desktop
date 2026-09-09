@@ -17,7 +17,10 @@ export async function createItemsBulk(
     description: item.description ?? null,
     order: item.order ?? (idx + 1) * 100,
     priority: item.priority ?? 0,
+    start_date: item.start_date ?? null,
     due_date: item.due_date ?? null,
+    status: item.status ?? false,
+    assignee: item.assignee ?? null,
     background: item.background ?? null,
     owner: item.owner ?? null
   }))

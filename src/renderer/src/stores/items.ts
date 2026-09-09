@@ -41,6 +41,8 @@ type ItemsState = {
     itemsWithOrders: { id: number | string; lane_id: number | null; order: number }[]
   ) => Promise<void>
   bulkSetPriority: (itemIds: (number | string)[], priority: number) => Promise<void>
+  bulkSetStatus: (itemIds: (number | string)[], status: boolean) => Promise<void>
+  bulkSetAssignee: (itemIds: (number | string)[], assignee: string | null) => Promise<void>
   bulkSetBackground: (itemIds: (number | string)[], background: string | null) => Promise<void>
   bulkRemoveItems: (itemIds: (number | string)[]) => Promise<boolean>
 }
@@ -133,7 +135,10 @@ export const useItemsStore = create<ItemsState>()(
         icon: draft.icon ?? null,
         description: draft.description ?? null,
         priority: draft.priority ?? 0,
+        start_date: draft.start_date ?? null,
         due_date: draft.due_date ?? null,
+        status: draft.status ?? false,
+        assignee: draft.assignee ?? null,
         background: draft.background ?? null,
         owner: draft.owner ?? null,
         order,
@@ -294,7 +299,10 @@ export const useItemsStore = create<ItemsState>()(
         icon: target.icon,
         description: target.description,
         priority: target.priority,
+        start_date: target.start_date,
         due_date: target.due_date,
+        status: target.status,
+        assignee: target.assignee,
         background: target.background,
         owner: target.owner,
         order
@@ -322,7 +330,10 @@ export const useItemsStore = create<ItemsState>()(
           icon: target.icon,
           description: target.description,
           priority: target.priority,
+          start_date: target.start_date,
           due_date: target.due_date,
+          status: target.status,
+          assignee: target.assignee,
           background: target.background,
           owner: target.owner,
           order: maxOrder
@@ -448,6 +459,42 @@ export const useItemsStore = create<ItemsState>()(
       broadcastSyncEvent('items')
 
       await updateItemsCommonFields(itemIds, { priority })
+      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+    },
+
+    // ── Bulk Set Status ───────────────────────────────────────────────
+    bulkSetStatus: async (itemIds, status) => {
+      const currentBoardId = get().boardId
+      const idSet = new Set(itemIds.map(String))
+
+      set((s) => ({
+        items: s.items.map((i) =>
+          idSet.has(String(i.id))
+            ? { ...i, status, updated_at: new Date().toISOString() }
+            : i
+        )
+      }))
+      broadcastSyncEvent('items')
+
+      await updateItemsCommonFields(itemIds, { status })
+      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+    },
+
+    // ── Bulk Set Assignee ─────────────────────────────────────────────
+    bulkSetAssignee: async (itemIds, assignee) => {
+      const currentBoardId = get().boardId
+      const idSet = new Set(itemIds.map(String))
+
+      set((s) => ({
+        items: s.items.map((i) =>
+          idSet.has(String(i.id))
+            ? { ...i, assignee, updated_at: new Date().toISOString() }
+            : i
+        )
+      }))
+      broadcastSyncEvent('items')
+
+      await updateItemsCommonFields(itemIds, { assignee })
       if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
     },
 

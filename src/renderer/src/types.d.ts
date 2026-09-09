@@ -62,7 +62,10 @@ type KanbanItem = {
   description?: string | null
   order?: number | null
   priority?: number | null
+  start_date?: string | null
   due_date?: string | null
+  status?: boolean | null
+  assignee?: string | null
   background?: string | null
   owner?: string | null
   created_at?: string

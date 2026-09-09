@@ -9,7 +9,10 @@ export type ParsedImportItem = {
   icon?: string | null
   description?: string | null
   priority?: number | null
+  start_date?: string | null
   due_date?: string | null
+  status?: boolean | null
+  assignee?: string | null
   background?: string | null
 }
 
@@ -68,7 +71,10 @@ export function exportBoardToJson(_board: Board | null | undefined, lanes: Lane[
         icon: item.icon || null,
         description: item.description || null,
         priority: item.priority ?? null,
+        start_date: item.start_date || null,
         due_date: item.due_date || null,
+        status: item.status ?? null,
+        assignee: item.assignee || null,
         background: item.background || null
       }))
     }
@@ -320,7 +326,10 @@ export function parseBoardImportText(text: string): ParsedImportData {
             icon: i?.icon ?? null,
             description: i?.description ?? null,
             priority: parsedPriority,
+            start_date: i?.start_date ?? null,
             due_date: i?.due_date ?? null,
+            status: typeof i?.status === 'boolean' ? i.status : null,
+            assignee: i?.assignee ?? null,
             background: i?.background ?? null
           }
         })
@@ -462,7 +471,10 @@ export async function importContentIntoBoard(
           icon: itemData.icon ?? undefined,
           description: itemData.description ?? undefined,
           priority: itemData.priority ?? undefined,
+          start_date: itemData.start_date ?? undefined,
           due_date: itemData.due_date ?? undefined,
+          status: itemData.status ?? undefined,
+          assignee: itemData.assignee ?? undefined,
           background: itemData.background ?? undefined,
           order: (iIdx + 1) * 100
         })

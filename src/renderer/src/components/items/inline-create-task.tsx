@@ -20,6 +20,14 @@ export function InlineCreateTask({ laneId, boardId }: InlineCreateTaskProps) {
   const handleSubmit = async (values: TaskFormValues) => {
     setIsSubmitting(true)
     try {
+      let isoStartDate: string | null = null
+      if (values.startDate) {
+        const d = new Date(values.startDate)
+        if (!isNaN(d.getTime())) {
+          isoStartDate = d.toISOString()
+        }
+      }
+
       let isoDueDate: string | null = null
       if (values.dueDate) {
         const d = new Date(values.dueDate)
@@ -35,7 +43,10 @@ export function InlineCreateTask({ laneId, boardId }: InlineCreateTaskProps) {
         icon: values.icon,
         description: values.description || null,
         priority: values.priority,
+        start_date: isoStartDate,
         due_date: isoDueDate,
+        status: values.status,
+        assignee: values.assignee || null,
         background: values.background || null,
         owner: user?.id || null
       })
@@ -71,6 +82,7 @@ export function InlineCreateTask({ laneId, boardId }: InlineCreateTaskProps) {
 
   return (
     <TaskForm
+      boardId={boardId}
       onSubmit={handleSubmit}
       onCancel={() => setIsOpen(false)}
       formTitle="New Task"

@@ -16,7 +16,9 @@ import {
   Palette,
   FolderInput,
   Inbox,
-  CopyPlus
+  CopyPlus,
+  CheckCircle2,
+  Circle
 } from 'lucide-react'
 import { useItemsStore } from '@/stores/items'
 import { useLanesStore } from '@/stores/lanes'
@@ -187,6 +189,20 @@ export function ItemMenuContent({ item, variant, onEdit }: ItemMenuContentProps)
       <MenuItem onClick={onEdit}>
         <Pencil className="mr-2 size-3.5 text-muted-foreground" />
         <span>Edit Task</span>
+      </MenuItem>
+
+      <MenuItem onClick={() => updateItem(item.id, { status: !item.status })}>
+        {item.status ? (
+          <>
+            <Circle className="mr-2 size-3.5 text-muted-foreground" />
+            <span>Mark as incomplete</span>
+          </>
+        ) : (
+          <>
+            <CheckCircle2 className="mr-2 size-3.5 text-primary" />
+            <span>Mark as done</span>
+          </>
+        )}
       </MenuItem>
 
       <MenuItem onClick={() => duplicateItem(item.id)}>

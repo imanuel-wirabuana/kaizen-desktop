@@ -272,6 +272,7 @@ export function SearchCommand() {
     const searchKeywords = [
       item.title ?? '',
       item.description ?? '',
+      item.assignee ?? '',
       priorityInfo.label,
       laneName
     ].join(' ')
@@ -291,9 +292,17 @@ export function SearchCommand() {
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-xs shrink-0">{item.icon || '📝'}</span>
-          <span className="font-semibold text-foreground truncate">
+          <span className={cn(
+            "font-semibold truncate",
+            item.status ? "line-through text-muted-foreground/70" : "text-foreground"
+          )}>
             {item.title || 'Untitled Task'}
           </span>
+          {item.assignee && (
+            <span className="rounded bg-primary/10 px-1.5 py-0 text-[9px] font-medium text-primary shrink-0 border border-primary/20 max-w-[90px] truncate">
+              {item.assignee}
+            </span>
+          )}
           <span className="rounded bg-muted/60 px-1.5 py-0 text-[9px] font-medium text-muted-foreground shrink-0 border border-border/50">
             {laneName}
           </span>

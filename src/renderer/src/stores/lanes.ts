@@ -364,7 +364,10 @@ export const useLanesStore = create<LanesState>()(
             icon: item.icon,
             description: item.description,
             priority: item.priority,
+            start_date: item.start_date,
             due_date: item.due_date,
+            status: item.status,
+            assignee: item.assignee,
             background: item.background,
             owner: item.owner,
             order: idx + 1

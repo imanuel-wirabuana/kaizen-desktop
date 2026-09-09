@@ -4,8 +4,9 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { BackgroundPicker } from '@/components/ui/background-picker'
-import { DateTimePicker } from '@/components/ui/date-picker'
-import { Loader2, Palette, Sparkles, Pencil, X, Smile } from 'lucide-react'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
+import { AssigneeCombobox } from './assignee-combobox'
+import { Loader2, Palette, Sparkles, Pencil, X, Smile, Check } from 'lucide-react'
 import { PRIORITY_CONFIG } from './task-card'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
@@ -15,12 +16,19 @@ export type TaskFormValues = {
   icon: string | null
   description: string
   priority: number
-  dueDate: string
+  startDate: string | null
+  dueDate: string | null
+  status: boolean
+  assignee: string | null
   background: string
 }
 
 export type TaskFormProps = {
-  initialValues?: Partial<TaskFormValues>
+  initialValues?: Partial<TaskFormValues> & {
+    start_date?: string | null
+    due_date?: string | null
+  }
+  boardId?: number | string | null
   onSubmit: (values: TaskFormValues) => Promise<void> | void
   onCancel: () => void
   submitLabel?: string
@@ -35,6 +43,7 @@ export type TaskFormProps = {
 
 export function TaskForm({
   initialValues,
+  boardId,
   onSubmit,
   onCancel,
   submitLabel,
@@ -50,7 +59,14 @@ export function TaskForm({
   const [icon, setIcon] = useState<string | null>(initialValues?.icon || null)
   const [description, setDescription] = useState(initialValues?.description || '')
   const [priority, setPriority] = useState<number>(initialValues?.priority ?? 0)
-  const [dueDate, setDueDate] = useState<string>(initialValues?.dueDate || '')
+  const [startDate, setStartDate] = useState<string | null>(
+    initialValues?.startDate ?? initialValues?.start_date ?? null
+  )
+  const [dueDate, setDueDate] = useState<string | null>(
+    initialValues?.dueDate ?? initialValues?.due_date ?? null
+  )
+  const [status, setStatus] = useState<boolean>(Boolean(initialValues?.status))
+  const [assignee, setAssignee] = useState<string | null>(initialValues?.assignee || null)
   const [background, setBackground] = useState<string>(initialValues?.background || '')
 
   const isEditMode = Boolean(initialValues?.title)
@@ -70,7 +86,10 @@ export function TaskForm({
       icon: icon || null,
       description: description.trim(),
       priority,
+      startDate,
       dueDate,
+      status,
+      assignee,
       background
     })
   }
@@ -227,14 +246,52 @@ export function TaskForm({
             })}
           </div>
 
-          {/* Due Date & Time Picker */}
-          <div className="flex items-center gap-1.5">
-            <DateTimePicker
-              value={dueDate}
-              onChange={(val) => setDueDate(val || '')}
-              placeholder="Due date & time (optional)..."
-              className="h-7 text-[11px] rounded-lg flex-1 bg-background shadow-2xs"
+          {/* Date Range Picker & Assignee Combobox Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+            <DateRangePicker
+              startDate={startDate}
+              dueDate={dueDate}
+              onChange={(range) => {
+                setStartDate(range.startDate)
+                setDueDate(range.dueDate)
+              }}
+              placeholder="Start & due date..."
+              className="h-7 text-[11px] w-full"
             />
+            <AssigneeCombobox
+              value={assignee}
+              onChange={setAssignee}
+              boardId={boardId}
+              placeholder="Assignee (optional)..."
+              className="h-7 text-[11px] w-full"
+            />
+          </div>
+
+          {/* Completion Status Toggle */}
+          <div className="flex items-center justify-between pt-0.5 px-0.5">
+            <label
+              className="inline-flex items-center gap-1.5 cursor-pointer select-none py-0.5"
+              onClick={() => setStatus(!status)}
+            >
+              <span
+                className={cn(
+                  'size-4 rounded-full border flex items-center justify-center transition-colors shrink-0',
+                  status
+                    ? 'bg-primary border-primary text-primary-foreground shadow-2xs'
+                    : 'border-muted-foreground/40 hover:border-primary bg-background'
+                )}
+              >
+                {status && <Check className="size-2.5 stroke-[3]" />}
+              </span>
+              <span
+                className={cn(
+                  'text-[11px]',
+                  status ? 'text-foreground font-semibold' : 'text-muted-foreground'
+                )}
+              >
+                {status ? 'Marked as completed' : 'Mark as completed'}
+              </span>
+            </label>
           </div>
         </div>
 
