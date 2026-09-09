@@ -19,6 +19,7 @@ import {
   UserCheck,
   Clock,
   Share2,
+  Users,
   MoreHorizontal,
   Sparkles,
   Inbox,
@@ -232,30 +233,33 @@ export function BoardDetailHeader({
 
               {/* Board Actions (Share + More Options) Button Group */}
               <ButtonGroup variant="connected">
-                {/* Share Board Action (Owner only) */}
-                {isOwner && (
-                  <Button
-                    size="sm"
-                    onClick={onOpenShare}
-                    className="h-7 gap-1 px-2.5 text-xs font-semibold shadow-none cursor-pointer"
-                  >
-                    <Share2 className="size-3" />
-                    <span>Share</span>
-                  </Button>
-                )}
+                {/* Share / Members Board Action */}
+                <Button
+                  variant={isReadOnly ? 'outline' : 'default'}
+                  size="sm"
+                  onClick={onOpenShare}
+                  className={cn(
+                    'h-7 gap-1 px-2.5 text-xs font-semibold shadow-none cursor-pointer',
+                    isReadOnly && 'font-medium'
+                  )}
+                  title={isReadOnly ? 'View Board Members' : 'Share Board'}
+                >
+                  {isReadOnly ? <Users className="size-3" /> : <Share2 className="size-3" />}
+                  <span>{isReadOnly ? 'Members' : 'Share'}</span>
+                </Button>
 
                 {/* Board Options Dropdown Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
                       <Button
-                        variant={isOwner ? 'default' : 'outline'}
+                        variant={isReadOnly ? 'outline' : 'default'}
                         size="sm"
                         className={cn(
                           'h-7 size-7 p-0 shadow-none cursor-pointer',
-                          isOwner
+                          !isReadOnly
                             ? 'border-l border-primary-foreground/25 hover:bg-primary/90'
-                            : 'text-muted-foreground hover:text-foreground'
+                            : 'border-l border-border/80 text-muted-foreground hover:text-foreground'
                         )}
                         title="Board options"
                       >

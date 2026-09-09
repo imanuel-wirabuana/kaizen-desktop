@@ -8,6 +8,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { formatExpiration } from './utils'
 import {
   ShareRole,
@@ -19,6 +20,7 @@ import {
 } from './types'
 
 type ShareInviteColumnProps = {
+  isReadOnly?: boolean
   permission: ShareRole
   setPermission: (role: ShareRole) => void
   expiresOption: ExpirationOption
@@ -40,6 +42,7 @@ type ShareInviteColumnProps = {
 }
 
 export function ShareInviteColumn({
+  isReadOnly = false,
   permission,
   setPermission,
   expiresOption,
@@ -67,21 +70,26 @@ export function ShareInviteColumn({
           <Globe className="size-4" />
         </div>
         <div>
-          <h3 className="text-xs font-semibold text-foreground">General Access & Invite Links</h3>
+          <h3 className="text-xs font-semibold text-foreground">
+            {isReadOnly ? 'Active Invite Links' : 'General Access & Invite Links'}
+          </h3>
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Generate temporary invite codes or shareable links for your team.
+            {isReadOnly
+              ? 'Active invite codes and shareable links for this board.'
+              : 'Generate temporary invite codes or shareable links for your team.'}
           </p>
         </div>
       </div>
 
-      {/* Generator Form Card */}
-      <div className="rounded-xl border bg-card/80 p-3.5 space-y-3 shadow-xs">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <KeyRound className="size-3.5 text-muted-foreground" />
-            Create Invite Link
-          </span>
-        </div>
+      {/* Generator Form Card (Omitted completely for Viewers) */}
+      {!isReadOnly && (
+        <div className="rounded-xl border bg-card/80 p-3.5 space-y-3 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <KeyRound className="size-3.5 text-muted-foreground" />
+              Create Invite Link
+            </span>
+          </div>
 
         <div className="grid grid-cols-3 gap-2 text-xs">
           {/* Permission */}
@@ -219,6 +227,7 @@ export function ShareInviteColumn({
           </div>
         )}
       </div>
+    )}
 
       {/* Active Invites List */}
       <div className="flex flex-col flex-1 min-h-0 space-y-2">
@@ -231,7 +240,12 @@ export function ShareInviteColumn({
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-28 max-h-52">
+        <div
+          className={cn(
+            'flex-1 overflow-y-auto space-y-2 pr-1 min-h-28',
+            !isReadOnly && 'max-h-52'
+          )}
+        >
           {loadingData ? (
             <div className="space-y-2">
               {[1, 2].map((i) => (
@@ -249,7 +263,9 @@ export function ShareInviteColumn({
               <KeyRound className="size-6 text-muted-foreground/40 mb-1.5" />
               <p className="font-medium text-foreground/80">No active invite codes</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Generate one above to invite teammates.
+                {isReadOnly
+                  ? 'No active invite links currently exist for this board.'
+                  : 'Generate one above to invite teammates.'}
               </p>
             </div>
           ) : (
@@ -294,14 +310,16 @@ export function ShareInviteColumn({
                       </>
                     )}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRevoke(inv.id)}
-                    className="h-7 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive px-2 cursor-pointer"
-                  >
-                    Revoke
-                  </Button>
+                  {!isReadOnly && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRevoke(inv.id)}
+                      className="h-7 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive px-2 cursor-pointer"
+                    >
+                      Revoke
+                    </Button>
+                  )}
                 </div>
               </div>
             ))

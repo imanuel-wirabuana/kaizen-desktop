@@ -21,6 +21,7 @@ import {
   Pencil,
   Trash2,
   Share2,
+  Users,
   FolderOpen,
   ArrowRight,
   GripVertical,
@@ -106,17 +107,15 @@ export function SortableGridBoardCard({
 
           {/* Quick Action Overlay Buttons (Top-Right) */}
           <div className="absolute right-1.5 top-1.5 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            {/* Share Board button (owner only) */}
-            {isOwner && (
-              <button
-                type="button"
-                onClick={onShare}
-                className="flex size-5 items-center justify-center rounded-md border border-white/30 bg-black/30 text-white hover:bg-black/50 shadow-xs transition-all backdrop-blur-md cursor-pointer"
-                title="Share Board"
-              >
-                <Share2 className="size-2.5" />
-              </button>
-            )}
+            {/* Quick Share / Members button */}
+            <button
+              type="button"
+              onClick={onShare}
+              className="flex size-5 items-center justify-center rounded-md border border-white/30 bg-black/30 text-white hover:bg-black/50 shadow-xs transition-all backdrop-blur-md cursor-pointer"
+              title={canEdit ? 'Share Board' : 'Members'}
+            >
+              {canEdit ? <Share2 className="size-2.5" /> : <Users className="size-2.5" />}
+            </button>
 
             {/* Quick Pin toggle button */}
             <button

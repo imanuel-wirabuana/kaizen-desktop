@@ -367,6 +367,7 @@ export function ProjectDetailPage({ projectId }: { projectId: string }) {
         board={sharingBoard}
         open={!!sharingBoard}
         onOpenChange={(open) => !open && setSharingBoard(null)}
+        permissionRole={sharingBoard?.role}
       />
 
       <FolderModal

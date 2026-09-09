@@ -11,6 +11,7 @@ import { ExportImportBoardModal } from '@/components/boards/export-import-board-
 import { ShareBoardModal } from '@/components/boards/share-board-modal'
 import { AiMutationPreviewModal } from '@/components/ai'
 import { BoardDetailDialogs } from '../hooks/use-board-detail-dialogs'
+import { BoardPermissions } from '../hooks/use-board-permissions'
 
 export interface BoardDetailModalsProps {
   boardId: number | string
@@ -18,6 +19,7 @@ export interface BoardDetailModalsProps {
   lanes: Lane[]
   items: KanbanItem[]
   dialogs: BoardDetailDialogs
+  permissions?: BoardPermissions
 }
 
 export function BoardDetailModals({
@@ -25,7 +27,8 @@ export function BoardDetailModals({
   board,
   lanes,
   items,
-  dialogs
+  dialogs,
+  permissions
 }: BoardDetailModalsProps) {
   const queryClient = useQueryClient()
   const navigate = useNavigationStore((s) => s.navigate)
@@ -97,7 +100,12 @@ export function BoardDetailModals({
       />
 
       {/* Share Board Modal */}
-      <ShareBoardModal board={board} open={isShareOpen} onOpenChange={setIsShareOpen} />
+      <ShareBoardModal
+        board={board}
+        open={isShareOpen}
+        onOpenChange={setIsShareOpen}
+        permissionRole={permissions?.permissionRole}
+      />
 
       {/* AI Mutation Review & Bulk CRUD Modal (Add, Update, Delete) */}
       <AiMutationPreviewModal

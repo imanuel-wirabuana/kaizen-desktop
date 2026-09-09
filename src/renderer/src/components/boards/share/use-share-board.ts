@@ -14,12 +14,17 @@ import {
   subscribeBoardMembers
 } from '@/services/members'
 import { useUser } from '@/providers/auth-provider'
+import { useBoardsStore } from '@/stores/boards'
 import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 import { getShareUrl } from './utils'
-import { ShareRole } from './types'
+import { ShareRole, PermissionRole } from './types'
 
-export function useShareBoard(board: Board | null, open: boolean) {
+export function useShareBoard(
+  board: Board | null,
+  open: boolean,
+  permissionRoleProp?: PermissionRole
+) {
   const { user } = useUser()
 
   const [permission, setPermission] = useState<ShareRole>('view')
@@ -87,8 +92,43 @@ export function useShareBoard(board: Board | null, open: boolean) {
     return undefined
   }, [open, board?.id, fetchInvitesAndMembers])
 
+  // Derive effective role prioritizing actual database membership over in-flight defaults
+  const effectiveRole = useMemo<PermissionRole>(() => {
+    // 1. Explicit board owner
+    if (user?.id && board?.owner === user.id) return 'owner'
+    if (board && !board.owner) return 'owner'
+
+    // 2. Direct database member record from loaded members (authoritative ground truth!)
+    if (user?.id && members.length > 0) {
+      const myMembership = members.find((m) => String(m.user_id) === String(user.id))
+      if (myMembership?.permission === 'edit') return 'edit'
+      if (myMembership?.permission === 'view') return 'view'
+      if (myMembership?.permission === 'owner') return 'owner'
+    }
+
+    // 3. Explicit prop passed from caller
+    if (permissionRoleProp) return permissionRoleProp
+
+    // 4. Role directly on board object
+    if (board?.role) return board.role
+
+    // 5. Look in boards store
+    if (board?.id !== undefined) {
+      const fromStore = useBoardsStore.getState().boards.find((b) => String(b.id) === String(board.id))
+      if (fromStore?.role) return fromStore.role
+    }
+
+    return 'view'
+  }, [permissionRoleProp, user?.id, board?.owner, board?.role, board?.id, board, members])
+
+  const isOwner = effectiveRole === 'owner'
+  const isEditor = effectiveRole === 'edit'
+  const isReadOnly = effectiveRole === 'view'
+  const canManageInvites = isOwner || isEditor
+  const canManageOtherMembers = isOwner || isEditor
+
   const handleGenerate = async () => {
-    if (!board?.id || !user?.id) return null
+    if (isReadOnly || !board?.id || !user?.id) return null
     setIsGenerating(true)
 
     try {
@@ -132,6 +172,7 @@ export function useShareBoard(board: Board | null, open: boolean) {
   }
 
   const handleRevoke = async (inviteId: number) => {
+    if (isReadOnly) return
     const ok = await revokeInvite(inviteId)
     if (ok) {
       setInvites((prev) => prev.filter((i) => i.id !== inviteId))
@@ -139,6 +180,13 @@ export function useShareBoard(board: Board | null, open: boolean) {
   }
 
   const handleMemberPermissionChange = async (memberId: number, newPerm: ShareRole) => {
+    if (isReadOnly) return
+    const target = members.find((m) => m.id === memberId)
+    if (!target) return
+    // Editors cannot modify their own permission or the board owner
+    if (isEditor && user?.id && String(target.user_id) === String(user.id)) return
+    if (isEditor && board?.owner && String(target.user_id) === String(board.owner)) return
+
     const ok = await updateMemberPermission(memberId, newPerm)
     if (ok) {
       setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, permission: newPerm } : m)))
@@ -148,6 +196,13 @@ export function useShareBoard(board: Board | null, open: boolean) {
   }
 
   const handleRemoveMember = async (memberId: number) => {
+    if (isReadOnly) return
+    const target = members.find((m) => m.id === memberId)
+    if (!target) return
+    // Editors cannot remove themselves or the board owner
+    if (isEditor && user?.id && String(target.user_id) === String(user.id)) return
+    if (isEditor && board?.owner && String(target.user_id) === String(board.owner)) return
+
     const ok = await removeMember(memberId)
     if (ok) {
       setMembers((prev) => prev.filter((m) => m.id !== memberId))
@@ -165,7 +220,10 @@ export function useShareBoard(board: Board | null, open: boolean) {
       return
     }
 
-    // Auto-generate if no active invite exists
+    // Viewers cannot generate new invites
+    if (isReadOnly) return
+
+    // Auto-generate if no active invite exists and user is owner/editor
     const created = await handleGenerate()
     if (created?.code) {
       navigator.clipboard.writeText(getShareUrl(created.code))
@@ -173,9 +231,6 @@ export function useShareBoard(board: Board | null, open: boolean) {
       setTimeout(() => setCopiedFooterLink(false), 2000)
     }
   }
-
-  const isOwner = Boolean(user?.id && board?.owner === user.id)
-  const canManageMembers = isOwner || board?.role === 'owner'
 
   const filteredMembers = useMemo(() => {
     if (!searchQuery.trim()) return members
@@ -189,8 +244,12 @@ export function useShareBoard(board: Board | null, open: boolean) {
 
   return {
     user,
+    effectiveRole,
     isOwner,
-    canManageMembers,
+    isEditor,
+    isReadOnly,
+    canManageInvites,
+    canManageOtherMembers,
     permission,
     setPermission,
     expiresOption,

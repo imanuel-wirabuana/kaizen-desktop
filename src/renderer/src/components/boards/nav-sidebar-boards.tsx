@@ -497,6 +497,7 @@ export function NavSidebarBoards() {
         board={activeBoardForShare}
         open={!!activeBoardForShare}
         onOpenChange={(open: boolean) => !open && setActiveBoardForShare(null)}
+        permissionRole={activeBoardForShare?.role}
       />
 
       {/* Folder Modals */}

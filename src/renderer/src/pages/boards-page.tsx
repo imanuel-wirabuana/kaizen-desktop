@@ -456,6 +456,7 @@ export function BoardsPage() {
         board={sharingBoard}
         open={!!sharingBoard}
         onOpenChange={(open) => !open && setSharingBoard(null)}
+        permissionRole={sharingBoard?.role}
       />
 
       {/* Folder Modals */}

@@ -28,8 +28,10 @@ export function useBoardDetailQuery(boardId: number | string, userId?: string) {
     queryFn: async () => {
       const data = await boardsService.getBoardById(boardId)
       if (!data) return null
+      const fromStore = useBoardsStore.getState().boards.find((b) => String(b.id) === String(boardId))
       return {
         ...data,
+        role: fromStore?.role ?? data.role,
         pinned: isBoardPinned(data.id)
       }
     },

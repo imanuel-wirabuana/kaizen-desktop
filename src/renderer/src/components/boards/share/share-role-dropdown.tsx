@@ -14,6 +14,7 @@ type ShareRoleDropdownProps = {
   onRoleChange: (newRole: ShareRole) => void
   onRemove: () => void
   canManage: boolean
+  canRemove?: boolean
   isRemoving?: boolean
 }
 
@@ -22,6 +23,7 @@ export function ShareRoleDropdown({
   onRoleChange,
   onRemove,
   canManage,
+  canRemove = true,
   isRemoving = false
 }: ShareRoleDropdownProps) {
   if (!canManage) {
@@ -84,16 +86,20 @@ export function ShareRoleDropdown({
           </div>
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator className="my-1" />
+        {canRemove && (
+          <>
+            <DropdownMenuSeparator className="my-1" />
 
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={onRemove}
-          className="flex items-center gap-2.5 py-2 text-destructive cursor-pointer"
-        >
-          <Trash2 className="size-3.5" />
-          <span className="font-medium">Remove access</span>
-        </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={onRemove}
+              className="flex items-center gap-2.5 py-2 text-destructive cursor-pointer"
+            >
+              <Trash2 className="size-3.5" />
+              <span className="font-medium">Remove access</span>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useBoardsStore } from '@/stores/boards'
 
 export type PermissionRole = 'owner' | 'edit' | 'view' | null
 
@@ -38,9 +39,17 @@ export function useBoardPermissions(
       return board.role
     }
 
+    // Check boards store for preloaded role
+    if (board.id !== undefined) {
+      const fromStore = useBoardsStore.getState().boards.find((b) => String(b.id) === String(board.id))
+      if (fromStore?.role) {
+        return fromStore.role
+      }
+    }
+
     // 5. Pending resolution for shared board
     return 'view'
-  }, [dbPermission, board?.role, board?.owner, board, userId])
+  }, [dbPermission, board?.role, board?.owner, board?.id, board, userId])
 
   const isOwner = permissionRole === 'owner'
   const isReadOnly = permissionRole === 'view'

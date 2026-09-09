@@ -11,7 +11,9 @@ type ShareMembersColumnProps = {
   board: Board | null
   user: AppUser | null
   isOwner: boolean
-  canManageMembers: boolean
+  isEditor?: boolean
+  isReadOnly?: boolean
+  canManageMembers?: boolean
   members: BoardMember[]
   filteredMembers: BoardMember[]
   loadingData: boolean
@@ -25,7 +27,8 @@ export function ShareMembersColumn({
   board,
   user,
   isOwner,
-  canManageMembers,
+  isEditor = false,
+  isReadOnly = false,
   members,
   filteredMembers,
   loadingData,
@@ -53,7 +56,9 @@ export function ShareMembersColumn({
           <div>
             <h3 className="text-xs font-semibold text-foreground">People with access</h3>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Manage member roles and permissions for this board.
+              {isReadOnly
+                ? 'View member roles and permissions for this board.'
+                : 'Manage member roles and permissions for this board.'}
             </p>
           </div>
         </div>
@@ -149,7 +154,8 @@ export function ShareMembersColumn({
 
             {/* Collaborators List */}
             {filteredMembers.map((mem) => {
-              const isCurrentUser = mem.user_id === user?.id
+              const isCurrentUser = Boolean(user?.id && String(mem.user_id) === String(user.id))
+              const isBoardOwner = Boolean(board?.owner && String(mem.user_id) === String(board.owner))
               const memberEmail = isCurrentUser ? user?.email : mem.user_email || mem.email
               const memberName = isCurrentUser
                 ? `${user?.fullName || 'You'} (You)`
@@ -159,6 +165,11 @@ export function ShareMembersColumn({
               const displayEmail =
                 memberEmail || (mem.user_id ? `ID: ${mem.user_id.slice(0, 16)}...` : '')
               const role = (mem.permission as ShareRole) || 'view'
+
+              // Editor can change permissions of other users other than himself (and not board owner)
+              const canManageThisMember =
+                !isReadOnly &&
+                (isOwner || (isEditor && !isCurrentUser && !isBoardOwner))
 
               return (
                 <div
@@ -194,7 +205,8 @@ export function ShareMembersColumn({
                       role={role}
                       onRoleChange={(newRole) => handleMemberPermissionChange(mem.id, newRole)}
                       onRemove={() => handleRemoveMember(mem.id)}
-                      canManage={canManageMembers}
+                      canManage={canManageThisMember}
+                      canRemove={isOwner}
                     />
                   </div>
                 </div>

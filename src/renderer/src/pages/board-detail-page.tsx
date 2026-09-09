@@ -151,6 +151,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         lanes={lanes}
         items={items}
         dialogs={dialogs}
+        permissions={permissions}
       />
     </div>
   )

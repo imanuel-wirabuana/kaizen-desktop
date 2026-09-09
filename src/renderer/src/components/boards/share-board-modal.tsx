@@ -6,7 +6,7 @@ import {
   DialogDescription
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Share2, Link, Check } from 'lucide-react'
+import { Share2, Users, Link, Check } from 'lucide-react'
 import {
   ShareBoardModalProps,
   useShareBoard,
@@ -14,11 +14,12 @@ import {
   ShareMembersColumn
 } from './share'
 
-export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalProps) {
+export function ShareBoardModal({ board, open, onOpenChange, permissionRole }: ShareBoardModalProps) {
   const {
     user,
     isOwner,
-    canManageMembers,
+    isEditor,
+    isReadOnly,
     permission,
     setPermission,
     expiresOption,
@@ -45,7 +46,7 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
     handleRevoke,
     handleMemberPermissionChange,
     handleRemoveMember
-  } = useShareBoard(board, open)
+  } = useShareBoard(board, open, permissionRole)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,14 +54,16 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
         {/* ── Dialog Header (Google Drive Inspired) ── */}
         <DialogHeader className="px-5 py-3.5 border-b flex flex-row items-center gap-3 shrink-0 bg-card pr-10">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
-            <Share2 className="size-4" />
+            {isReadOnly ? <Users className="size-4" /> : <Share2 className="size-4" />}
           </div>
           <div className="flex flex-col min-w-0">
             <DialogTitle className="text-sm font-semibold truncate">
-              Share &ldquo;{board?.title || 'Board'}&rdquo;
+              {isReadOnly ? `Members of "${board?.title || 'Board'}"` : `Share "${board?.title || 'Board'}"`}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground truncate">
-              Manage invite links, access permissions, and collaborator roles.
+              {isReadOnly
+                ? 'View collaborator roles, permissions, and active invite links.'
+                : 'Manage invite links, access permissions, and collaborator roles.'}
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -69,6 +72,7 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
         <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x overflow-hidden flex-1 min-h-0 bg-background/50">
           {/* Left Column: Code & Invite Links */}
           <ShareInviteColumn
+            isReadOnly={isReadOnly}
             permission={permission}
             setPermission={setPermission}
             expiresOption={expiresOption}
@@ -94,7 +98,8 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
             board={board}
             user={user}
             isOwner={isOwner}
-            canManageMembers={canManageMembers}
+            isEditor={isEditor}
+            isReadOnly={isReadOnly}
             members={members}
             filteredMembers={filteredMembers}
             loadingData={loadingData}
@@ -112,6 +117,7 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
               variant="outline"
               size="sm"
               onClick={handleCopyPrimaryLink}
+              disabled={isReadOnly && invites.length === 0}
               className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
             >
               {copiedFooterLink ? (
@@ -129,7 +135,9 @@ export function ShareBoardModal({ board, open, onOpenChange }: ShareBoardModalPr
             <span className="hidden sm:inline-block text-[11px] text-muted-foreground">
               {invites.length > 0
                 ? 'Copies the active invite link'
-                : 'Generates and copies a share link'}
+                : isReadOnly
+                  ? 'No active invite links available'
+                  : 'Generates and copies a share link'}
             </span>
           </div>
 

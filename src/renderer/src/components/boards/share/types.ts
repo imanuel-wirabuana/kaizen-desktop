@@ -1,9 +1,12 @@
 import { ExpirationOption, MaxUsesOption } from '@/services/invites'
 
+export type PermissionRole = 'owner' | 'edit' | 'view' | null
+
 export type ShareBoardModalProps = {
   board: Board | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  permissionRole?: PermissionRole
 }
 
 export type ShareRole = 'view' | 'edit'
