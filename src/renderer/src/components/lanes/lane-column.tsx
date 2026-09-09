@@ -192,33 +192,35 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
 
                       {/* Options Dropdown Menu Trigger */}
                       {!isVirtual && !readOnly && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60"
-                                title="Column options"
-                              >
-                                <MoreHorizontal className="size-3.5" />
-                              </Button>
-                            }
-                          />
-                          <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
-                            <LaneMenuContent
-                              lane={lane}
-                              index={index}
-                              totalLanes={totalLanes}
-                              columnItemsCount={columnItems.length}
-                              variant="dropdown"
-                              onEditTitle={() => setIsEditing(true)}
-                              onDelete={() => setIsDeleteOpen(true)}
-                              onRequestMoveToBoard={handleRequestMoveToBoard}
-                              onBackgroundChange={handleBackgroundChange}
+                        <div className="opacity-0 group-hover/header:opacity-100 transition-opacity">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 shrink-0"
+                                  title="Column options"
+                                >
+                                  <MoreHorizontal className="size-3.5" />
+                                </Button>
+                              }
                             />
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
+                              <LaneMenuContent
+                                lane={lane}
+                                index={index}
+                                totalLanes={totalLanes}
+                                columnItemsCount={columnItems.length}
+                                variant="dropdown"
+                                onEditTitle={() => setIsEditing(true)}
+                                onDelete={() => setIsDeleteOpen(true)}
+                                onRequestMoveToBoard={handleRequestMoveToBoard}
+                                onBackgroundChange={handleBackgroundChange}
+                              />
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       )}
                     </div>
                   </>

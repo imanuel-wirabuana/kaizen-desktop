@@ -272,7 +272,7 @@ export function InlineEditLane({ lane, isEditing, onEditingChange, readOnly = fa
               <button
                 type="button"
                 onClick={(e) => e.stopPropagation()}
-                className="flex size-6 items-center justify-center rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer"
+                className="flex size-6 items-center justify-center rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors shrink-0 cursor-pointer"
                 title="Add lane emoji"
               >
                 <Smile className="size-3.5" />
