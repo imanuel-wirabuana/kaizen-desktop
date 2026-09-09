@@ -1,4 +1,5 @@
 export * from './components/board-detail-header'
+export * from './components/inline-edit-board-title'
 export * from './components/board-detail-canvas'
 export * from './components/board-detail-modals'
 export * from './components/board-detail-skeleton'

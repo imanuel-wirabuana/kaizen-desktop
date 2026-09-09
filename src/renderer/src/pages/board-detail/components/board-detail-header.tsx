@@ -27,6 +27,7 @@ import { BoardMenuContent } from '@/components/menus/board-menu-content'
 import { cn } from '@/lib/utils'
 import { formatLastActivity } from '../utils/format-activity'
 import { BoardPermissions } from '../hooks/use-board-permissions'
+import { InlineEditBoardTitle } from './inline-edit-board-title'
 
 export interface BoardDetailHeaderProps {
   board: Board
@@ -110,9 +111,7 @@ export function BoardDetailHeader({
                 </div>
               )}
               <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                <h1 className="text-xs sm:text-sm font-bold tracking-tight text-foreground truncate shrink-0">
-                  {board.title || 'Untitled Board'}
-                </h1>
+                <InlineEditBoardTitle board={board} canEdit={canEdit} />
                 {isPreviewing && (
                   <span className="flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 shrink-0 animate-pulse">
                     <Sparkles className="size-2.5" /> Live Preview
