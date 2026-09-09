@@ -21,7 +21,8 @@ import {
   UploadIcon,
   FolderIcon,
   FolderPlusIcon,
-  CheckIcon
+  CheckIcon,
+  ArrowUpDown as ArrowUpDownIcon
 } from 'lucide-react'
 import { useBoardsStore } from '@/stores/boards'
 import { useBoardFoldersStore } from '@/stores/board-folders'
@@ -36,6 +37,7 @@ export type BoardMenuContentProps = {
   onEdit?: (e?: any) => void
   onDelete?: (e?: any) => void
   onLeave?: (e?: any) => void
+  onExportImport?: (e?: any) => void
   onExport?: (e?: any) => void
   onImport?: (e?: any) => void
   onTogglePin?: (e?: any) => void
@@ -51,6 +53,7 @@ export function BoardMenuContent({
   onEdit,
   onDelete,
   onLeave,
+  onExportImport,
   onExport,
   onImport,
   onTogglePin,
@@ -85,6 +88,8 @@ export function BoardMenuContent({
       updateBoard(board.id, { pinned: !board.pinned })
     }
   }
+
+  const handleExportImport = onExportImport || onExport || onImport
 
   return (
     <MenuProvider variant={variant}>
@@ -166,17 +171,10 @@ export function BoardMenuContent({
         </MenuItem>
       )}
 
-      {canEdit && onExport && (
-        <MenuItem onClick={onExport}>
-          <UploadIcon className="text-muted-foreground" />
-          <span>Export Board</span>
-        </MenuItem>
-      )}
-
-      {canEdit && onImport && (
-        <MenuItem onClick={onImport}>
-          <DownloadIcon className="text-muted-foreground" />
-          <span>Import Content</span>
+      {canEdit && handleExportImport && (
+        <MenuItem onClick={() => handleExportImport('export')}>
+          <ArrowUpDownIcon className="text-muted-foreground" />
+          <span>Export/Import</span>
         </MenuItem>
       )}
 

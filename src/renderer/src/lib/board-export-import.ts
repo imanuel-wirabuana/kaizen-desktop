@@ -22,23 +22,40 @@ export type ParsedImportLane = {
 }
 
 export type ParsedImportData = {
-  format: 'JSON' | 'CSV'
+  format: 'JSON' | 'CSV' | 'MARKDOWN'
   boardTitle?: string
   lanes: ParsedImportLane[]
+}
+
+function getExportLanes(lanes: Lane[], items: KanbanItem[]): Lane[] {
+  const allLanes = [...(lanes || [])]
+  const hasDraftItems = (items || []).some((i) => i.lane_id === null || i.lane_id === undefined)
+  const hasDraftLane = allLanes.some((l) => l.id === null)
+  if (hasDraftItems && !hasDraftLane) {
+    allLanes.unshift({
+      id: null,
+      title: 'Draft',
+      order: -9999
+    })
+  }
+  return allLanes.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+}
+
+function isItemInLane(item: KanbanItem, lane: Lane): boolean {
+  if (lane.id === null) {
+    return item.lane_id === null || item.lane_id === undefined
+  }
+  return item.lane_id !== null && item.lane_id !== undefined && String(item.lane_id) === String(lane.id)
 }
 
 /**
  * Export board, lanes, and items to formatted JSON string.
  */
-export function exportBoardToJson(_board: Board, lanes: Lane[], items: KanbanItem[]): string {
-  const sortedLanes = [...lanes].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+export function exportBoardToJson(_board: Board | null | undefined, lanes: Lane[], items: KanbanItem[]): string {
+  const sortedLanes = getExportLanes(lanes, items)
   const lanesData = sortedLanes.map((lane) => {
-    const laneItems = items
-      .filter(
-        (item) =>
-          (lane.id === null && item.lane_id === null) ||
-          (lane.id !== null && Number(item.lane_id) === Number(lane.id))
-      )
+    const laneItems = (items || [])
+      .filter((item) => isItemInLane(item, lane))
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
     return {
@@ -58,7 +75,7 @@ export function exportBoardToJson(_board: Board, lanes: Lane[], items: KanbanIte
   })
 
   const exportObj = {
-    board: _board?.title,
+    board: _board?.title || 'Board',
     lanes: lanesData
   }
 
@@ -72,8 +89,8 @@ export function exportBoardToJson(_board: Board, lanes: Lane[], items: KanbanIte
  * item1;item2;;
  * item3;;;
  */
-export function exportBoardToCsv(_board: Board, lanes: Lane[], items: KanbanItem[]): string {
-  const sortedLanes = [...lanes].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+export function exportBoardToCsv(_board: Board | null | undefined, lanes: Lane[], items: KanbanItem[]): string {
+  const sortedLanes = getExportLanes(lanes, items)
   const laneTitles = sortedLanes.map((l) => l.title || (l.id === null ? 'Draft' : 'Untitled Column'))
 
   const headerLine = `${laneTitles.join(';')};`
@@ -82,12 +99,8 @@ export function exportBoardToCsv(_board: Board, lanes: Lane[], items: KanbanItem
   let maxItems = 0
 
   for (const lane of sortedLanes) {
-    const laneItems = items
-      .filter(
-        (i) =>
-          (lane.id === null && i.lane_id === null) ||
-          (lane.id !== null && Number(i.lane_id) === Number(lane.id))
-      )
+    const laneItems = (items || [])
+      .filter((i) => isItemInLane(i, lane))
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       .map((i) => i.title || '')
     laneItemsMap.set(lane.id, laneItems)
@@ -111,7 +124,157 @@ export function exportBoardToCsv(_board: Board, lanes: Lane[], items: KanbanItem
 }
 
 /**
- * Parse JSON or CSV text string input into a structured board hierarchy.
+ * Export board, lanes, and items to formatted Markdown string.
+ * Uses # for board title, ## for columns, and - [ ] for tasks.
+ */
+export function exportBoardToMarkdown(_board: Board | null | undefined, lanes: Lane[], items: KanbanItem[]): string {
+  const sortedLanes = getExportLanes(lanes, items)
+  const lines: string[] = []
+
+  const boardTitle = _board?.title || 'Board'
+  lines.push(`# ${boardTitle}`)
+  lines.push('')
+
+  for (const lane of sortedLanes) {
+    const laneTitle = lane.title || (lane.id === null ? 'Draft' : 'Untitled Column')
+    lines.push(`## ${laneTitle}`)
+
+    const laneItems = (items || [])
+      .filter((item) => isItemInLane(item, lane))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+    if (laneItems.length === 0) {
+      lines.push('')
+      continue
+    }
+
+    for (const item of laneItems) {
+      const itemTitle = item.title || 'Untitled Task'
+      lines.push(`- [ ] ${itemTitle}`)
+      if (item.description && item.description.trim()) {
+        const descLines = item.description.trim().split('\n')
+        for (const dl of descLines) {
+          lines.push(`  ${dl}`)
+        }
+      }
+    }
+    lines.push('')
+  }
+
+  return lines.join('\n').trimEnd() + '\n'
+}
+
+/**
+ * Parse Markdown string into structured board hierarchy.
+ */
+export function parseMarkdownBoard(trimmed: string): ParsedImportData {
+  const lines = trimmed.split(/\r?\n/)
+  let detectedBoardTitle: string | undefined
+  const lanes: ParsedImportLane[] = []
+  let currentLane: ParsedImportLane | null = null
+  let currentItem: ParsedImportItem | null = null
+
+  const headingMatches = lines.filter((l) => /^\s*#{1,6}\s+/.test(l))
+  const hasH1 = headingMatches.some((l) => /^\s*#\s+[^#]/.test(l))
+  const hasH2Plus = headingMatches.some((l) => /^\s*#{2,6}\s+/.test(l))
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i]
+    const line = rawLine.trim()
+    if (!line) {
+      currentItem = null
+      continue
+    }
+
+    // Check heading
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/)
+    if (headingMatch) {
+      const level = headingMatch[1].length
+      const title = headingMatch[2].trim()
+
+      if (level === 1 && hasH2Plus && !detectedBoardTitle) {
+        detectedBoardTitle = title
+        continue
+      }
+
+      currentItem = null
+      currentLane = {
+        title,
+        icon: null,
+        description: null,
+        background: null,
+        items: []
+      }
+      lanes.push(currentLane)
+      continue
+    }
+
+    // Check list item: - [ ] title, - [x] title, - title, * title, + title, 1. title
+    const itemMatch = line.match(/^(?:[-*+]\s+(?:\[[ xX]\]\s+)?|\d+\.\s+)(.+)$/)
+    if (itemMatch) {
+      if (!currentLane) {
+        currentLane = {
+          title: 'Imported Tasks',
+          icon: null,
+          description: null,
+          background: null,
+          items: []
+        }
+        lanes.push(currentLane)
+      }
+
+      const itemTitle = itemMatch[1].trim()
+      currentItem = {
+        title: itemTitle,
+        icon: null,
+        description: null,
+        priority: null,
+        due_date: null,
+        background: null
+      }
+      currentLane.items.push(currentItem)
+      continue
+    }
+
+    // Indented description or blockquote line under current item
+    if (currentItem && (/^\s{2,}/.test(rawLine) || /^\t/.test(rawLine) || line.startsWith('>'))) {
+      const descLine = line.replace(/^>\s*/, '').trim()
+      if (descLine) {
+        currentItem.description = currentItem.description
+          ? `${currentItem.description}\n${descLine}`
+          : descLine
+      }
+      continue
+    }
+
+    // Plain text line under a lane heading
+    if (currentLane && !line.startsWith('#')) {
+      currentItem = {
+        title: line,
+        icon: null,
+        description: null,
+        priority: null,
+        due_date: null,
+        background: null
+      }
+      currentLane.items.push(currentItem)
+      continue
+    }
+  }
+
+  if (lanes.length === 0) {
+    throw new Error('No columns or tasks found in Markdown content.')
+  }
+
+  return {
+    format: 'MARKDOWN',
+    boardTitle: detectedBoardTitle,
+    lanes
+  }
+}
+
+/**
+ * Parse JSON, Markdown, or CSV text string input into a structured board hierarchy.
  */
 export function parseBoardImportText(text: string): ParsedImportData {
   const trimmed = text.trim()
@@ -179,14 +342,30 @@ export function parseBoardImportText(text: string): ParsedImportData {
     }
   }
 
-  // 2. CSV parsing (delimiter ';' or ',')
+  // 2. Try Markdown parsing
+  const isMarkdown =
+    /(?:^|\n)\s*#{1,6}\s+/.test(trimmed) ||
+    /(?:^|\n)\s*[-*+]\s+\[[ xX]\]/.test(trimmed) ||
+    (/(?:^|\n)\s*[-*]\s+\S+/.test(trimmed) && !trimmed.includes(';'))
+
+  if (isMarkdown) {
+    try {
+      return parseMarkdownBoard(trimmed)
+    } catch (err: any) {
+      if (/(?:^|\n)\s*#{1,6}\s+/.test(trimmed)) {
+        throw err
+      }
+    }
+  }
+
+  // 3. CSV parsing (delimiter ';' or ',')
   const lines = trimmed
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
 
   if (lines.length === 0) {
-    throw new Error('No valid content lines found in CSV.')
+    throw new Error('No valid content lines found in CSV or Markdown.')
   }
 
   const delimiter = lines[0].includes(';') ? ';' : ','
@@ -202,7 +381,7 @@ export function parseBoardImportText(text: string): ParsedImportData {
   })
 
   if (laneTitles.length === 0) {
-    throw new Error('CSV header line must specify at least one column (e.g. Draft;Belum;Bagus;)')
+    throw new Error('Unable to parse content. Please provide valid JSON, Markdown, or CSV formatted text.')
   }
 
   const laneItemsMap = laneTitles.map(() => [] as string[])

@@ -99,6 +99,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         isAiOpen={isAiOpen}
         toggleAiSidebar={toggleAiSidebar}
         onOpenShare={dialogs.openShare}
+        onOpenExportImport={dialogs.openExportImport}
         onOpenExport={dialogs.openExport}
         onOpenImport={dialogs.openImport}
         onOpenEdit={dialogs.openEdit}
@@ -132,7 +133,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
       {/* Drawers & Modals Container */}
       <BoardDetailModals
         boardId={boardId}
-        board={board}
+        board={activeBoard || board}
         lanes={lanes}
         items={items}
         dialogs={dialogs}

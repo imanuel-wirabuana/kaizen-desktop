@@ -7,8 +7,7 @@ import { useBoardAiStore } from '@/stores/board-ai'
 import { EditBoardDrawer } from '@/components/boards/edit-board-drawer'
 import { DeleteBoardDrawer } from '@/components/boards/delete-board-drawer'
 import { LeaveBoardDrawer } from '@/components/boards/leave-board-drawer'
-import { ExportBoardModal } from '@/components/boards/export-board-modal'
-import { ImportBoardModal } from '@/components/boards/import-board-modal'
+import { ExportImportBoardModal } from '@/components/boards/export-import-board-modal'
 import { ShareBoardModal } from '@/components/boards/share-board-modal'
 import { AiMutationPreviewModal } from '@/components/ai'
 import { BoardDetailDialogs } from '../hooks/use-board-detail-dialogs'
@@ -43,10 +42,9 @@ export function BoardDetailModals({
     setIsDeleteOpen,
     isLeaveOpen,
     setIsLeaveOpen,
-    isExportOpen,
-    setIsExportOpen,
-    isImportOpen,
-    setIsImportOpen,
+    isExportImportOpen,
+    setIsExportImportOpen,
+    exportImportTab,
     isShareOpen,
     setIsShareOpen
   } = dialogs
@@ -80,20 +78,14 @@ export function BoardDetailModals({
         onSuccess={() => navigate({ name: 'boards' })}
       />
 
-      {/* Export Board Modal */}
-      <ExportBoardModal
+      {/* Unified Export / Import Board Modal */}
+      <ExportImportBoardModal
         board={board}
         lanes={lanes}
         items={items}
-        open={isExportOpen}
-        onOpenChange={setIsExportOpen}
-      />
-
-      {/* Import Content Modal */}
-      <ImportBoardModal
-        board={board}
-        open={isImportOpen}
-        onOpenChange={setIsImportOpen}
+        open={isExportImportOpen}
+        onOpenChange={setIsExportImportOpen}
+        initialTab={exportImportTab}
         onSuccess={() => {
           if (boardId) {
             queryClient.invalidateQueries({ queryKey: queryKeys.lanes.list(boardId) })

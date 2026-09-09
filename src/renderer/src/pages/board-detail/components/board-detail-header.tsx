@@ -17,8 +17,6 @@ import {
   UserCheck,
   Clock,
   Share2,
-  Upload,
-  Download,
   MoreHorizontal,
   Sparkles,
   Inbox
@@ -37,8 +35,9 @@ export interface BoardDetailHeaderProps {
   isAiOpen: boolean
   toggleAiSidebar: () => void
   onOpenShare: () => void
-  onOpenExport: () => void
-  onOpenImport: () => void
+  onOpenExportImport?: () => void
+  onOpenExport?: () => void
+  onOpenImport?: () => void
   onOpenEdit: () => void
   onOpenDelete: () => void
   onOpenLeave: () => void
@@ -53,6 +52,7 @@ export function BoardDetailHeader({
   isAiOpen,
   toggleAiSidebar,
   onOpenShare,
+  onOpenExportImport,
   onOpenExport,
   onOpenImport,
   onOpenEdit,
@@ -64,6 +64,8 @@ export function BoardDetailHeader({
   const isPreviewing = useBoardPreviewStore((s) =>
     board.id !== undefined && s.activePreviewBoardId !== null && String(s.activePreviewBoardId) === String(board.id)
   )
+
+  const handleExportImport = onOpenExportImport || onOpenExport || onOpenImport
 
   return (
     <ContextMenu>
@@ -147,34 +149,6 @@ export function BoardDetailHeader({
                 </Button>
               )}
 
-              {/* Export Board Button */}
-              {canEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onOpenExport}
-                  className="h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs cursor-pointer"
-                  title="Export Board to JSON or CSV"
-                >
-                  <Upload className="size-3 text-muted-foreground" />
-                  <span>Export</span>
-                </Button>
-              )}
-
-              {/* Import Content Button */}
-              {canEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onOpenImport}
-                  className="h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs cursor-pointer"
-                  title="Import Content into Board"
-                >
-                  <Download className="size-3 text-muted-foreground" />
-                  <span>Import</span>
-                </Button>
-              )}
-
               {/* Board Options Dropdown Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -198,8 +172,7 @@ export function BoardDetailHeader({
                     onEdit={onOpenEdit}
                     onDelete={onOpenDelete}
                     onLeave={onOpenLeave}
-                    onExport={onOpenExport}
-                    onImport={onOpenImport}
+                    onExportImport={handleExportImport}
                   />
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -260,8 +233,7 @@ export function BoardDetailHeader({
           onEdit={onOpenEdit}
           onDelete={onOpenDelete}
           onLeave={onOpenLeave}
-          onExport={onOpenExport}
-          onImport={onOpenImport}
+          onExportImport={handleExportImport}
         />
       </ContextMenuContent>
     </ContextMenu>
