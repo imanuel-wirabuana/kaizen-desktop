@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import * as itemsService from '@/services/items'
+import {
+  createItemsBulk,
+  deleteItemsBulk,
+  updateItemsCommonFields,
+  updateItemsBulk
+} from '@/services/bulk-items'
 import { useBoardsStore } from '@/stores/boards'
 import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
@@ -23,6 +29,20 @@ type ItemsState = {
   removeItem: (id: number | string) => Promise<boolean>
   moveItem: (id: number | string, targetLaneId: number | string | null, newOrder: number) => Promise<void>
   duplicateItem: (id: number | string) => Promise<KanbanItem | null>
+
+  // Bulk operations
+  bulkDuplicateItems: (itemIds: (number | string)[]) => Promise<KanbanItem[]>
+  bulkMoveItems: (
+    itemIds: (number | string)[],
+    targetLaneId: number | string | null,
+    targetBoardId?: number | string
+  ) => Promise<void>
+  bulkMoveItemsWithOrder: (
+    itemsWithOrders: { id: number | string; lane_id: number | null; order: number }[]
+  ) => Promise<void>
+  bulkSetPriority: (itemIds: (number | string)[], priority: number) => Promise<void>
+  bulkSetBackground: (itemIds: (number | string)[], background: string | null) => Promise<void>
+  bulkRemoveItems: (itemIds: (number | string)[]) => Promise<boolean>
 }
 
 let realtimeCleanup: (() => void) | null = null
@@ -279,6 +299,189 @@ export const useItemsStore = create<ItemsState>()(
         owner: target.owner,
         order
       })
+    },
+
+    // ── Bulk Duplicate Items (Duplicated items go to draft lane) ───────
+    bulkDuplicateItems: async (itemIds) => {
+      const currentBoardId = get().boardId
+      if (!currentBoardId) return []
+
+      const idSet = new Set(itemIds.map(String))
+      const targets = get().items.filter((i) => idSet.has(String(i.id)))
+      if (targets.length === 0) return []
+
+      const draftItems = get().items.filter((i) => i.lane_id === null)
+      let maxOrder = draftItems.length > 0 ? Math.max(...draftItems.map((i) => i.order ?? 0)) : 0
+
+      const draftsToCreate = targets.map((target) => {
+        maxOrder += 100
+        return {
+          board_id: Number(currentBoardId),
+          lane_id: null,
+          title: target.title ? `${target.title} (Copy)` : 'Untitled Task (Copy)',
+          icon: target.icon,
+          description: target.description,
+          priority: target.priority,
+          due_date: target.due_date,
+          background: target.background,
+          owner: target.owner,
+          order: maxOrder
+        }
+      })
+
+      suppressRealtimeRefetch = true
+      try {
+        const created = await createItemsBulk(draftsToCreate)
+        if (created.length > 0) {
+          set((s) => ({ items: [...s.items, ...created] }))
+          broadcastSyncEvent('items')
+          useBoardsStore.getState().touchBoardActivity(currentBoardId)
+        }
+        return created
+      } catch (err) {
+        console.error('bulkDuplicateItems failed:', err)
+        return []
+      } finally {
+        setTimeout(() => {
+          suppressRealtimeRefetch = false
+        }, 500)
+      }
+    },
+
+    // ── Bulk Move Items ──────────────────────────────────────────────
+    bulkMoveItems: async (itemIds, targetLaneId, targetBoardId) => {
+      const currentBoardId = get().boardId
+      const idSet = new Set(itemIds.map(String))
+      const normalizedTargetLane =
+        targetLaneId !== null && !isNaN(Number(targetLaneId)) ? Number(targetLaneId) : null
+      const isDifferentBoard =
+        targetBoardId !== undefined && String(targetBoardId) !== String(currentBoardId)
+
+      if (isDifferentBoard) {
+        // Move to a different board: remove from current board view and update DB
+        set((s) => ({ items: s.items.filter((i) => !idSet.has(String(i.id))) }))
+        broadcastSyncEvent('items')
+
+        const updates = itemIds.map((id) => ({
+          id: Number(id),
+          data: {
+            board_id: Number(targetBoardId),
+            lane_id: normalizedTargetLane,
+            order: 100
+          }
+        }))
+        await updateItemsBulk(updates)
+        if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+        useBoardsStore.getState().touchBoardActivity(targetBoardId)
+      } else {
+        // Move within current board
+        set((s) => ({
+          items: s.items.map((i) =>
+            idSet.has(String(i.id))
+              ? { ...i, lane_id: normalizedTargetLane, updated_at: new Date().toISOString() }
+              : i
+          )
+        }))
+        broadcastSyncEvent('items')
+
+        await updateItemsCommonFields(itemIds, { lane_id: normalizedTargetLane })
+        if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      }
+    },
+
+    // ── Bulk Move Items with Calculated Orders ────────────────────────
+    bulkMoveItemsWithOrder: async (itemsWithOrders) => {
+      const currentBoardId = get().boardId
+      if (itemsWithOrders.length === 0) return
+
+      const orderMap = new Map(itemsWithOrders.map((i) => [String(i.id), i]))
+
+      set((s) => ({
+        items: s.items.map((i) => {
+          const update = orderMap.get(String(i.id))
+          if (update) {
+            return {
+              ...i,
+              lane_id: update.lane_id,
+              order: update.order,
+              updated_at: new Date().toISOString()
+            }
+          }
+          return i
+        })
+      }))
+
+      broadcastSyncEvent('items')
+
+      suppressRealtimeRefetch = true
+      try {
+        const dbUpdates = itemsWithOrders.map((item) => ({
+          id: Number(item.id),
+          data: {
+            lane_id: item.lane_id,
+            order: item.order
+          }
+        }))
+        await updateItemsBulk(dbUpdates)
+        if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      } catch (err) {
+        console.error('bulkMoveItemsWithOrder failed:', err)
+      } finally {
+        setTimeout(() => {
+          suppressRealtimeRefetch = false
+        }, 500)
+      }
+    },
+
+    // ── Bulk Set Priority ─────────────────────────────────────────────
+    bulkSetPriority: async (itemIds, priority) => {
+      const currentBoardId = get().boardId
+      const idSet = new Set(itemIds.map(String))
+
+      set((s) => ({
+        items: s.items.map((i) =>
+          idSet.has(String(i.id))
+            ? { ...i, priority, updated_at: new Date().toISOString() }
+            : i
+        )
+      }))
+      broadcastSyncEvent('items')
+
+      await updateItemsCommonFields(itemIds, { priority })
+      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+    },
+
+    // ── Bulk Set Background Accent ───────────────────────────────────
+    bulkSetBackground: async (itemIds, background) => {
+      const currentBoardId = get().boardId
+      const idSet = new Set(itemIds.map(String))
+
+      set((s) => ({
+        items: s.items.map((i) =>
+          idSet.has(String(i.id))
+            ? { ...i, background: background || null, updated_at: new Date().toISOString() }
+            : i
+        )
+      }))
+      broadcastSyncEvent('items')
+
+      await updateItemsCommonFields(itemIds, { background: background || null })
+      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+    },
+
+    // ── Bulk Remove Items ────────────────────────────────────────────
+    bulkRemoveItems: async (itemIds) => {
+      const currentBoardId = get().boardId
+      const idSet = new Set(itemIds.map(String))
+
+      set((s) => ({
+        items: s.items.filter((i) => !idSet.has(String(i.id)))
+      }))
+      broadcastSyncEvent('items')
+
+      const ok = await deleteItemsBulk(itemIds)
+      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      return ok
     }
   }))
 )

@@ -13,6 +13,7 @@ import { DraftSidebar, TaskCardPreview } from '@/components/items'
 import { LaneColumnPreview } from '@/components/lanes'
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
+import { useItemSelectionStore } from '@/stores/item-selection'
 import { useUser } from '@/providers/auth-provider'
 import { useRealtimeBoardsSync } from '@/queries/use-realtime-sync'
 import { initGlobalRealtimeSync } from '@/lib/realtime'
@@ -26,7 +27,17 @@ export function BoardsLayout({ children }: { children: React.ReactNode }) {
     initGlobalRealtimeSync()
   }, [])
 
+  const handleKanbanDragStart = (event: any) => {
+    const source = event.operation?.source
+    if (!source || source.type !== 'item') return
+    const { isSelectionMode, selectedIds } = useItemSelectionStore.getState()
+    if (isSelectionMode && selectedIds.includes(String(source.id))) {
+      useItemSelectionStore.getState().setIsDraggingSelection(true)
+    }
+  }
+
   const handleKanbanDragEnd = (event: any) => {
+    useItemSelectionStore.getState().setIsDraggingSelection(false)
     const { source, target } = event.operation || {}
     if (!source || !target) return
 
@@ -101,6 +112,119 @@ export function BoardsLayout({ children }: { children: React.ReactNode }) {
         const allItems = useItemsStore.getState().items
         const activeItem = allItems.find((i) => String(i.id) === String(source.id))
         if (!activeItem) return
+
+        const { isSelectionMode, selectedIds } = useItemSelectionStore.getState()
+        const isBulkDrag = isSelectionMode && selectedIds.includes(String(source.id))
+
+        // ── Bulk Drag Handling for Selected Items ──
+        if (isBulkDrag) {
+          const selectedSet = new Set(selectedIds)
+          const selectedItems = allItems.filter((i) => selectedSet.has(String(i.id)))
+          if (selectedItems.length === 0) return
+
+          // 1. Resolve Target Lane ID directly from drop target
+          let targetLaneId: number | null = null
+          let laneResolved = false
+
+          if (target.id === 'draft-sidebar-drop-target' || target.id === 'draft-lane-virtual') {
+            targetLaneId = null
+            laneResolved = true
+          } else if (typeof target.id === 'string' && target.id.startsWith('lane-drop-target-')) {
+            const rawId = target.id.replace('lane-drop-target-', '')
+            targetLaneId = rawId === 'null' || rawId === 'undefined' ? null : Number(rawId)
+            laneResolved = true
+          } else if (target.type === 'item') {
+            const targetItem = allItems.find((i) => String(i.id) === String(target.id))
+            if (targetItem) {
+              targetLaneId = targetItem.lane_id ?? null
+              laneResolved = true
+            }
+          } else if (target.data?.laneId !== undefined) {
+            targetLaneId = target.data.laneId !== null ? Number(target.data.laneId) : null
+            laneResolved = true
+          } else if (target.type === 'lane') {
+            targetLaneId = target.id === null || target.id === 'draft-lane-virtual' ? null : Number(target.id)
+            laneResolved = true
+          }
+
+          // Fallback: check if sortable group changed from initial group
+          if (!laneResolved) {
+            if (source.group !== undefined && source.group !== null && source.group !== source.initialGroup) {
+              targetLaneId = source.group === 'draft' ? null : Number(source.group)
+              laneResolved = true
+            } else {
+              const finalGroup = source.group ?? source.initialGroup
+              targetLaneId =
+                finalGroup === 'draft' || finalGroup === null || finalGroup === undefined
+                  ? null
+                  : Number(finalGroup)
+            }
+          }
+
+          // 2. Existing items in target lane (excluding the dragged bundle)
+          const siblingItems = allItems
+            .filter(
+              (i) =>
+                !selectedSet.has(String(i.id)) &&
+                ((targetLaneId === null && i.lane_id === null) ||
+                  (targetLaneId !== null && i.lane_id === targetLaneId))
+            )
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+          // 3. Resolve Insertion Index
+          let insertIdx = siblingItems.length
+          if (target.type === 'item') {
+            const targetIdx = siblingItems.findIndex((i) => String(i.id) === String(target.id))
+            if (targetIdx !== -1) insertIdx = targetIdx
+          } else if (
+            source.group !== undefined &&
+            (targetLaneId === null ? source.group === 'draft' : source.group === String(targetLaneId)) &&
+            source.index !== undefined &&
+            source.index >= 0 &&
+            source.index <= siblingItems.length
+          ) {
+            insertIdx = source.index
+          }
+
+          // 4. Calculate Orders
+          let itemsWithOrders: { id: number; lane_id: number | null; order: number }[] = []
+
+          if (siblingItems.length === 0) {
+            itemsWithOrders = selectedItems.map((item, idx) => ({
+              id: item.id,
+              lane_id: targetLaneId,
+              order: (idx + 1) * 100
+            }))
+          } else if (insertIdx <= 0) {
+            const firstOrder = siblingItems[0].order ?? 100
+            itemsWithOrders = selectedItems.map((item, idx) => ({
+              id: item.id,
+              lane_id: targetLaneId,
+              order: firstOrder - (selectedItems.length - idx) * 100
+            }))
+          } else if (insertIdx >= siblingItems.length) {
+            const lastOrder = siblingItems[siblingItems.length - 1].order ?? 0
+            itemsWithOrders = selectedItems.map((item, idx) => ({
+              id: item.id,
+              lane_id: targetLaneId,
+              order: lastOrder + (idx + 1) * 100
+            }))
+          } else {
+            const prevOrder = siblingItems[insertIdx - 1].order ?? 0
+            const nextOrder = siblingItems[insertIdx].order ?? prevOrder + 200
+            const effectiveNext =
+              nextOrder <= prevOrder ? prevOrder + (selectedItems.length + 1) * 100 : nextOrder
+            const step = (effectiveNext - prevOrder) / (selectedItems.length + 1)
+            itemsWithOrders = selectedItems.map((item, idx) => ({
+              id: item.id,
+              lane_id: targetLaneId,
+              order: Number((prevOrder + (idx + 1) * step).toFixed(2))
+            }))
+          }
+
+          useItemsStore.getState().bulkMoveItemsWithOrder(itemsWithOrders)
+          return
+        }
 
         // Determine the final lane from the sortable's group property
         let finalLaneId: number | null = null
@@ -210,7 +334,7 @@ export function BoardsLayout({ children }: { children: React.ReactNode }) {
       <AppSidebar />
 
       {/* Dedicated Kanban Workspace Provider (Encloses Center Canvas & Right Draft Sidebar) */}
-      <DragDropProvider onDragEnd={handleKanbanDragEnd}>
+      <DragDropProvider onDragStart={handleKanbanDragStart} onDragEnd={handleKanbanDragEnd}>
         {/* Center Content Workspace Area */}
         <SidebarInset className="flex min-h-0 flex-1 flex-col overflow-hidden m-2 md:ml-0 rounded-xl shadow-2xs bg-background">
           <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b bg-background/80 px-3 backdrop-blur-sm">
@@ -253,9 +377,16 @@ export function BoardsLayout({ children }: { children: React.ReactNode }) {
               const activeItem = items.find((i) => String(i.id) === String(source.id))
               if (!activeItem) return null
               const width = source.element ? source.element.getBoundingClientRect().width : undefined
+              const { isSelectionMode, selectedIds } = useItemSelectionStore.getState()
+              const isBulkDrag =
+                isSelectionMode && selectedIds.includes(String(source.id)) && selectedIds.length > 1
+
               return (
                 <div style={{ width: width ? `${width}px` : undefined }}>
-                  <TaskCardPreview item={activeItem} />
+                  <TaskCardPreview
+                    item={activeItem}
+                    bulkCount={isBulkDrag ? selectedIds.length : undefined}
+                  />
                 </div>
               )
             }

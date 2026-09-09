@@ -79,7 +79,7 @@ export function BoardDrawer({
       }
       setError(null)
     }
-  }, [open, board])
+  }, [open, board?.id])
 
   // Synchronize live preview whenever form fields change while editing an existing board
   useEffect(() => {

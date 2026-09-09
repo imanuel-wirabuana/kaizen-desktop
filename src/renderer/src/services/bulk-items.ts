@@ -35,13 +35,48 @@ export async function createItemsBulk(
 /**
  * Deletes multiple tasks in a single query using `.in('id', itemIds)`.
  */
-export async function deleteItemsBulk(itemIds: number[]): Promise<boolean> {
+export async function deleteItemsBulk(itemIds: (number | string)[]): Promise<boolean> {
   if (itemIds.length === 0) return true
 
-  const { error } = await supabase.from('items').delete().in('id', itemIds)
+  const numericIds = itemIds.map(Number).filter((id) => !isNaN(id))
+  if (numericIds.length === 0) return true
+
+  const { error } = await supabase.from('items').delete().in('id', numericIds)
 
   if (error) {
     console.error('Error bulk deleting items:', error)
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Updates multiple items with the same fields in a single SQL query using `.in('id', numericIds)`.
+ */
+export async function updateItemsCommonFields(
+  itemIds: (number | string)[],
+  updates: Partial<KanbanItem>
+): Promise<boolean> {
+  if (itemIds.length === 0) return true
+
+  const numericIds = itemIds.map(Number).filter((id) => !isNaN(id))
+  if (numericIds.length === 0) return true
+
+  const payload: Record<string, any> = {
+    ...updates,
+    updated_at: new Date().toISOString()
+  }
+
+  if (payload.lane_id !== undefined) {
+    payload.lane_id =
+      payload.lane_id !== null && !isNaN(Number(payload.lane_id)) ? Number(payload.lane_id) : null
+  }
+
+  const { error } = await supabase.from('items').update(payload).in('id', numericIds)
+
+  if (error) {
+    console.error('Error updating items common fields:', error)
     return false
   }
 

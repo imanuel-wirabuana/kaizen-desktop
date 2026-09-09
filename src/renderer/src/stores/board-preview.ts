@@ -16,19 +16,34 @@ interface BoardPreviewState {
   clearPreview: () => void
 }
 
-export const useBoardPreviewStore = create<BoardPreviewState>((set) => ({
+export const useBoardPreviewStore = create<BoardPreviewState>((set, get) => ({
   activePreviewBoardId: null,
   previewData: null,
-  setPreview: (boardId, data) =>
+  setPreview: (boardId, data) => {
+    const current = get()
+    if (
+      String(current.activePreviewBoardId) === String(boardId) &&
+      current.previewData?.title === data.title &&
+      current.previewData?.description === data.description &&
+      current.previewData?.icon === data.icon &&
+      current.previewData?.background === data.background &&
+      current.previewData?.pinned === data.pinned
+    ) {
+      return
+    }
     set({
       activePreviewBoardId: boardId,
       previewData: data
-    }),
-  clearPreview: () =>
+    })
+  },
+  clearPreview: () => {
+    const current = get()
+    if (current.activePreviewBoardId === null && current.previewData === null) return
     set({
       activePreviewBoardId: null,
       previewData: null
     })
+  }
 }))
 
 /**

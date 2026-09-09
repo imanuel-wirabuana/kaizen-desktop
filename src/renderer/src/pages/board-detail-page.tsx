@@ -4,8 +4,9 @@ import { useBoardFoldersStore } from '@/stores/board-folders'
 import { useDraftSidebarStore } from '@/stores/draft-sidebar'
 import { useBoardAiStore } from '@/stores/board-ai'
 import { useActiveBoardWithPreview } from '@/stores/board-preview'
-import { DraftSidebar } from '@/components/items'
+import { DraftSidebar, BulkActionsToolbar } from '@/components/items'
 import { BoardAiSidebar } from '@/components/ai'
+import { useItemSelectionStore } from '@/stores/item-selection'
 import {
   BoardDetailHeader,
   BoardDetailCanvas,
@@ -77,6 +78,14 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
     }
   }, [closeDraftSidebar, closeAiSidebar])
 
+  // Reset item selection when changing boards or unmounting (constraint: only to its board)
+  useEffect(() => {
+    useItemSelectionStore.getState().setBoardId(boardId)
+    return () => {
+      useItemSelectionStore.getState().exitSelectionMode()
+    }
+  }, [boardId])
+
   // Initial loading skeleton
   if (loading) {
     return <BoardDetailSkeleton />
@@ -130,10 +139,15 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         />
       </div>
 
+      {/* Floating Bulk Actions Toolbar (Active Board Only) */}
+      {!permissions.isReadOnly && (
+        <BulkActionsToolbar boardId={boardId} lanes={lanes} />
+      )}
+
       {/* Drawers & Modals Container */}
       <BoardDetailModals
         boardId={boardId}
-        board={activeBoard || board}
+        board={board}
         lanes={lanes}
         items={items}
         dialogs={dialogs}
