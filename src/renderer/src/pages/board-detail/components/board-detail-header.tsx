@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
 import { InlineEmojiPicker } from '@/components/ui/emoji-picker'
 import { useBoardsStore } from '@/stores/boards'
 import { useBoardPreviewStore } from '@/stores/board-preview'
@@ -147,115 +148,135 @@ export function BoardDetailHeader({
             </div>
 
             {/* Top Right Header Controls */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* Share Board Action (Owner only) */}
-              {isOwner && (
-                <Button
-                  size="sm"
-                  onClick={onOpenShare}
-                  className="h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs cursor-pointer"
-                >
-                  <Share2 className="size-3" />
-                  <span>Share</span>
-                </Button>
-              )}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Canvas Utilities & Drawers Button Group */}
+              <ButtonGroup variant="default">
+                {/* Select Mode Toggle Button (Editable only) */}
+                {!isReadOnly && (
+                  <Button
+                    variant={isSelectionMode ? 'secondary' : 'ghost'}
+                    size="xs"
+                    onClick={handleToggleSelectMode}
+                    className={cn(
+                      'h-6 gap-1 px-2 rounded-md text-xs font-medium transition-all cursor-pointer shadow-none',
+                      isSelectionMode
+                        ? 'bg-background text-primary shadow-2xs font-semibold dark:bg-card border border-border/50'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                    title={isSelectionMode ? 'Exit Selection Mode (Esc)' : 'Select Tasks'}
+                  >
+                    <CheckSquare
+                      className={cn(
+                        'size-3.5',
+                        isSelectionMode ? 'text-primary' : 'text-muted-foreground'
+                      )}
+                    />
+                    <span>Select</span>
+                    {isSelectionMode && selectedIds.length > 0 && (
+                      <span className="flex h-3.5 min-w-[14px] px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
+                        {selectedIds.length}
+                      </span>
+                    )}
+                  </Button>
+                )}
 
-              {/* Board Options Dropdown Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 size-7 p-0 rounded-lg text-muted-foreground hover:text-foreground"
-                      title="Board options"
-                    >
-                      <MoreHorizontal className="size-3.5" />
-                    </Button>
-                  }
-                />
-                <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
-                  <BoardMenuContent
-                    board={board}
-                    variant="dropdown"
-                    isOwner={isOwner}
-                    canEdit={canEdit}
-                    onEdit={onOpenEdit}
-                    onDelete={onOpenDelete}
-                    onLeave={onOpenLeave}
-                    onExportImport={handleExportImport}
-                  />
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Select Mode Toggle Button (Editable only) */}
-              {!isReadOnly && (
+                {/* AI Assistant Toggle Button */}
                 <Button
-                  variant={isSelectionMode ? 'secondary' : 'outline'}
-                  size="sm"
-                  onClick={handleToggleSelectMode}
+                  variant={isAiOpen ? 'secondary' : 'ghost'}
+                  size="xs"
+                  onClick={toggleAiSidebar}
                   className={cn(
-                    'h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs transition-all cursor-pointer',
-                    isSelectionMode && 'bg-primary/15 text-primary border-primary/30'
+                    'h-6 gap-1 px-2 rounded-md text-xs font-medium transition-all cursor-pointer shadow-none',
+                    isAiOpen
+                      ? 'bg-background text-primary shadow-2xs font-semibold dark:bg-card border border-border/50'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
-                  title={isSelectionMode ? 'Exit Selection Mode (Esc)' : 'Select Tasks'}
+                  title={isAiOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
                 >
-                  <CheckSquare
+                  <Sparkles
                     className={cn(
                       'size-3.5',
-                      isSelectionMode ? 'text-primary' : 'text-muted-foreground'
+                      isAiOpen ? 'text-primary animate-pulse' : 'text-muted-foreground'
                     )}
                   />
-                  <span>Select</span>
-                  {isSelectionMode && selectedIds.length > 0 && (
+                  <span>Assistant</span>
+                </Button>
+
+                {/* Draft Sidebar Toggle Button */}
+                <Button
+                  variant={isDraftOpen ? 'secondary' : 'ghost'}
+                  size="xs"
+                  onClick={toggleDraftSidebar}
+                  className={cn(
+                    'h-6 gap-1 px-2 rounded-md text-xs font-medium transition-all cursor-pointer shadow-none',
+                    isDraftOpen
+                      ? 'bg-background text-primary shadow-2xs font-semibold dark:bg-card border border-border/50'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  title={isDraftOpen ? 'Close Draft Sidebar' : 'Open Draft Sidebar'}
+                >
+                  <Inbox
+                    className={cn(
+                      'size-3.5',
+                      isDraftOpen ? 'text-primary' : 'text-muted-foreground'
+                    )}
+                  />
+                  <span>Drafts</span>
+                  {draftItemsCount > 0 && (
                     <span className="flex h-3.5 min-w-[14px] px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
-                      {selectedIds.length}
+                      {draftItemsCount}
                     </span>
                   )}
                 </Button>
-              )}
+              </ButtonGroup>
 
-              {/* AI Assistant Toggle Button */}
-              <Button
-                variant={isAiOpen ? 'secondary' : 'outline'}
-                size="sm"
-                onClick={toggleAiSidebar}
-                className={cn(
-                  'h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs transition-all cursor-pointer',
-                  isAiOpen && 'bg-primary/15 text-primary border-primary/30'
+              {/* Board Actions (Share + More Options) Button Group */}
+              <ButtonGroup variant="connected">
+                {/* Share Board Action (Owner only) */}
+                {isOwner && (
+                  <Button
+                    size="sm"
+                    onClick={onOpenShare}
+                    className="h-7 gap-1 px-2.5 text-xs font-semibold shadow-none cursor-pointer"
+                  >
+                    <Share2 className="size-3" />
+                    <span>Share</span>
+                  </Button>
                 )}
-                title={isAiOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
-              >
-                <Sparkles
-                  className={cn(
-                    'size-3.5',
-                    isAiOpen ? 'text-primary animate-pulse' : 'text-primary/70'
-                  )}
-                />
-                <span>Assistant</span>
-              </Button>
 
-              {/* Draft Sidebar Toggle Button */}
-              <Button
-                variant={isDraftOpen ? 'secondary' : 'outline'}
-                size="sm"
-                onClick={toggleDraftSidebar}
-                className="h-7 gap-1 px-2.5 rounded-lg text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-                title={isDraftOpen ? 'Close Draft Sidebar' : 'Open Draft Sidebar'}
-              >
-                <Inbox
-                  className={cn(
-                    'size-3.5',
-                    isDraftOpen ? 'text-primary' : 'text-muted-foreground'
-                  )}
-                />
-                <span>Drafts</span>
-                {draftItemsCount > 0 && (
-                  <span className="flex h-3.5 min-w-[14px] px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
-                    {draftItemsCount}
-                  </span>
-                )}
-              </Button>
+                {/* Board Options Dropdown Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant={isOwner ? 'default' : 'outline'}
+                        size="sm"
+                        className={cn(
+                          'h-7 size-7 p-0 shadow-none cursor-pointer',
+                          isOwner
+                            ? 'border-l border-primary-foreground/25 hover:bg-primary/90'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                        title="Board options"
+                      >
+                        <MoreHorizontal className="size-3.5" />
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
+                    <BoardMenuContent
+                      board={board}
+                      variant="dropdown"
+                      isOwner={isOwner}
+                      canEdit={canEdit}
+                      onEdit={onOpenEdit}
+                      onDelete={onOpenDelete}
+                      onLeave={onOpenLeave}
+                      onExportImport={handleExportImport}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ButtonGroup>
             </div>
           </div>
         }
