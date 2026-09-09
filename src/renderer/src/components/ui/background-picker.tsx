@@ -2,14 +2,8 @@ import { useState, useEffect } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Palette, Check, Image as ImageIcon, Sliders, Sparkles, X, RotateCw, Dices } from 'lucide-react'
+import { Palette, Check, Image as ImageIcon, Sliders, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import {
-  generateRandomSampleWallpapers,
-  getSourceSplashUrl,
-  SAMPLE_IMAGE_PRESETS,
-  type SampleWallpaper
-} from '@/lib/wallpaper-utils'
 
 export type BackgroundPreset = {
   label: string
@@ -106,7 +100,29 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
   ...GRADIENT_PRESETS
 ]
 
-export { SAMPLE_IMAGE_PRESETS, type SampleWallpaper } from '@/lib/wallpaper-utils'
+export type SampleWallpaper = {
+  label: string
+  url: string
+}
+
+export const SAMPLE_IMAGE_PRESETS: SampleWallpaper[] = [
+  {
+    label: 'Abstract Mesh',
+    url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=2560&q=90'
+  },
+  {
+    label: 'Dark Aurora',
+    url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=2560&q=90'
+  },
+  {
+    label: 'Neon Mesh',
+    url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=2560&q=90'
+  },
+  {
+    label: 'Cosmic Sky',
+    url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2560&q=90'
+  }
+]
 
 export type BackgroundPickerContentProps = {
   value: string | null | undefined
@@ -156,24 +172,6 @@ export function BackgroundPickerContent({
   const [imageUrl, setImageUrl] = useState(
     /^(https?:\/\/|data:image\/|blob:|\/|\.\/|\.\.\/)/i.test(activeVal) ? activeVal : ''
   )
-
-  // Sample Wallpapers state (10 SourceSplash random wallpapers with refresh)
-  const [sampleWallpapers, setSampleWallpapers] = useState<SampleWallpaper[]>(() =>
-    generateRandomSampleWallpapers(10)
-  )
-  const [isRefreshing, setIsRefreshing] = useState(false)
-
-  const handleRefreshWallpapers = () => {
-    setIsRefreshing(true)
-    setSampleWallpapers(generateRandomSampleWallpapers(10))
-    setTimeout(() => setIsRefreshing(false), 450)
-  }
-
-  const handleRandomWallpaper = () => {
-    const randomUrl = getSourceSplashUrl()
-    setImageUrl(randomUrl)
-    applyImageUrl(randomUrl)
-  }
 
   // Custom Solid State
   const [solidColor, setSolidColor] = useState(
@@ -517,7 +515,7 @@ export function BackgroundPickerContent({
             <span className="text-xs font-medium text-muted-foreground">Image URL</span>
             <div className="flex gap-1.5">
               <Input
-                placeholder="https://www.sourcesplash.com/i/random?q=... or image URL"
+                placeholder="https://images.unsplash.com/... or image URL"
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
                 onKeyDown={(e) => {
@@ -528,17 +526,6 @@ export function BackgroundPickerContent({
                 }}
                 className="h-8 text-xs flex-1"
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleRandomWallpaper}
-                className="h-8 text-xs px-2.5 cursor-pointer flex items-center gap-1.5 shrink-0"
-                title="Roll a random wallpaper and apply"
-              >
-                <Dices className="size-3.5" />
-                <span className="text-xs">Random</span>
-              </Button>
               <Button
                 type="button"
                 size="sm"
@@ -567,39 +554,18 @@ export function BackgroundPickerContent({
             </div>
           ) : null}
 
-          {/* Preset Sample Wallpaper Grid (10 images with Refresh) */}
+          {/* Preset Sample Wallpaper Grid */}
           <div className="space-y-1.5 pt-1 border-t border-border/40">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                Sample Wallpapers (10)
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleRefreshWallpapers()
-                }}
-                className="h-6 px-2 text-[11px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-1.5 cursor-pointer rounded-md hover:bg-muted/80 transition-colors"
-                title="Randomize and load 10 new sample wallpapers"
-              >
-                <RotateCw
-                  className={cn(
-                    'size-3 transition-transform duration-500',
-                    isRefreshing && 'animate-spin'
-                  )}
-                />
-                <span>Refresh</span>
-              </Button>
-            </div>
+            <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+              Sample Wallpapers
+            </span>
 
-            <div className="grid grid-cols-2 gap-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
-              {sampleWallpapers.map((sample) => {
+            <div className="grid grid-cols-2 gap-1.5">
+              {SAMPLE_IMAGE_PRESETS.map((sample) => {
                 const isSelected = activeVal === sample.url
                 return (
                   <button
-                    key={sample.id}
+                    key={sample.label}
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -623,14 +589,9 @@ export function BackgroundPickerContent({
                       }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent p-1.5 flex items-end justify-between pointer-events-none">
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-[10px] font-medium text-white truncate drop-shadow-xs">
-                          {sample.label}
-                        </span>
-                        <span className="text-[9px] font-mono text-white/70 truncate">
-                          q={sample.query}
-                        </span>
-                      </div>
+                      <span className="text-[10px] font-medium text-white truncate drop-shadow-xs">
+                        {sample.label}
+                      </span>
                       {isSelected && (
                         <div className="size-4 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-xs">
                           <Check className="size-2.5 text-primary-foreground stroke-[3]" />

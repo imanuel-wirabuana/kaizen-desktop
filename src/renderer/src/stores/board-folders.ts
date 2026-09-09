@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { boardFoldersIndexedDbStorage } from '@/lib/folders/board-folders-db'
+import {
+  boardFoldersIndexedDbStorage,
+  migrateFoldersFromLocalStorageToDb
+} from '@/lib/folders/board-folders-db'
 import { useBoardsStore } from './boards'
 
 export interface BoardFolder {
@@ -20,6 +23,8 @@ export interface BoardFoldersState {
   boardFolderMap: Record<string, string> // boardId (as string) -> folderId
   boardOrderMap: Record<string, (string | number)[]> // categoryKey -> array of board IDs
   isHydrated: boolean
+  hasHydrated: boolean
+  setHasHydrated: (val: boolean) => void
 
   // Actions
   createFolder: (
@@ -45,6 +50,8 @@ export const useBoardFoldersStore = create<BoardFoldersState>()(
       boardFolderMap: {},
       boardOrderMap: {},
       isHydrated: false,
+      hasHydrated: false,
+      setHasHydrated: (val) => set({ hasHydrated: val, isHydrated: val }),
 
       createFolder: (name, icon = '📁', color, userId) => {
         const folders = get().folders
@@ -171,14 +178,36 @@ export const useBoardFoldersStore = create<BoardFoldersState>()(
         boardFolderMap: state.boardFolderMap,
         boardOrderMap: state.boardOrderMap
       }),
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.isHydrated = true
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState as Partial<BoardFoldersState>) || {}
+        return {
+          ...currentState,
+          ...persisted,
+          folders: persisted.folders || currentState.folders || [],
+          boardFolderMap: persisted.boardFolderMap || currentState.boardFolderMap || {},
+          boardOrderMap: persisted.boardOrderMap || currentState.boardOrderMap || {},
+          isHydrated: true,
+          hasHydrated: true
+        }
+      },
+      onRehydrateStorage: () => {
+        return (_state, error) => {
+          if (error) {
+            console.error('[Board Folders] Failed to rehydrate folders from IndexedDB:', error)
+          }
+          useBoardFoldersStore.setState({ isHydrated: true, hasHydrated: true })
         }
       }
     }
   )
 )
+
+// Proactively migrate any existing localStorage folder data to IndexedDB
+if (typeof window !== 'undefined') {
+  migrateFoldersFromLocalStorageToDb().catch((err) => {
+    console.warn('[Board Folders] Proactive migration check failed:', err)
+  })
+}
 
 /**
  * Utility function to categorize all boards into:

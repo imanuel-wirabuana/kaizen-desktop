@@ -126,6 +126,9 @@ export async function idbDelete(key: string): Promise<void> {
 
 /**
  * Zustand StateStorage adapter backed by IndexedDB for board folders.
+ * Features automatic one-time migration from localStorage on first read
+ * and safe fallback only if IndexedDB is unavailable.
+ *
  * Persists serialized JSON containing:
  * - state.folders: Array<BoardFolder> with { id, user_id, name, icon, color, order, isCollapsed, createdAt, updatedAt }
  * - state.boardFolderMap: Record<boardId, folderId>
@@ -142,18 +145,31 @@ export const boardFoldersIndexedDbStorage: StateStorage = {
       console.warn('[Folders DB] Failed to read from IndexedDB, attempting fallback:', err)
     }
 
-    // Fallback to localStorage if IndexedDB is empty or errors
-    try {
-      const localVal = localStorage.getItem(key)
-      if (localVal) {
-        // Asynchronously backfill IndexedDB
-        idbSet(key, localVal).catch((e) =>
-          console.warn('[Folders DB] Failed to backfill localStorage value to IndexedDB:', e)
-        )
-        return localVal
+    // One-time automatic migration from localStorage if not present in IndexedDB
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const legacyKeys = [key, 'kaizen_board_folders_v1', 'kaizen-board-folders', 'board_folders']
+        for (const k of legacyKeys) {
+          const localVal = localStorage.getItem(k)
+          if (localVal) {
+            try {
+              // Verify it's valid JSON before saving to IndexedDB
+              JSON.parse(localVal)
+              await idbSet(key, localVal)
+              // Reclaim localStorage quota and remove localStorage copy
+              localStorage.removeItem(k)
+              console.log(
+                `[Folders DB] Successfully migrated folders from localStorage key "${k}" to IndexedDB key "${key}"`
+              )
+              return localVal
+            } catch {
+              console.warn(`[Folders DB] Found corrupt folder data in localStorage key "${k}", skipping migration`)
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[Folders DB] LocalStorage migration check failed:', e)
       }
-    } catch (e) {
-      console.warn('[Folders DB] localStorage fallback get failed:', e)
     }
 
     return null
@@ -162,18 +178,15 @@ export const boardFoldersIndexedDbStorage: StateStorage = {
   setItem: async (key: string, value: string): Promise<void> => {
     try {
       await idbSet(key, value)
-      // Mirror to localStorage as backup
-      try {
-        localStorage.setItem(key, value)
-      } catch {
-        // Ignore quota errors on localStorage
-      }
     } catch (err) {
       console.error('[Folders DB] Failed to write to IndexedDB, falling back to localStorage:', err)
-      try {
-        localStorage.setItem(key, value)
-      } catch (e) {
-        console.error('[Folders DB] Both IndexedDB and localStorage write failed:', e)
+      // Fallback only if IndexedDB write fails
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          localStorage.setItem(key, value)
+        } catch (e) {
+          console.error('[Folders DB] LocalStorage fallback also failed:', e)
+        }
       }
     }
   },
@@ -181,20 +194,77 @@ export const boardFoldersIndexedDbStorage: StateStorage = {
   removeItem: async (key: string): Promise<void> => {
     try {
       await idbDelete(key)
-      try {
+      if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.removeItem(key)
-      } catch {
-        // Ignore
+        localStorage.removeItem('kaizen_board_folders_v1')
       }
     } catch (err) {
       console.error('[Folders DB] Failed to delete from IndexedDB:', err)
-      try {
+      if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.removeItem(key)
-      } catch (e) {
-        // Ignore
       }
     }
   }
+}
+
+/**
+ * Proactively migrates any remaining folders data in localStorage into IndexedDB and cleans up localStorage.
+ */
+export async function migrateFoldersFromLocalStorageToDb(
+  targetKey = 'kaizen_board_folders_v1'
+): Promise<boolean> {
+  if (typeof window === 'undefined' || !window.localStorage) return false
+
+  const legacyKeys = [targetKey, 'kaizen-board-folders', 'board_folders']
+  let migrated = false
+
+  for (const k of legacyKeys) {
+    const raw = localStorage.getItem(k)
+    if (raw) {
+      try {
+        JSON.parse(raw)
+        const existing = await idbGet(targetKey)
+        if (!existing) {
+          await idbSet(targetKey, raw)
+          console.log(`[Folders DB] Proactively migrated key "${k}" to IndexedDB key "${targetKey}"`)
+        }
+        localStorage.removeItem(k)
+        migrated = true
+      } catch (e) {
+        console.warn(`[Folders DB] Failed to migrate localStorage key "${k}":`, e)
+      }
+    }
+  }
+
+  return migrated
+}
+
+/**
+ * Utility function to read stored folders state directly from IndexedDB.
+ */
+export async function getStoredFoldersFromDb(key = 'kaizen_board_folders_v1'): Promise<any | null> {
+  try {
+    const raw = await idbGet(key)
+    return raw ? JSON.parse(raw) : null
+  } catch (err) {
+    console.error('[Folders DB] Failed to read stored folders from IndexedDB:', err)
+    return null
+  }
+}
+
+/**
+ * Utility function to save raw folders state directly into IndexedDB.
+ */
+export async function saveFoldersToDb(
+  stateData: {
+    folders: any[]
+    boardFolderMap: Record<string, string>
+    boardOrderMap: Record<string, (string | number)[]>
+  },
+  key = 'kaizen_board_folders_v1'
+): Promise<void> {
+  const payload = JSON.stringify({ state: stateData, version: 1 })
+  await idbSet(key, payload)
 }
 
 /**
@@ -215,3 +285,4 @@ export async function clearAllBoardFoldersFromDb(): Promise<void> {
     console.error('[Folders DB] Failed to clear board folders store:', err)
   }
 }
+
