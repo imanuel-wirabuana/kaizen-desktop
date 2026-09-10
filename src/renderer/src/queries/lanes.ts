@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as lanesService from '@/services/lanes'
+import * as repo from '@/lib/db/repo'
 import { broadcastSyncEvent } from '@/lib/realtime'
 import { queryKeys } from './query-keys'
 
@@ -20,8 +21,19 @@ export function useLanesQuery(boardId: number | string) {
   return useQuery({
     queryKey: queryKeys.lanes.list(boardId),
     queryFn: async () => {
-      const userLanes = await lanesService.getLanesByBoardId(boardId)
-      return [createVirtualDraftLane(boardId), ...userLanes]
+      const virtual = createVirtualDraftLane(boardId)
+      const local = await repo.getLocalLanes(boardId)
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return [virtual, ...local]
+      }
+      try {
+        const remote = await lanesService.getLanesByBoardId(boardId)
+        const reconciled = await repo.reconcileRemoteLanes(boardId, remote)
+        return [virtual, ...reconciled]
+      } catch (err) {
+        console.warn('[useLanesQuery] Network fetch failed, returning local Dexie lanes:', err)
+        return [virtual, ...local]
+      }
     },
     enabled: !!boardId,
     staleTime: 1000 * 60 * 2
