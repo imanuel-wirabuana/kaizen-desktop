@@ -150,11 +150,24 @@ export function AiMutationPreviewModal({
     let title = ''
     let details = ''
 
-    if (action.type === 'add_lane') {
+    if (action.type === 'update_board') {
+      badgeClass = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+      icon = <Pencil className="size-3.5 text-amber-500" />
+      title = `Update Board: "${action.icon ? `${action.icon} ` : ''}${action.title || board?.title || 'Board Settings'}"`
+      const detailsList: string[] = []
+      if (action.title && board?.title && action.title.trim() !== board.title.trim()) {
+        detailsList.push(`rename: "${action.title}"`)
+      }
+      if (action.icon) detailsList.push(`icon: ${action.icon}`)
+      if (action.description) detailsList.push(`desc: "${action.description}"`)
+      if (action.background) detailsList.push(`background: ${action.background}`)
+      if (detailsList.length > 0) details = detailsList.join(' · ')
+    } else if (action.type === 'add_lane') {
       badgeClass = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
       icon = <PlusCircle className="size-3.5 text-emerald-500" />
       title = `Create Column: "${action.icon ? `${action.icon} ` : ''}${action.title}"`
       const detailsList: string[] = []
+      if (action.order !== undefined && action.order !== null) detailsList.push(`order: ${action.order}`)
       if (action.description) detailsList.push(action.description)
       if (action.background) detailsList.push(`background: ${action.background}`)
       if (detailsList.length > 0) details = detailsList.join(' · ')
@@ -168,6 +181,10 @@ export function AiMutationPreviewModal({
         const pLabel = PRIORITY_CONFIG[action.priority as keyof typeof PRIORITY_CONFIG]?.label
         if (pLabel) detailsList.push(`priority: ${pLabel}`)
       }
+      if (action.status !== undefined && action.status !== null) {
+        detailsList.push(action.status ? 'status: completed' : 'status: open')
+      }
+      if (action.start_date) detailsList.push(`start: ${action.start_date}`)
       if (action.due_date) {
         detailsList.push(
           `due: ${new Date(action.due_date).toLocaleDateString(undefined, {
@@ -176,6 +193,7 @@ export function AiMutationPreviewModal({
           })}`
         )
       }
+      if (action.assignee) detailsList.push(`assigned: @${action.assignee}`)
       if (action.background) detailsList.push(`background: ${action.background}`)
       if (action.description) detailsList.push(action.description)
       if (detailsList.length > 0) details = detailsList.join(' · ')
@@ -190,6 +208,7 @@ export function AiMutationPreviewModal({
         title = `Update Column: "${action.icon ? `${action.icon} ` : ''}${action.title || oldLaneTitle}"`
       }
       const detailsList: string[] = []
+      if (action.order !== undefined && action.order !== null) detailsList.push(`order: ${action.order}`)
       if (action.description) detailsList.push(action.description)
       if (action.background) detailsList.push(`background: ${action.background}`)
       if (detailsList.length > 0) details = detailsList.join(' · ')
@@ -220,6 +239,12 @@ export function AiMutationPreviewModal({
         const pLabel = PRIORITY_CONFIG[action.priority as keyof typeof PRIORITY_CONFIG]?.label || 'None'
         detailsList.push(`priority: ${pLabel}`)
       }
+      if ('status' in action && action.status !== undefined && action.status !== null) {
+        detailsList.push(action.status ? 'status: completed' : 'status: open')
+      }
+      if ('assignee' in action && action.assignee !== undefined) {
+        detailsList.push(action.assignee ? `assigned: @${action.assignee}` : 'unassigned')
+      }
       if (detailsList.length > 0) details = detailsList.join(' · ')
     } else if (action.type === 'update_item') {
       const existingItem = allItems.find((i) => i.id === action.item_id)
@@ -230,7 +255,10 @@ export function AiMutationPreviewModal({
         !action.description &&
         !action.background &&
         !action.priority &&
-        !action.due_date
+        !action.due_date &&
+        action.status === undefined &&
+        action.start_date === undefined &&
+        action.assignee === undefined
 
       if (isReorderOnly) {
         badgeClass = 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
@@ -254,6 +282,12 @@ export function AiMutationPreviewModal({
         const pLabel = PRIORITY_CONFIG[action.priority as keyof typeof PRIORITY_CONFIG]?.label || 'None'
         detailsList.push(`priority: ${pLabel}`)
       }
+      if (action.status !== undefined && action.status !== null) {
+        detailsList.push(action.status ? 'marked completed' : 'reopened')
+      }
+      if (action.start_date !== undefined) {
+        detailsList.push(action.start_date ? `start: ${action.start_date}` : 'start date cleared')
+      }
       if (action.due_date !== undefined) {
         detailsList.push(
           action.due_date
@@ -263,6 +297,9 @@ export function AiMutationPreviewModal({
               })}`
             : 'due date cleared'
         )
+      }
+      if (action.assignee !== undefined) {
+        detailsList.push(action.assignee ? `assigned: @${action.assignee}` : 'unassigned')
       }
       if (action.background !== undefined) {
         detailsList.push(action.background ? `background: ${action.background}` : 'background cleared')

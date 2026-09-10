@@ -94,7 +94,10 @@ export function AiProposalCard({ proposal, applied, onReview }: AiProposalCardPr
               !act.priority &&
               !act.due_date
 
-            if (act.type === 'add_lane') {
+            if (act.type === 'update_board') {
+              icon = <Pencil className="size-3 text-amber-500" />
+              label = `~ Board "${act.title || 'Settings'}"`
+            } else if (act.type === 'add_lane') {
               label = `+ Column "${act.title || 'Untitled Column'}"`
             } else if (act.type === 'add_item') {
               label = `+ Task "${act.title || 'Untitled Task'}"`

@@ -6,6 +6,7 @@ import {
   deleteItemsByLaneIds,
   updateItemsBulk
 } from '@/services/bulk-items'
+import { useBoardsStore } from '@/stores/boards'
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
 import { broadcastSyncEvent } from '@/lib/realtime'
@@ -31,6 +32,28 @@ export async function executeBoardMutations(
 
   if (actions.length === 0) {
     return { success: true, appliedCount: 0, errors: [] }
+  }
+
+  // -------------------------------------------------------------
+  // PHASE 0: Update Board Properties
+  // -------------------------------------------------------------
+  const updateBoardActions = actions.filter((a) => a.type === 'update_board')
+  if (updateBoardActions.length > 0) {
+    const boardUpdates: Partial<Board> = {}
+    for (const act of updateBoardActions) {
+      if (act.title !== undefined) boardUpdates.title = act.title
+      if (act.icon !== undefined) boardUpdates.icon = act.icon
+      if (act.description !== undefined) boardUpdates.description = act.description
+      if (act.background !== undefined) boardUpdates.background = act.background
+    }
+    if (Object.keys(boardUpdates).length > 0) {
+      try {
+        await useBoardsStore.getState().updateBoard(targetBoardId, boardUpdates)
+        appliedCount += updateBoardActions.length
+      } catch (err: any) {
+        errors.push(`Error updating board properties: ${err?.message || 'Unknown error'}`)
+      }
+    }
   }
 
   // Fetch current lanes once to resolve existing titles & orders
@@ -86,7 +109,7 @@ export async function executeBoardMutations(
         icon: act.icon ?? null,
         description: act.description ?? null,
         background: act.background ?? null,
-        order: maxLaneOrder + idx * 100
+        order: act.order !== undefined && act.order !== null ? act.order : maxLaneOrder + idx * 100
       }))
 
       const createdLanes = await createLanesBulk(lanePayloads)
@@ -114,6 +137,7 @@ export async function executeBoardMutations(
       if (act.icon !== undefined) updateData.icon = act.icon
       if (act.description !== undefined) updateData.description = act.description
       if (act.background !== undefined) updateData.background = act.background
+      if (act.order !== undefined && act.order !== null) updateData.order = act.order
 
       const res = await updateLane(act.lane_id, updateData)
       if (res) {
@@ -186,7 +210,10 @@ export async function executeBoardMutations(
           icon: act.icon ?? null,
           description: act.description ?? null,
           priority: act.priority ?? 0,
+          status: act.status ?? false,
+          start_date: act.start_date ?? null,
           due_date: act.due_date ?? null,
+          assignee: act.assignee ?? null,
           background: act.background ?? null,
           order: calculatedOrder
         }
@@ -212,7 +239,10 @@ export async function executeBoardMutations(
       if ('icon' in act && act.icon !== undefined) data.icon = act.icon
       if ('description' in act && act.description !== undefined) data.description = act.description
       if ('priority' in act && act.priority !== undefined) data.priority = act.priority
+      if ('status' in act && act.status !== undefined) data.status = act.status
+      if ('start_date' in act && act.start_date !== undefined) data.start_date = act.start_date
       if ('due_date' in act && act.due_date !== undefined) data.due_date = act.due_date
+      if ('assignee' in act && act.assignee !== undefined) data.assignee = act.assignee
       if ('background' in act && act.background !== undefined) data.background = act.background
 
       // Resolve destination lane ID
@@ -312,6 +342,9 @@ export async function executeBoardMutations(
     useLanesStore.getState().refreshLanes(boardIdStr),
     useItemsStore.getState().refreshItems(boardIdStr)
   ])
+  if (updateBoardActions.length > 0) {
+    broadcastSyncEvent('boards')
+  }
   broadcastSyncEvent('lanes')
   broadcastSyncEvent('items')
 
