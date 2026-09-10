@@ -19,18 +19,27 @@ export function App() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const searchParams = new URLSearchParams(window.location.search)
-    let code = searchParams.get('code') || searchParams.get('invite')
+    // Never process or strip params on /success auth callback route
+    if (window.location.pathname.startsWith('/success')) return
 
-    if (!code && window.location.hash.includes('?')) {
+    const searchParams = new URLSearchParams(window.location.search)
+    let rawCode = searchParams.get('code') || searchParams.get('invite')
+
+    if (!rawCode && window.location.hash.includes('?')) {
       const hashQuery = window.location.hash.split('?')[1]
       const hashParams = new URLSearchParams(hashQuery)
-      code = hashParams.get('code') || hashParams.get('invite')
+      rawCode = hashParams.get('code') || hashParams.get('invite')
     }
 
-    if (code) {
+    if (!rawCode) return
+
+    const trimmed = rawCode.trim()
+    const isExplicitInvite = Boolean(searchParams.get('invite'))
+    const isInviteCodeFormat = /^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(trimmed)
+
+    if (isExplicitInvite || isInviteCodeFormat) {
       // Store and preserve invite code in store & localStorage
-      useJoinModalStore.getState().setPendingInviteCode(code)
+      useJoinModalStore.getState().setPendingInviteCode(trimmed)
 
       // Clean query parameters from address bar
       const url = new URL(window.location.href)
@@ -44,6 +53,9 @@ export function App() {
   // 2. React to auth state and handle pending invite code
   useEffect(() => {
     if (!isLoaded) return
+
+    // Do not pop auth/join modal on /success route
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/success')) return
 
     const pendingCode = useJoinModalStore.getState().pendingInviteCode
 

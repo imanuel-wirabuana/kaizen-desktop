@@ -3,21 +3,21 @@ import { CheckCircle2, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function AuthSuccessPage() {
-  const [deepLinkUrl, setDeepLinkUrl] = useState('')
+  const [deepLinkUrl] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    return 'kaizen://auth/callback' + window.location.search + window.location.hash
+  })
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const target = 'kaizen://auth/callback' + window.location.search + window.location.hash
-      setDeepLinkUrl(target)
-      
+    if (typeof window !== 'undefined' && deepLinkUrl) {
       // Auto-trigger deep link redirect to open desktop app
       const timer = setTimeout(() => {
-        window.location.href = target
-      }, 500)
+        window.location.href = deepLinkUrl
+      }, 300)
 
       return () => clearTimeout(timer)
     }
-  }, [])
+  }, [deepLinkUrl])
 
   const handleOpenApp = () => {
     if (deepLinkUrl) {

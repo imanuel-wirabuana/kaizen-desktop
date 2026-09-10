@@ -138,7 +138,7 @@ export function AuthModal(props: AuthModalProps = {}) {
     setError(null)
     try {
       const isElectron = Boolean(window.api)
-      const appUrl = import.meta.env.VITE_APP_URL || 'https://kaizen33.space'
+      const appUrl = (import.meta.env.VITE_APP_URL || 'https://kaizen33.space').replace(/\/+$/, '')
       const redirectUrl = isElectron
         ? `${appUrl}/success`
         : window.location.origin

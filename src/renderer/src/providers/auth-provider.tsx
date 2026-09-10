@@ -118,7 +118,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        if (typeof window !== 'undefined' && !window.api && (access_token || (code && !/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(code.trim())))) {
+        if (
+          typeof window !== 'undefined' &&
+          !window.api &&
+          !window.location.pathname.startsWith('/success') &&
+          (access_token || (code && !/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(code.trim())))
+        ) {
           window.history.replaceState({}, '', window.location.pathname)
         }
       } catch (err) {
@@ -126,15 +131,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Check for web URL auth parameters on mount
+    // Check for web URL auth parameters on mount (skip on /success route as it forwards to desktop deep link)
     if (typeof window !== 'undefined' && !window.api) {
-      const currentUrl = window.location.href
-      const searchParams = new URLSearchParams(window.location.search)
-      const urlCode = searchParams.get('code')
-      const isInviteCode = urlCode ? /^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(urlCode.trim()) : false
+      const isSuccessRoute = window.location.pathname.startsWith('/success')
+      if (!isSuccessRoute) {
+        const currentUrl = window.location.href
+        const searchParams = new URLSearchParams(window.location.search)
+        const urlCode = searchParams.get('code')
+        const isInviteCode = urlCode ? /^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(urlCode.trim()) : false
 
-      if (currentUrl.includes('#access_token') || (!isInviteCode && (currentUrl.includes('?code=') || currentUrl.includes('&code=')))) {
-        handleDeepLink(currentUrl)
+        if (currentUrl.includes('#access_token') || (!isInviteCode && (currentUrl.includes('?code=') || currentUrl.includes('&code=')))) {
+          handleDeepLink(currentUrl)
+        }
       }
     }
 
