@@ -13,6 +13,16 @@ const api = {
   },
   openExternalUrl: (url: string) => {
     electronAPI.ipcRenderer.send('open-external-url', url)
+  },
+  sendEmail: (payload: {
+    to: string
+    subject: string
+    html: string
+    text?: string
+    from?: string
+    replyTo?: string
+  }) => {
+    return electronAPI.ipcRenderer.invoke('send-email', payload)
   }
 }
 

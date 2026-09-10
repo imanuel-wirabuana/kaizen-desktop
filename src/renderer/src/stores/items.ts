@@ -6,6 +6,7 @@ import { enqueueMutation } from '@/lib/db/sync-outbox'
 import { useBoardsStore } from '@/stores/boards'
 import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
+import { sendTicketAssignmentEmail } from '@/services/email'
 
 type ItemsState = {
   items: KanbanItem[]
@@ -196,6 +197,15 @@ export const useItemsStore = create<ItemsState>()(
       })
 
       if (optimistic.board_id) useBoardsStore.getState().touchBoardActivity(optimistic.board_id)
+
+      // Auto email notification if an assignee is set
+      if (optimistic.assignee?.trim()) {
+        sendTicketAssignmentEmail({
+          item: optimistic,
+          boardId: currentBoardId
+        }).catch((err) => console.error('[useItemsStore] Failed to send assignment email:', err))
+      }
+
       return optimistic
     },
 
@@ -230,6 +240,19 @@ export const useItemsStore = create<ItemsState>()(
           payload: updates
         })
         useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      }
+
+      // Auto email notification if assignee changed or was newly assigned
+      if (
+        updates.assignee !== undefined &&
+        updates.assignee !== null &&
+        updates.assignee.trim() &&
+        updates.assignee.trim() !== (prevItem.assignee?.trim() || '')
+      ) {
+        sendTicketAssignmentEmail({
+          item: updated,
+          boardId: currentBoardId
+        }).catch((err) => console.error('[useItemsStore] Failed to send assignment email:', err))
       }
 
       return updated
@@ -560,6 +583,18 @@ export const useItemsStore = create<ItemsState>()(
       }
 
       useBoardsStore.getState().touchBoardActivity(currentBoardId)
+
+      // Auto email notification for bulk assigned items
+      if (assignee && assignee.trim()) {
+        const newlyAssigned = updatedItems.filter((i) => idSet.has(String(i.id)))
+        for (const itm of newlyAssigned) {
+          sendTicketAssignmentEmail({
+            item: itm,
+            boardId: currentBoardId,
+            assigneeName: assignee.trim()
+          }).catch((err) => console.error('[useItemsStore] Failed to send bulk assignment email:', err))
+        }
+      }
     },
 
     // ── Bulk Set Background Accent ─────────────────────────

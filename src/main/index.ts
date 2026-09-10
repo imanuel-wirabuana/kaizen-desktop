@@ -1,6 +1,15 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { Resend } from 'resend'
+
+const getResendClient = () => {
+  const apiKey =
+    process.env.RESEND_API_KEY ||
+    process.env.VITE_RESEND_API_KEY ||
+    ''
+  return new Resend(apiKey)
+}
 
 let mainWindow: BrowserWindow | null = null
 
@@ -50,7 +59,8 @@ function createWindow(): void {
     icon: iconPath,
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
-      sandbox: false
+      sandbox: false,
+      webSecurity: false
     }
   })
 
@@ -89,6 +99,56 @@ ipcMain.on('open-external-url', (_event, url: string) => {
     shell.openExternal(url)
   }
 })
+
+// IPC handler to send email via Resend
+ipcMain.handle(
+  'send-email',
+  async (
+    _event,
+    payload: {
+      to: string
+      subject: string
+      html: string
+      text?: string
+      from?: string
+      replyTo?: string
+    }
+  ) => {
+    try {
+      const fromEmail =
+        payload.from ||
+        process.env.RESEND_FROM_EMAIL ||
+        'kaizen@kaizen33.space'
+
+      console.log('[Resend Main] Dispatching email:', {
+        from: fromEmail,
+        to: payload.to,
+        subject: payload.subject
+      })
+
+      const resend = getResendClient()
+      const { data, error } = await resend.emails.send({
+        from: fromEmail,
+        replyTo: payload.replyTo || 'wirabuana.imanuel@gmail.com',
+        to: Array.isArray(payload.to) ? payload.to : [payload.to],
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text
+      })
+
+      if (error) {
+        console.error('[Resend Main] Error sending email:', error)
+        return { success: false, error: (error as any).message || error }
+      }
+
+      console.log('[Resend Main] Email sent successfully:', data?.id)
+      return { success: true, data }
+    } catch (err: any) {
+      console.error('[Resend Main] Unhandled exception sending email:', err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  }
+)
 
 // macOS deep link handler
 app.on('open-url', (event, url) => {
