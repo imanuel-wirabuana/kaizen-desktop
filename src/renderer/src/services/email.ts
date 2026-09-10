@@ -110,13 +110,64 @@ export async function resolveAssigneeEmail(
   if (boardId) {
     const boards = useBoardsStore.getState().boards
     const board = boards.find((b) => String(b.id) === String(boardId))
-    if (board?.owner_info?.email) {
-      const ownerName = (board.owner_info.name || '').toLowerCase()
-      const ownerEmail = board.owner_info.email.toLowerCase()
-      if (ownerName === lower || ownerEmail === lower) {
-        return {
-          email: board.owner_info.email,
-          name: board.owner_info.name || trimmed
+    if (board) {
+      const cleanLower = lower.replace(/\s*\((me,\s*owner|me|owner)\)$/i, '').trim()
+
+      if (board.owner_info?.email) {
+        const ownerName = (board.owner_info.name || '').toLowerCase()
+        const ownerEmail = board.owner_info.email.toLowerCase()
+        if (
+          ownerName === lower ||
+          ownerName === cleanLower ||
+          ownerEmail === lower ||
+          ownerEmail === cleanLower ||
+          (ownerName && cleanLower.includes(ownerName)) ||
+          (ownerName && ownerName.includes(cleanLower)) ||
+          cleanLower === 'owner' ||
+          cleanLower === 'board owner'
+        ) {
+          return {
+            email: board.owner_info.email,
+            name: board.owner_info.name || trimmed
+          }
+        }
+      }
+
+      // If owner_info email is not directly on board, lookup owner profile via board.owner
+      if (board.owner) {
+        try {
+          const { data: ownerProfile } = await supabase
+            .from('profiles')
+            .select('email, full_name, display_name, name')
+            .eq('id', board.owner)
+            .single()
+
+          if (ownerProfile?.email) {
+            const profName = (
+              ownerProfile.full_name ||
+              ownerProfile.display_name ||
+              ownerProfile.name ||
+              ''
+            ).toLowerCase()
+            const profEmail = ownerProfile.email.toLowerCase()
+
+            if (
+              profName === lower ||
+              profName === cleanLower ||
+              profEmail === lower ||
+              profEmail === cleanLower ||
+              (profName && cleanLower.includes(profName)) ||
+              cleanLower === 'owner' ||
+              cleanLower === 'board owner'
+            ) {
+              return {
+                email: ownerProfile.email,
+                name: ownerProfile.full_name || ownerProfile.display_name || ownerProfile.name || trimmed
+              }
+            }
+          }
+        } catch {
+          // Ignore profile lookup error
         }
       }
     }
