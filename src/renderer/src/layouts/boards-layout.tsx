@@ -3,6 +3,7 @@ import { DragDropProvider, DragOverlay } from '@dnd-kit/react'
 import { AppSidebar } from '@/components/app-sidebar'
 import { DynamicBreadcrumb } from '@/components/dynamic-breadcrumb'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { SyncStatusBadge } from '@/components/sync-status-badge'
 import { useBoardsInit } from '@/hooks/use-boards'
 import { Separator } from '@/components/ui/separator'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
@@ -345,6 +346,7 @@ export function BoardsLayout({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex items-center gap-2">
+              <SyncStatusBadge />
               <SearchCommand />
               <ThemeToggle />
               <SignedIn>

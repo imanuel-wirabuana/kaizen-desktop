@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as boardsService from '@/services/boards'
+import * as repo from '@/lib/db/repo'
+import { db } from '@/lib/db'
 import { useBoardsStore } from '@/stores/boards'
 import { isBoardPinned, setBoardPinned } from '@/lib/pinned-boards'
 import { broadcastSyncEvent } from '@/lib/realtime'
@@ -9,11 +11,21 @@ export function useBoardsQuery(userId?: string) {
   return useQuery({
     queryKey: queryKeys.boards.list(userId),
     queryFn: async () => {
-      const data = await boardsService.getBoards(userId)
-      return data.map((b) => ({
-        ...b,
-        pinned: isBoardPinned(b.id)
-      }))
+      const local = await repo.getLocalBoards(userId)
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return local.map((b) => ({ ...b, pinned: isBoardPinned(b.id) }))
+      }
+      try {
+        const data = await boardsService.getBoards(userId)
+        await repo.putLocalBoards(data)
+        return data.map((b) => ({
+          ...b,
+          pinned: isBoardPinned(b.id)
+        }))
+      } catch (err) {
+        console.warn('[useBoardsQuery] Network fetch failed, returning local Dexie boards:', err)
+        return local.map((b) => ({ ...b, pinned: isBoardPinned(b.id) }))
+      }
     },
     enabled: !!userId,
     staleTime: 1000 * 60 * 2 // 2 minutes fresh
@@ -26,7 +38,18 @@ export function useBoardDetailQuery(boardId: number | string, userId?: string) {
   return useQuery({
     queryKey: queryKeys.boards.detail(boardId),
     queryFn: async () => {
-      const data = await boardsService.getBoardById(boardId)
+      let data: Board | null = null
+      try {
+        data = await boardsService.getBoardById(boardId)
+        if (data) await repo.putLocalBoard(data)
+      } catch {
+        // Fallback to local
+      }
+
+      if (!data) {
+        data = (await db.boards.get(Number(boardId))) || null
+      }
+
       if (!data) return null
       const fromStore = useBoardsStore.getState().boards.find((b) => String(b.id) === String(boardId))
       return {

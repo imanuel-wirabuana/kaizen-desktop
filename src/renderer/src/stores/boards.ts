@@ -3,6 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware'
 import * as boardsService from '@/services/boards'
 import * as lanesService from '@/services/lanes'
 import * as itemsService from '@/services/items'
+import * as repo from '@/lib/db/repo'
 import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
 import { isBoardPinned, setBoardPinned } from '@/lib/pinned-boards'
@@ -50,11 +51,25 @@ export const useBoardsStore = create<BoardsState>()(
       realtimeCleanup?.()
       realtimeCleanup = null
 
-      set({ owner, loading: true })
+      // 1. Immediate local read from IndexedDB (0ms UI)
+      const local = await repo.getLocalBoards(owner)
+      if (local.length > 0) {
+        const localMapped = local.map((b) => ({ ...b, pinned: isBoardPinned(b.id) }))
+        set({ owner, boards: localMapped, loading: false })
+      } else {
+        set({ owner, loading: true })
+      }
 
-      const data = await boardsService.getBoards(owner)
-      const mapped = data.map((b) => ({ ...b, pinned: isBoardPinned(b.id) }))
-      set({ boards: mapped, loading: false })
+      // 2. Fetch fresh from network & update local DB
+      try {
+        const data = await boardsService.getBoards(owner)
+        const mapped = data.map((b) => ({ ...b, pinned: isBoardPinned(b.id) }))
+        await repo.putLocalBoards(data)
+        set({ boards: mapped, loading: false })
+      } catch (err) {
+        console.warn('[useBoardsStore] Failed to fetch remote boards, using local:', err)
+        set({ loading: false })
+      }
 
       // 1. Realtime postgres changes channel listener
       const channel = boardsService.subscribeBoards(() => {
@@ -125,6 +140,7 @@ export const useBoardsStore = create<BoardsState>()(
         }
 
         const withRole = { ...result, role: 'owner' as const }
+        await repo.putLocalBoard(withRole)
         set((s) => ({
           boards: s.boards.map((b) => (b.id === tempId ? withRole : b))
         }))
@@ -149,6 +165,11 @@ export const useBoardsStore = create<BoardsState>()(
       }
 
       const patch = { ...updates, updated_at: new Date().toISOString() }
+
+      // 0. Update local Dexie storage
+      if (prev) {
+        await repo.putLocalBoard({ ...prev, ...patch, id: Number(id) } as Board)
+      }
 
       // 1. Synchronously update Zustand store if populated
       if (prevInStore) {
@@ -206,6 +227,7 @@ export const useBoardsStore = create<BoardsState>()(
         }
 
         const withRole = { ...result, pinned: isBoardPinned(result.id), role: prev?.role || 'owner' }
+        await repo.putLocalBoard(withRole)
         if (prevInStore) {
           set((s) => ({
             boards: s.boards.map((b) => (String(b.id) === String(id) ? withRole : b))
@@ -253,6 +275,7 @@ export const useBoardsStore = create<BoardsState>()(
         return false
       }
 
+      await repo.deleteLocalBoard(id)
       set((s) => ({ boards: s.boards.filter((b) => String(b.id) !== String(id)) }))
       queryClient.removeQueries({ queryKey: queryKeys.boards.detail(id) })
       queryClient.setQueriesData<Board[]>({ queryKey: queryKeys.boards.all }, (old) => {
@@ -280,6 +303,7 @@ export const useBoardsStore = create<BoardsState>()(
       const withOrder = reordered.map((b, i) => ({ ...b, order: i, pinned: Boolean(b.pinned) }))
       const updatesMap = new Map(withOrder.map((b) => [String(b.id), { order: b.order, pinned: b.pinned }]))
 
+      await repo.putLocalBoards(withOrder)
       set((s) => ({
         boards: s.boards.map((b) => (updatesMap.has(String(b.id)) ? { ...b, ...updatesMap.get(String(b.id)) } : b))
       }))

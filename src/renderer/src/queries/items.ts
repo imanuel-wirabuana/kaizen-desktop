@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as itemsService from '@/services/items'
+import * as repo from '@/lib/db/repo'
 import { broadcastSyncEvent } from '@/lib/realtime'
 import { queryKeys } from './query-keys'
 
@@ -7,7 +8,17 @@ export function useItemsQuery(boardId: number | string) {
   return useQuery({
     queryKey: queryKeys.items.list(boardId),
     queryFn: async () => {
-      return itemsService.getItemsByBoardId(boardId)
+      const local = await repo.getLocalItems(boardId)
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return local
+      }
+      try {
+        const remote = await itemsService.getItemsByBoardId(boardId)
+        return await repo.reconcileRemoteItems(boardId, remote)
+      } catch (err) {
+        console.warn('[useItemsQuery] Network fetch failed, returning local Dexie items:', err)
+        return local
+      }
     },
     enabled: !!boardId,
     staleTime: 1000 * 60 * 2

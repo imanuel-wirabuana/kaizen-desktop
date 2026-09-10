@@ -1,12 +1,8 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import * as itemsService from '@/services/items'
-import {
-  createItemsBulk,
-  deleteItemsBulk,
-  updateItemsCommonFields,
-  updateItemsBulk
-} from '@/services/bulk-items'
+import * as repo from '@/lib/db/repo'
+import { enqueueMutation } from '@/lib/db/sync-outbox'
 import { useBoardsStore } from '@/stores/boards'
 import { supabase } from '@/lib/supabase'
 import { broadcastSyncEvent, onSyncEvent } from '@/lib/realtime'
@@ -21,7 +17,7 @@ type ItemsState = {
   refreshItems: (boardId?: number | string) => Promise<void>
   cleanup: () => void
 
-  // Optimistic mutations
+  // Local-first mutations (Instant UI + IndexedDB + Outbox Sync)
   addItem: (
     draft: Partial<Omit<KanbanItem, 'id' | 'created_at' | 'updated_at'>>
   ) => Promise<KanbanItem | null>
@@ -60,8 +56,18 @@ export const useItemsStore = create<ItemsState>()(
       const targetId = boardId ?? get().boardId
       if (!targetId) return
       try {
-        const data = await itemsService.getItemsByBoardId(targetId)
-        set({ boardId: targetId, items: data, loading: false })
+        // 1. Read local Dexie first
+        const local = await repo.getLocalItems(targetId)
+        if (local.length > 0) {
+          set({ boardId: targetId, items: local, loading: false })
+        }
+
+        // 2. Fetch remote if online
+        if (typeof navigator === 'undefined' || navigator.onLine) {
+          const remote = await itemsService.getItemsByBoardId(targetId)
+          const reconciled = await repo.reconcileRemoteItems(targetId, remote)
+          set({ boardId: targetId, items: reconciled, loading: false })
+        }
       } catch (err) {
         console.error('Error in refreshItems:', err)
       }
@@ -74,16 +80,34 @@ export const useItemsStore = create<ItemsState>()(
       realtimeCleanup?.()
       realtimeCleanup = null
 
-      set({ boardId, items: [], loading: true })
+      // Immediate 0ms local read from IndexedDB
+      const local = await repo.getLocalItems(boardId)
+      if (local.length > 0) {
+        set({ boardId, items: local, loading: false })
+      } else {
+        set({ boardId, items: [], loading: true })
+      }
 
-      const data = await itemsService.getItemsByBoardId(boardId)
-      set({ items: data, loading: false })
+      // Revalidate from Supabase in background
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        itemsService
+          .getItemsByBoardId(boardId)
+          .then(async (remote) => {
+            const reconciled = await repo.reconcileRemoteItems(boardId, remote)
+            set({ items: reconciled, loading: false })
+          })
+          .catch((err) => {
+            console.warn('[useItemsStore] Remote fetch failed, using local DB:', err)
+            set({ loading: false })
+          })
+      }
 
       // 1. Postgres changes subscription
       const channel = itemsService.subscribeItems(boardId, () => {
         if (suppressRealtimeRefetch) return
-        itemsService.getItemsByBoardId(boardId).then((fresh) => {
-          set({ items: fresh })
+        itemsService.getItemsByBoardId(boardId).then(async (fresh) => {
+          const reconciled = await repo.reconcileRemoteItems(boardId, fresh)
+          set({ items: reconciled })
         })
       })
 
@@ -92,8 +116,9 @@ export const useItemsStore = create<ItemsState>()(
         if (event === 'items' || event === 'lanes') {
           const currentBoardId = get().boardId
           if (!currentBoardId || suppressRealtimeRefetch) return
-          itemsService.getItemsByBoardId(currentBoardId).then((fresh) => {
-            set({ items: fresh })
+          itemsService.getItemsByBoardId(currentBoardId).then(async (fresh) => {
+            const reconciled = await repo.reconcileRemoteItems(currentBoardId, fresh)
+            set({ items: reconciled })
           })
         }
       })
@@ -110,7 +135,7 @@ export const useItemsStore = create<ItemsState>()(
       set({ items: [], boardId: undefined, loading: false })
     },
 
-    // ── Optimistic Create Item ──────────────────────────────
+    // ── Local-First Create Item ──────────────────────────────
     addItem: async (draft) => {
       const currentBoardId = draft.board_id ?? get().boardId
       if (!currentBoardId || isNaN(Number(currentBoardId))) {
@@ -118,7 +143,13 @@ export const useItemsStore = create<ItemsState>()(
         return null
       }
 
-      const laneId = draft.lane_id !== undefined && draft.lane_id !== null ? (typeof draft.lane_id === 'number' || !isNaN(Number(draft.lane_id)) ? Number(draft.lane_id) : draft.lane_id) : null
+      const laneId =
+        draft.lane_id !== undefined && draft.lane_id !== null
+          ? typeof draft.lane_id === 'number' || !isNaN(Number(draft.lane_id))
+            ? Number(draft.lane_id)
+            : draft.lane_id
+          : null
+
       const sameLaneItems = get().items.filter(
         (i) => (i.lane_id === null && laneId === null) || (i.lane_id !== null && String(i.lane_id) === String(laneId))
       )
@@ -126,7 +157,8 @@ export const useItemsStore = create<ItemsState>()(
       const maxOrder = sameLaneItems.length > 0 ? Math.max(...sameLaneItems.map((i) => i.order ?? 0)) : 0
       const order = draft.order ?? maxOrder + 100
 
-      const tempId = -Date.now()
+      // Temporary local negative ID (<0)
+      const tempId = -Date.now() - Math.floor(Math.random() * 1000)
       const optimistic: KanbanItem = {
         id: tempId,
         board_id: Number(currentBoardId),
@@ -147,139 +179,124 @@ export const useItemsStore = create<ItemsState>()(
         updated_at: new Date().toISOString()
       }
 
+      // 1. Instant local persistence in IndexedDB
+      await repo.putLocalItem(optimistic)
+
+      // 2. Instant UI update
       set((s) => ({ items: [...s.items, optimistic] }))
+      broadcastSyncEvent('items')
 
-      suppressRealtimeRefetch = true
-      try {
-        const result = await itemsService.createItem({
-          ...draft,
-          board_id: Number(currentBoardId),
-          lane_id: laneId,
-          order
-        })
+      // 3. Enqueue to Outbox for debounced bulk sync
+      await enqueueMutation({
+        entityType: 'items',
+        action: 'create',
+        boardId: currentBoardId,
+        entityId: tempId,
+        payload: optimistic
+      })
 
-        if (!result) {
-          console.error('addItem: database insert failed, reverting optimistic item')
-          set((s) => ({ items: s.items.filter((i) => String(i.id) !== String(tempId)) }))
-          return null
-        }
-
-        set((s) => ({
-          items: s.items.map((i) => (String(i.id) === String(tempId) ? result : i))
-        }))
-        broadcastSyncEvent('items')
-        if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
-        return result
-      } finally {
-        setTimeout(() => {
-          suppressRealtimeRefetch = false
-        }, 500)
-      }
+      if (optimistic.board_id) useBoardsStore.getState().touchBoardActivity(optimistic.board_id)
+      return optimistic
     },
 
-    // ── Optimistic Update Item ──────────────────────────────
+    // ── Local-First Update Item ──────────────────────────────
     updateItem: async (id, updates) => {
       const prevItem = get().items.find((i) => String(i.id) === String(id))
       if (!prevItem) return null
 
-      set((s) => ({
-        items: s.items.map((i) =>
-          String(i.id) === String(id) ? { ...i, ...updates, updated_at: new Date().toISOString() } : i
-        )
-      }))
+      const updated: KanbanItem = {
+        ...prevItem,
+        ...updates,
+        updated_at: new Date().toISOString()
+      }
 
+      // 1. Instant local persistence
+      await repo.putLocalItem(updated)
+
+      // 2. Instant UI update
+      set((s) => ({
+        items: s.items.map((i) => (String(i.id) === String(id) ? updated : i))
+      }))
       broadcastSyncEvent('items')
 
-      if (typeof id === 'number' && id < 0) return prevItem
-
-      suppressRealtimeRefetch = true
-      try {
-        const result = await itemsService.updateItem(id, updates)
-
-        if (!result) {
-          console.error(`updateItem: database update failed for item ${id}, reverting`)
-          set((s) => ({
-            items: s.items.map((i) => (String(i.id) === String(id) ? prevItem : i))
-          }))
-          broadcastSyncEvent('items')
-          return null
-        }
-
-        set((s) => ({
-          items: s.items.map((i) => (String(i.id) === String(id) ? result : i))
-        }))
-        if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
-        return result
-      } finally {
-        setTimeout(() => {
-          suppressRealtimeRefetch = false
-        }, 500)
+      // 3. Enqueue to Outbox
+      const currentBoardId = prevItem.board_id ?? get().boardId
+      if (currentBoardId) {
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'update',
+          boardId: currentBoardId,
+          entityId: id,
+          payload: updates
+        })
+        useBoardsStore.getState().touchBoardActivity(currentBoardId)
       }
+
+      return updated
     },
 
-    // ── Optimistic Delete Item ──────────────────────────────
+    // ── Local-First Remove Item ──────────────────────────────
     removeItem: async (id) => {
       const prevItems = get().items
       const target = prevItems.find((i) => String(i.id) === String(id))
       if (!target) return false
 
+      // 1. Instant local delete
+      await repo.deleteLocalItem(id)
+
+      // 2. Instant UI update
       set((s) => ({ items: s.items.filter((i) => String(i.id) !== String(id)) }))
       broadcastSyncEvent('items')
 
-      if (typeof id === 'number' && id < 0) return true
-
-      suppressRealtimeRefetch = true
-      try {
-        const ok = await itemsService.deleteItem(id)
-
-        if (!ok) {
-          console.error(`removeItem: database delete failed for item ${id}, reverting`)
-          set({ items: prevItems })
-          broadcastSyncEvent('items')
-          return false
-        }
-
-        if (target?.board_id) useBoardsStore.getState().touchBoardActivity(target.board_id)
-        return true
-      } finally {
-        setTimeout(() => {
-          suppressRealtimeRefetch = false
-        }, 500)
+      // 3. Enqueue to Outbox
+      const currentBoardId = target.board_id ?? get().boardId
+      if (currentBoardId) {
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'delete',
+          boardId: currentBoardId,
+          entityId: id
+        })
+        useBoardsStore.getState().touchBoardActivity(currentBoardId)
       }
+
+      return true
     },
 
-    // ── Move item between lanes / reorder ───────────────────
+    // ── Local-First Move Item ────────────────────────────────
     moveItem: async (id, targetLaneId, newOrder) => {
-      const prevItems = get().items
-      const normalizedTargetLane = targetLaneId !== null && !isNaN(Number(targetLaneId)) ? Number(targetLaneId) : null
+      const prevItem = get().items.find((i) => String(i.id) === String(id))
+      if (!prevItem) return
 
+      const normalizedTargetLane =
+        targetLaneId !== null && !isNaN(Number(targetLaneId)) ? Number(targetLaneId) : null
+
+      const updated: KanbanItem = {
+        ...prevItem,
+        lane_id: normalizedTargetLane,
+        order: newOrder,
+        updated_at: new Date().toISOString()
+      }
+
+      // 1. Instant local persistence
+      await repo.putLocalItem(updated)
+
+      // 2. Instant UI update
       set((s) => ({
-        items: s.items.map((i) =>
-          String(i.id) === String(id)
-            ? { ...i, lane_id: normalizedTargetLane, order: newOrder, updated_at: new Date().toISOString() }
-            : i
-        )
+        items: s.items.map((i) => (String(i.id) === String(id) ? updated : i))
       }))
-
       broadcastSyncEvent('items')
 
-      if (typeof id === 'number' && id < 0) return
-
-      // Suppress realtime refetch during DB update to prevent DOM conflicts with dnd-kit
-      suppressRealtimeRefetch = true
-      try {
-        const result = await itemsService.updateItem(id, {
-          lane_id: normalizedTargetLane,
-          order: newOrder
+      // 3. Enqueue to Outbox
+      const currentBoardId = prevItem.board_id ?? get().boardId
+      if (currentBoardId) {
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'update',
+          boardId: currentBoardId,
+          entityId: id,
+          payload: { lane_id: normalizedTargetLane, order: newOrder }
         })
-
-        if (!result) {
-          console.error(`moveItem: database update failed for item ${id}, reverting`)
-          set({ items: prevItems })
-          broadcastSyncEvent('items')
-        }
-      } finally {
-        suppressRealtimeRefetch = false
       }
     },
 
@@ -289,7 +306,9 @@ export const useItemsStore = create<ItemsState>()(
       if (!target) return null
 
       const sameLaneItems = get().items.filter(
-        (i) => (target.lane_id === null && i.lane_id === null) || (target.lane_id !== null && String(i.lane_id) === String(target.lane_id))
+        (i) =>
+          (target.lane_id === null && i.lane_id === null) ||
+          (target.lane_id !== null && String(i.lane_id) === String(target.lane_id))
       )
       const order = sameLaneItems.length + 1
       const copyTitle = target.title ? `${target.title} (Copy)` : 'Untitled Task (Copy)'
@@ -311,7 +330,7 @@ export const useItemsStore = create<ItemsState>()(
       })
     },
 
-    // ── Bulk Duplicate Items (Duplicated items go to draft lane) ───────
+    // ── Bulk Duplicate Items ────────────────────────────────
     bulkDuplicateItems: async (itemIds) => {
       const currentBoardId = get().boardId
       if (!currentBoardId) return []
@@ -323,9 +342,13 @@ export const useItemsStore = create<ItemsState>()(
       const draftItems = get().items.filter((i) => i.lane_id === null)
       let maxOrder = draftItems.length > 0 ? Math.max(...draftItems.map((i) => i.order ?? 0)) : 0
 
-      const draftsToCreate = targets.map((target) => {
+      const createdList: KanbanItem[] = []
+
+      for (const target of targets) {
         maxOrder += 100
-        return {
+        const tempId = -Date.now() - Math.floor(Math.random() * 1000)
+        const optimistic: KanbanItem = {
+          id: tempId,
           board_id: Number(currentBoardId),
           lane_id: null,
           title: target.title ? `${target.title} (Copy)` : 'Untitled Task (Copy)',
@@ -339,30 +362,29 @@ export const useItemsStore = create<ItemsState>()(
           background: target.background,
           owner: target.owner,
           owner_info: target.owner_info ?? null,
-          order: maxOrder
+          order: maxOrder,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
-      })
 
-      suppressRealtimeRefetch = true
-      try {
-        const created = await createItemsBulk(draftsToCreate)
-        if (created.length > 0) {
-          set((s) => ({ items: [...s.items, ...created] }))
-          broadcastSyncEvent('items')
-          useBoardsStore.getState().touchBoardActivity(currentBoardId)
-        }
-        return created
-      } catch (err) {
-        console.error('bulkDuplicateItems failed:', err)
-        return []
-      } finally {
-        setTimeout(() => {
-          suppressRealtimeRefetch = false
-        }, 500)
+        createdList.push(optimistic)
+        await repo.putLocalItem(optimistic)
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'create',
+          boardId: currentBoardId,
+          entityId: tempId,
+          payload: optimistic
+        })
       }
+
+      set((s) => ({ items: [...s.items, ...createdList] }))
+      broadcastSyncEvent('items')
+      useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      return createdList
     },
 
-    // ── Bulk Move Items ──────────────────────────────────────────────
+    // ── Bulk Move Items ─────────────────────────────────────
     bulkMoveItems: async (itemIds, targetLaneId, targetBoardId) => {
       const currentBoardId = get().boardId
       const idSet = new Set(itemIds.map(String))
@@ -372,166 +394,225 @@ export const useItemsStore = create<ItemsState>()(
         targetBoardId !== undefined && String(targetBoardId) !== String(currentBoardId)
 
       if (isDifferentBoard) {
-        // Move to a different board: remove from current board view and update DB
+        // Move to a different board
         set((s) => ({ items: s.items.filter((i) => !idSet.has(String(i.id))) }))
         broadcastSyncEvent('items')
 
-        const updates = itemIds.map((id) => ({
-          id: Number(id),
-          data: {
-            board_id: Number(targetBoardId),
-            lane_id: normalizedTargetLane,
-            order: 100
-          }
-        }))
-        await updateItemsBulk(updates)
+        for (const id of itemIds) {
+          await repo.deleteLocalItem(id)
+          await enqueueMutation({
+            entityType: 'items',
+            action: 'update',
+            boardId: currentBoardId!,
+            entityId: id,
+            payload: {
+              board_id: Number(targetBoardId),
+              lane_id: normalizedTargetLane,
+              order: 100
+            }
+          })
+        }
         if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
         useBoardsStore.getState().touchBoardActivity(targetBoardId)
       } else {
         // Move within current board
-        set((s) => ({
-          items: s.items.map((i) =>
-            idSet.has(String(i.id))
-              ? { ...i, lane_id: normalizedTargetLane, updated_at: new Date().toISOString() }
-              : i
-          )
-        }))
+        const updatedItems = get().items.map((i) =>
+          idSet.has(String(i.id))
+            ? { ...i, lane_id: normalizedTargetLane, updated_at: new Date().toISOString() }
+            : i
+        )
+
+        await repo.putLocalItems(updatedItems.filter((i) => idSet.has(String(i.id))))
+        set({ items: updatedItems })
         broadcastSyncEvent('items')
 
-        await updateItemsCommonFields(itemIds, { lane_id: normalizedTargetLane })
+        for (const id of itemIds) {
+          await enqueueMutation({
+            entityType: 'items',
+            action: 'update',
+            boardId: currentBoardId!,
+            entityId: id,
+            payload: { lane_id: normalizedTargetLane }
+          })
+        }
         if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
       }
     },
 
-    // ── Bulk Move Items with Calculated Orders ────────────────────────
+    // ── Bulk Move Items with Calculated Orders ───────────────
     bulkMoveItemsWithOrder: async (itemsWithOrders) => {
       const currentBoardId = get().boardId
-      if (itemsWithOrders.length === 0) return
+      if (itemsWithOrders.length === 0 || !currentBoardId) return
 
       const orderMap = new Map(itemsWithOrders.map((i) => [String(i.id), i]))
 
-      set((s) => ({
-        items: s.items.map((i) => {
-          const update = orderMap.get(String(i.id))
-          if (update) {
-            return {
-              ...i,
-              lane_id: update.lane_id,
-              order: update.order,
-              updated_at: new Date().toISOString()
-            }
+      const updatedItems = get().items.map((i) => {
+        const update = orderMap.get(String(i.id))
+        if (update) {
+          return {
+            ...i,
+            lane_id: update.lane_id,
+            order: update.order,
+            updated_at: new Date().toISOString()
           }
-          return i
-        })
-      }))
+        }
+        return i
+      })
 
+      // 1. Instant local persistence in Dexie
+      const touched = updatedItems.filter((i) => orderMap.has(String(i.id)))
+      await repo.putLocalItems(touched)
+
+      // 2. Instant UI update
+      set({ items: updatedItems })
       broadcastSyncEvent('items')
 
-      suppressRealtimeRefetch = true
-      try {
-        const dbUpdates = itemsWithOrders.map((item) => ({
-          id: Number(item.id),
-          data: {
-            lane_id: item.lane_id,
-            order: item.order
-          }
-        }))
-        await updateItemsBulk(dbUpdates)
-        if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
-      } catch (err) {
-        console.error('bulkMoveItemsWithOrder failed:', err)
-      } finally {
-        setTimeout(() => {
-          suppressRealtimeRefetch = false
-        }, 500)
+      // 3. Enqueue to Outbox (compactor will coalesce)
+      for (const item of itemsWithOrders) {
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'update',
+          boardId: currentBoardId,
+          entityId: item.id,
+          payload: { lane_id: item.lane_id, order: item.order }
+        })
       }
+
+      useBoardsStore.getState().touchBoardActivity(currentBoardId)
     },
 
-    // ── Bulk Set Priority ─────────────────────────────────────────────
+    // ── Bulk Set Priority ───────────────────────────────────
     bulkSetPriority: async (itemIds, priority) => {
       const currentBoardId = get().boardId
+      if (!currentBoardId) return
       const idSet = new Set(itemIds.map(String))
 
-      set((s) => ({
-        items: s.items.map((i) =>
-          idSet.has(String(i.id))
-            ? { ...i, priority, updated_at: new Date().toISOString() }
-            : i
-        )
-      }))
+      const updatedItems = get().items.map((i) =>
+        idSet.has(String(i.id)) ? { ...i, priority, updated_at: new Date().toISOString() } : i
+      )
+
+      await repo.putLocalItems(updatedItems.filter((i) => idSet.has(String(i.id))))
+      set({ items: updatedItems })
       broadcastSyncEvent('items')
 
-      await updateItemsCommonFields(itemIds, { priority })
-      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      for (const id of itemIds) {
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'update',
+          boardId: currentBoardId,
+          entityId: id,
+          payload: { priority }
+        })
+      }
+
+      useBoardsStore.getState().touchBoardActivity(currentBoardId)
     },
 
-    // ── Bulk Set Status ───────────────────────────────────────────────
+    // ── Bulk Set Status ─────────────────────────────────────
     bulkSetStatus: async (itemIds, status) => {
       const currentBoardId = get().boardId
+      if (!currentBoardId) return
       const idSet = new Set(itemIds.map(String))
 
-      set((s) => ({
-        items: s.items.map((i) =>
-          idSet.has(String(i.id))
-            ? { ...i, status, updated_at: new Date().toISOString() }
-            : i
-        )
-      }))
+      const updatedItems = get().items.map((i) =>
+        idSet.has(String(i.id)) ? { ...i, status, updated_at: new Date().toISOString() } : i
+      )
+
+      await repo.putLocalItems(updatedItems.filter((i) => idSet.has(String(i.id))))
+      set({ items: updatedItems })
       broadcastSyncEvent('items')
 
-      await updateItemsCommonFields(itemIds, { status })
-      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      for (const id of itemIds) {
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'update',
+          boardId: currentBoardId,
+          entityId: id,
+          payload: { status }
+        })
+      }
+
+      useBoardsStore.getState().touchBoardActivity(currentBoardId)
     },
 
-    // ── Bulk Set Assignee ─────────────────────────────────────────────
+    // ── Bulk Set Assignee ───────────────────────────────────
     bulkSetAssignee: async (itemIds, assignee) => {
       const currentBoardId = get().boardId
+      if (!currentBoardId) return
       const idSet = new Set(itemIds.map(String))
 
-      set((s) => ({
-        items: s.items.map((i) =>
-          idSet.has(String(i.id))
-            ? { ...i, assignee, updated_at: new Date().toISOString() }
-            : i
-        )
-      }))
+      const updatedItems = get().items.map((i) =>
+        idSet.has(String(i.id)) ? { ...i, assignee, updated_at: new Date().toISOString() } : i
+      )
+
+      await repo.putLocalItems(updatedItems.filter((i) => idSet.has(String(i.id))))
+      set({ items: updatedItems })
       broadcastSyncEvent('items')
 
-      await updateItemsCommonFields(itemIds, { assignee })
-      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      for (const id of itemIds) {
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'update',
+          boardId: currentBoardId,
+          entityId: id,
+          payload: { assignee }
+        })
+      }
+
+      useBoardsStore.getState().touchBoardActivity(currentBoardId)
     },
 
-    // ── Bulk Set Background Accent ───────────────────────────────────
+    // ── Bulk Set Background Accent ─────────────────────────
     bulkSetBackground: async (itemIds, background) => {
       const currentBoardId = get().boardId
+      if (!currentBoardId) return
       const idSet = new Set(itemIds.map(String))
 
-      set((s) => ({
-        items: s.items.map((i) =>
-          idSet.has(String(i.id))
-            ? { ...i, background: background || null, updated_at: new Date().toISOString() }
-            : i
-        )
-      }))
+      const updatedItems = get().items.map((i) =>
+        idSet.has(String(i.id))
+          ? { ...i, background: background || null, updated_at: new Date().toISOString() }
+          : i
+      )
+
+      await repo.putLocalItems(updatedItems.filter((i) => idSet.has(String(i.id))))
+      set({ items: updatedItems })
       broadcastSyncEvent('items')
 
-      await updateItemsCommonFields(itemIds, { background: background || null })
-      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      for (const id of itemIds) {
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'update',
+          boardId: currentBoardId,
+          entityId: id,
+          payload: { background: background || null }
+        })
+      }
+
+      useBoardsStore.getState().touchBoardActivity(currentBoardId)
     },
 
-    // ── Bulk Remove Items ────────────────────────────────────────────
+    // ── Bulk Remove Items ───────────────────────────────────
     bulkRemoveItems: async (itemIds) => {
       const currentBoardId = get().boardId
+      if (!currentBoardId) return false
       const idSet = new Set(itemIds.map(String))
+
+      await repo.deleteLocalItems(itemIds)
 
       set((s) => ({
         items: s.items.filter((i) => !idSet.has(String(i.id)))
       }))
       broadcastSyncEvent('items')
 
-      const ok = await deleteItemsBulk(itemIds)
-      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
-      return ok
+      await enqueueMutation({
+        entityType: 'items',
+        action: 'bulk_delete',
+        boardId: currentBoardId,
+        payload: { ids: itemIds }
+      })
+
+      useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      return true
     }
   }))
 )

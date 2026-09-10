@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import * as lanesService from '@/services/lanes'
-import * as boardsService from '@/services/boards'
+import * as repo from '@/lib/db/repo'
+import { enqueueMutation } from '@/lib/db/sync-outbox'
 import { useItemsStore } from '@/stores/items'
 import { useBoardsStore } from '@/stores/boards'
 import { supabase } from '@/lib/supabase'
@@ -30,7 +31,7 @@ type LanesState = {
   refreshLanes: (boardId?: number | string) => Promise<void>
   cleanup: () => void
 
-  // Optimistic mutations
+  // Local-First mutations (Instant UI + IndexedDB + Outbox Sync)
   addLane: (
     draft: Partial<Omit<Lane, 'id' | 'created_at' | 'updated_at'>>
   ) => Promise<Lane | null>
@@ -55,9 +56,20 @@ export const useLanesStore = create<LanesState>()(
       const targetId = boardId ?? get().boardId
       if (!targetId) return
       try {
-        const userLanes = await lanesService.getLanesByBoardId(targetId)
         const virtualDraft = createVirtualDraftLane(targetId)
-        set({ boardId: targetId, lanes: [virtualDraft, ...userLanes], loading: false })
+
+        // 1. Read local Dexie first
+        const local = await repo.getLocalLanes(targetId)
+        if (local.length > 0) {
+          set({ boardId: targetId, lanes: [virtualDraft, ...local], loading: false })
+        }
+
+        // 2. Fetch remote if online
+        if (typeof navigator === 'undefined' || navigator.onLine) {
+          const remote = await lanesService.getLanesByBoardId(targetId)
+          const reconciled = await repo.reconcileRemoteLanes(targetId, remote)
+          set({ boardId: targetId, lanes: [virtualDraft, ...reconciled], loading: false })
+        }
       } catch (err) {
         console.error('Error in refreshLanes:', err)
       }
@@ -70,17 +82,36 @@ export const useLanesStore = create<LanesState>()(
       realtimeCleanup?.()
       realtimeCleanup = null
 
-      set({ boardId, lanes: [createVirtualDraftLane(boardId)], loading: true })
-
-      const userLanes = await lanesService.getLanesByBoardId(boardId)
       const virtualDraft = createVirtualDraftLane(boardId)
-      set({ lanes: [virtualDraft, ...userLanes], loading: false })
+
+      // Immediate 0ms local read from IndexedDB
+      const local = await repo.getLocalLanes(boardId)
+      if (local.length > 0) {
+        set({ boardId, lanes: [virtualDraft, ...local], loading: false })
+      } else {
+        set({ boardId, lanes: [virtualDraft], loading: true })
+      }
+
+      // Revalidate from Supabase in background
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        lanesService
+          .getLanesByBoardId(boardId)
+          .then(async (remote) => {
+            const reconciled = await repo.reconcileRemoteLanes(boardId, remote)
+            set({ lanes: [virtualDraft, ...reconciled], loading: false })
+          })
+          .catch((err) => {
+            console.warn('[useLanesStore] Remote fetch failed, using local DB:', err)
+            set({ loading: false })
+          })
+      }
 
       // 1. Postgres changes subscription
       const channel = lanesService.subscribeLanes(boardId, () => {
         if (suppressRealtimeRefetch) return
-        lanesService.getLanesByBoardId(boardId).then((fresh) => {
-          set({ lanes: [createVirtualDraftLane(boardId), ...fresh] })
+        lanesService.getLanesByBoardId(boardId).then(async (fresh) => {
+          const reconciled = await repo.reconcileRemoteLanes(boardId, fresh)
+          set({ lanes: [createVirtualDraftLane(boardId), ...reconciled] })
         })
       })
 
@@ -89,8 +120,9 @@ export const useLanesStore = create<LanesState>()(
         if (event === 'lanes') {
           const currentBoardId = get().boardId
           if (!currentBoardId || suppressRealtimeRefetch) return
-          lanesService.getLanesByBoardId(currentBoardId).then((fresh) => {
-            set({ lanes: [createVirtualDraftLane(currentBoardId), ...fresh] })
+          lanesService.getLanesByBoardId(currentBoardId).then(async (fresh) => {
+            const reconciled = await repo.reconcileRemoteLanes(currentBoardId, fresh)
+            set({ lanes: [createVirtualDraftLane(currentBoardId), ...reconciled] })
           })
         }
       })
@@ -107,17 +139,18 @@ export const useLanesStore = create<LanesState>()(
       set({ lanes: [], boardId: undefined, loading: false })
     },
 
-    // ── Optimistic create ──────────────────────────────────────
+    // ── Local-First Create Lane ──────────────────────────────
     addLane: async (draft) => {
+      const currentBoardId = draft.board_id ?? (get().boardId ? Number(get().boardId) : null)
       const realLanes = get().lanes.filter((l) => l.id !== null)
       const maxOrder = realLanes.length > 0 ? Math.max(...realLanes.map((l) => l.order ?? 0)) : 0
-      const order = maxOrder + 1
+      const order = draft.order ?? maxOrder + 1
 
       const tempId = -Date.now()
       const optimistic: Lane = {
         id: tempId,
-        board_id: draft.board_id ?? (get().boardId ? Number(get().boardId) : null),
-        title: draft.title ?? 'New Lane',
+        board_id: currentBoardId,
+        title: draft.title ?? 'New Column',
         icon: draft.icon ?? null,
         description: draft.description ?? null,
         background: draft.background ?? null,
@@ -128,76 +161,67 @@ export const useLanesStore = create<LanesState>()(
         updated_at: new Date().toISOString()
       }
 
+      // 1. Instant local persistence in IndexedDB
+      await repo.putLocalLane(optimistic)
+
+      // 2. Instant UI update
       set((s) => ({ lanes: [...s.lanes, optimistic] }))
+      broadcastSyncEvent('lanes')
 
-      suppressRealtimeRefetch = true
-      try {
-        const result = await lanesService.createLane({
-          ...draft,
-          board_id: optimistic.board_id,
-          order
+      // 3. Enqueue to Outbox
+      if (currentBoardId) {
+        await enqueueMutation({
+          entityType: 'lanes',
+          action: 'create',
+          boardId: currentBoardId,
+          entityId: tempId,
+          payload: optimistic
         })
-
-        if (!result) {
-          set((s) => ({ lanes: s.lanes.filter((l) => l.id !== tempId) }))
-          return null
-        }
-
-        set((s) => ({
-          lanes: s.lanes.map((l) => (l.id === tempId ? result : l))
-        }))
-        broadcastSyncEvent('lanes')
-        if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
-        return result
-      } finally {
-        setTimeout(() => {
-          suppressRealtimeRefetch = false
-        }, 500)
+        useBoardsStore.getState().touchBoardActivity(currentBoardId)
       }
+
+      return optimistic
     },
 
-    // ── Optimistic update ──────────────────────────────────────
+    // ── Local-First Update Lane ──────────────────────────────
     updateLane: async (id, updates) => {
       if (id === null || String(id) === 'null') return null
 
       const prevLane = get().lanes.find((l) => String(l.id) === String(id))
       if (!prevLane) return null
 
-      set((s) => ({
-        lanes: s.lanes.map((l) =>
-          String(l.id) === String(id)
-            ? { ...l, ...updates, updated_at: new Date().toISOString() }
-            : l
-        )
-      }))
+      const updated: Lane = {
+        ...prevLane,
+        ...updates,
+        updated_at: new Date().toISOString()
+      }
 
+      // 1. Instant local persistence
+      await repo.putLocalLane(updated)
+
+      // 2. Instant UI update
+      set((s) => ({
+        lanes: s.lanes.map((l) => (String(l.id) === String(id) ? updated : l))
+      }))
       broadcastSyncEvent('lanes')
 
-      suppressRealtimeRefetch = true
-      try {
-        const result = await lanesService.updateLane(id, updates)
-
-        if (!result) {
-          set((s) => ({
-            lanes: s.lanes.map((l) => (String(l.id) === String(id) ? prevLane : l))
-          }))
-          broadcastSyncEvent('lanes')
-          return null
-        }
-
-        set((s) => ({
-          lanes: s.lanes.map((l) => (String(l.id) === String(id) ? result : l))
-        }))
-        if (result?.board_id) useBoardsStore.getState().touchBoardActivity(result.board_id)
-        return result
-      } finally {
-        setTimeout(() => {
-          suppressRealtimeRefetch = false
-        }, 500)
+      // 3. Enqueue to Outbox
+      const currentBoardId = prevLane.board_id ?? get().boardId
+      if (currentBoardId) {
+        await enqueueMutation({
+          entityType: 'lanes',
+          action: 'update',
+          boardId: currentBoardId,
+          entityId: id,
+          payload: updates
+        })
+        useBoardsStore.getState().touchBoardActivity(currentBoardId)
       }
+
+      return updated
     },
 
-    // ── Optimistic delete ──────────────────────────────────────
+    // ── Local-First Remove Lane ──────────────────────────────
     removeLane: async (id) => {
       if (id === null || String(id) === 'null') return false
 
@@ -205,33 +229,35 @@ export const useLanesStore = create<LanesState>()(
       const target = prevLanes.find((l) => String(l.id) === String(id))
       if (!target) return false
 
+      // 1. Instant local delete (cascades items locally too)
+      await repo.deleteLocalLane(id)
+
+      // 2. Instant UI update
       set((s) => ({ lanes: s.lanes.filter((l) => String(l.id) !== String(id)) }))
       broadcastSyncEvent('lanes')
 
-      suppressRealtimeRefetch = true
-      try {
-        const ok = await lanesService.deleteLane(id)
-
-        if (!ok) {
-          set({ lanes: prevLanes })
-          broadcastSyncEvent('lanes')
-          return false
-        }
-
-        if (target?.board_id) useBoardsStore.getState().touchBoardActivity(target.board_id)
-        return true
-      } finally {
-        setTimeout(() => {
-          suppressRealtimeRefetch = false
-        }, 500)
+      // 3. Enqueue to Outbox
+      const currentBoardId = target.board_id ?? get().boardId
+      if (currentBoardId) {
+        await enqueueMutation({
+          entityType: 'lanes',
+          action: 'delete',
+          boardId: currentBoardId,
+          entityId: id
+        })
+        useBoardsStore.getState().touchBoardActivity(currentBoardId)
       }
+
+      return true
     },
 
-    // ── Move lane left/right ───────────────────────────────────
+    // ── Move Lane Left/Right ─────────────────────────────────
     moveLane: async (id, direction) => {
       if (id === null || String(id) === 'null') return
 
-      const realLanes = get().lanes.filter((l) => l.id !== null).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      const realLanes = get()
+        .lanes.filter((l) => l.id !== null)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       const index = realLanes.findIndex((l) => String(l.id) === String(id))
 
       if (index === -1) return
@@ -246,21 +272,18 @@ export const useLanesStore = create<LanesState>()(
       await get().reorderLanes(reordered)
     },
 
-    // ── Move lane to another board ──────────────────────────────
+    // ── Move Lane to Another Board ───────────────────────────
     moveLaneToBoard: async (laneId: number | string, targetBoardId: number | string) => {
       if (laneId === null || String(laneId) === 'null') return false
 
-      suppressRealtimeRefetch = true
-
-      const prevLanes = get().lanes
+      const currentBoardId = get().boardId
       const prevItems = useItemsStore.getState().items
 
-      // Optimistically remove lane from current board view
+      // 1. Local update
+      await repo.deleteLocalLane(laneId)
       set((s) => ({
         lanes: s.lanes.filter((l) => String(l.id) !== String(laneId))
       }))
-
-      // Optimistically remove lane's items from current board items state
       useItemsStore.setState({
         items: prevItems.filter((i) => String(i.lane_id) !== String(laneId))
       })
@@ -269,36 +292,26 @@ export const useLanesStore = create<LanesState>()(
       broadcastSyncEvent('boards')
       broadcastSyncEvent('items')
 
+      // 2. Direct server call for cross-board move
       const success = await lanesService.moveLaneToBoard(laneId, targetBoardId)
-
-      setTimeout(() => {
-        suppressRealtimeRefetch = false
-      }, 500)
-
-      if (!success) {
-        // Rollback
-        set({ lanes: prevLanes })
-        useItemsStore.setState({ items: prevItems })
-        broadcastSyncEvent('lanes')
-        broadcastSyncEvent('boards')
-        broadcastSyncEvent('items')
-        return false
-      }
-
+      if (currentBoardId) useBoardsStore.getState().touchBoardActivity(currentBoardId)
+      useBoardsStore.getState().touchBoardActivity(targetBoardId)
       useBoardsStore.getState().refresh()
-      return true
+
+      return success
     },
 
-    // ── Optimistic reorder ─────────────────────────────────────
+    // ── Local-First Reorder Lanes ────────────────────────────
     reorderLanes: async (reordered: Lane[]) => {
       const currentBoardId = get().boardId
+      if (!currentBoardId) return
       const realReordered = reordered.filter((l) => l.id !== null)
       const prevLanes = get().lanes
 
       const withOrder = realReordered.map((l, i) => ({ ...l, order: i + 1 }))
       const orderMap = new Map(withOrder.map((l) => [String(l.id), l.order]))
 
-      const draftLane = currentBoardId ? createVirtualDraftLane(currentBoardId) : null
+      const draftLane = createVirtualDraftLane(currentBoardId)
       const updatedRealLanes = prevLanes
         .filter((l) => l.id !== null)
         .map((l) => {
@@ -307,27 +320,27 @@ export const useLanesStore = create<LanesState>()(
         })
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
-      set({ lanes: draftLane ? [draftLane, ...updatedRealLanes] : updatedRealLanes })
+      // 1. Instant local persistence
+      await repo.putLocalLanes(withOrder)
+
+      // 2. Instant UI update
+      set({ lanes: [draftLane, ...updatedRealLanes] })
       broadcastSyncEvent('lanes')
 
-      // Suppress realtime refetch during batch update to prevent race conditions
-      suppressRealtimeRefetch = true
-      try {
-        const updates = withOrder.map((l) => lanesService.updateLane(Number(l.id), { order: l.order }))
-        const results = await Promise.all(updates)
-
-        if (results.some((r) => r === null)) {
-          console.error('reorderLanes: one or more lane database updates failed, reverting')
-          set({ lanes: prevLanes })
-          broadcastSyncEvent('lanes')
+      // 3. Enqueue to Outbox
+      for (const lane of withOrder) {
+        if (lane.id !== null) {
+          await enqueueMutation({
+            entityType: 'lanes',
+            action: 'update',
+            boardId: currentBoardId,
+            entityId: lane.id,
+            payload: { order: lane.order }
+          })
         }
-      } catch (err) {
-        console.error('reorderLanes error:', err)
-        set({ lanes: prevLanes })
-        broadcastSyncEvent('lanes')
-      } finally {
-        suppressRealtimeRefetch = false
       }
+
+      useBoardsStore.getState().touchBoardActivity(currentBoardId)
     },
 
     // ── Duplicate Lane ──────────────────────────────────────
@@ -339,7 +352,7 @@ export const useLanesStore = create<LanesState>()(
 
       const realLanes = get().lanes.filter((l) => l.id !== null)
       const order = realLanes.length + 1
-      const copyTitle = target.title ? `${target.title} (Copy)` : 'Untitled Lane (Copy)'
+      const copyTitle = target.title ? `${target.title} (Copy)` : 'Untitled Column (Copy)'
 
       const newLane = await get().addLane({
         board_id: target.board_id,
