@@ -10,6 +10,7 @@ import { useBoardsStore } from '@/stores/boards'
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
 import { broadcastSyncEvent } from '@/lib/realtime'
+import { sendTicketAssignmentEmail } from '@/services/email'
 import type { BoardMutationAction } from './ai-tools'
 
 export interface MutationExecutionResult {
@@ -221,6 +222,19 @@ export async function executeBoardMutations(
 
       const createdItems = await createItemsBulk(itemPayloads)
       appliedCount += createdItems.length
+
+      // Auto email notification for newly created tasks with an assignee
+      for (const createdItem of createdItems) {
+        if (createdItem.assignee && createdItem.assignee.trim()) {
+          sendTicketAssignmentEmail({
+            item: createdItem,
+            boardId: targetBoardId,
+            assigneeName: createdItem.assignee.trim()
+          }).catch((err) =>
+            console.error('[executeBoardMutations] Failed to send assignment email for created item:', err)
+          )
+        }
+      }
     } catch (err: any) {
       errors.push(`Error bulk creating tasks: ${err?.message || 'Unknown error'}`)
     }
@@ -296,10 +310,46 @@ export async function executeBoardMutations(
       }
     })
 
+    // Track items that are receiving a new or modified assignee
+    const assignedUpdatesToNotify: { item: Partial<KanbanItem>; assigneeName: string }[] = []
+    for (const act of updateItemActions) {
+      if ('assignee' in act && act.assignee !== undefined && act.assignee !== null) {
+        const newAssignee = act.assignee.trim()
+        const currentTask = allBoardItems.find((i) => i.id === act.item_id)
+        const prevAssignee = currentTask?.assignee?.trim() || ''
+
+        // Only notify if newAssignee is non-empty and changed from previous assignee
+        if (newAssignee && newAssignee.toLowerCase() !== prevAssignee.toLowerCase()) {
+          const updateEntry = updatesList.find((u) => u.id === act.item_id)
+          const mergedItem: Partial<KanbanItem> = {
+            ...(currentTask || {}),
+            ...(updateEntry?.data || {}),
+            id: act.item_id,
+            board_id: targetBoardId,
+            assignee: newAssignee
+          }
+          assignedUpdatesToNotify.push({ item: mergedItem, assigneeName: newAssignee })
+        }
+      }
+    }
+
     const updatedSuccessCount = await updateItemsBulk(updatesList)
     appliedCount += updatedSuccessCount
     if (updatedSuccessCount < updateItemActions.length) {
       errors.push(`Some task updates failed (${updateItemActions.length - updatedSuccessCount})`)
+    }
+
+    // Auto email notification for successfully updated tasks with new or modified assignee
+    if (updatedSuccessCount > 0 && assignedUpdatesToNotify.length > 0) {
+      for (const notify of assignedUpdatesToNotify) {
+        sendTicketAssignmentEmail({
+          item: notify.item,
+          boardId: targetBoardId,
+          assigneeName: notify.assigneeName
+        }).catch((err) =>
+          console.error('[executeBoardMutations] Failed to send assignment email for updated item:', err)
+        )
+      }
     }
   }
 

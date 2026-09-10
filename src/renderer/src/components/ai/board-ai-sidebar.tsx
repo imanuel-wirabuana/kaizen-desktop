@@ -29,6 +29,8 @@ import {
   type BoardPermissionRole
 } from '@/lib/ai/ai-prompts'
 import { useBoardAiStore, BoardAiMessage } from '@/stores/board-ai'
+import { useUser } from '@/providers/auth-provider'
+import { useBoardMembersQuery } from '@/queries/members'
 import { AiProposalCard } from './ai-proposal-card'
 import { AiMarkdown } from './ai-markdown'
 
@@ -77,6 +79,8 @@ export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiS
   }, [isFullScreen, setIsFullScreen])
 
   const boardId = board?.id ? String(board.id) : null
+  const { user } = useUser()
+  const { data: members = [] } = useBoardMembersQuery(boardId || '')
 
   // Reactive selector for messages belonging to this board
   const messages =
@@ -177,7 +181,7 @@ export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiS
       }))
 
       const fullContent = await streamKaizenChat({
-        system: buildSystemPrompt(board, lanes, items, permissionRole),
+        system: buildSystemPrompt(board, lanes, items, permissionRole, members, user),
         messages: chatHistory,
         signal: controller.signal,
         onDelta: (_delta, accumulated) => {

@@ -45,7 +45,7 @@ export const BOARD_MUTATION_SCHEMA_DETAILS = `SCHEMA DETAILS:
   - status (boolean optional: true = completed/done/checked, false = open/in-progress)
   - start_date (string optional: ISO format "YYYY-MM-DD")
   - due_date (string optional: ISO format "YYYY-MM-DD")
-  - assignee (string optional: member name, handle e.g. "@alex", or email)
+  - assignee (string optional: member name or direct email from "Available Board Assignees" below e.g. "Alice Smith" or "alice@company.com". Always specify an available member name or direct email so assignment notification emails are dispatched)
   - background (string optional: solid hex, CSS gradient, or image URL. CRITICAL: OMIT by default unless user explicitly requests styling or theming)
   - order (number or string optional: controls vertical positioning within a column; smaller numbers appear higher e.g. 100, 200, 300; also accepts semantic shortcuts "top" or "bottom")
   - target_lane_title (string optional: name of destination column when moving task)
@@ -127,7 +127,7 @@ export const MUTATION_GUIDELINES = `GUIDELINES & EDIT PERMISSION CONSTRAINTS:
    - LANE REORDERING & UPDATES: Use { "type": "update_lane", "lane_id": <id>, ... } to rename, set icon, description, background, or reorder column horizontally by specifying "order": <number> (e.g. 100, 200, 300).
    - TASK COMPLETION & STATUS: To mark a task as completed or checked, emit { "type": "update_item", "item_id": <id>, "status": true }. To reopen, set "status": false.
    - TASK DATES: Set "start_date": "YYYY-MM-DD" and/or "due_date": "YYYY-MM-DD".
-   - TASK ASSIGNEES: Set "assignee": "<name or @handle>" when user asks to assign tasks.
+   - TASK ASSIGNEES & EMAIL NOTIFICATIONS: When assigning tasks, choose an assignee from the "Available Board Assignees" section in the Board Context (using their exact display name or email address) or use a direct email provided by the user. Assigning a task automatically triggers an email notification to the assignee. If the user asks to "assign to me", use the active user's name or email.
    - TASK POSITIONING: Use "order": "top" or "order": "bottom" or numeric order to position tasks vertically within columns.
 
 5. MESSAGE STRUCTURE & SINGLE CODE BLOCK:
@@ -198,7 +198,9 @@ export function formatBoardContext(
   board: Board | null | undefined,
   lanes: Lane[],
   items: KanbanItem[],
-  permissionRole?: BoardPermissionRole
+  permissionRole?: BoardPermissionRole,
+  members?: BoardMember[],
+  currentUser?: { email?: string; fullName?: string; name?: string } | null
 ): string {
   if (!board) return 'No board context available.'
 
@@ -219,10 +221,69 @@ export function formatBoardContext(
     `Current Board: "${board.title || 'Untitled'}"${boardIconStr} (board_id: ${board.id ?? 'unknown'})${boardBgStr}`,
     `Active User Permission: ${permDisplay}`,
     `Today's Date: ${todayFormatted}`,
-    board.description ? `Description: ${board.description}` : '',
+    board.description ? `Description: ${board.description}` : ''
+  ]
+
+  // ── Available Board Assignees ──
+  const assigneeLines: string[] = []
+  const seenAssignees = new Set<string>()
+
+  // 1. Board Owner
+  if (board.owner_info?.email || board.owner_info?.name) {
+    const oName = board.owner_info.name || 'Board Owner'
+    const oEmail = board.owner_info.email ? ` <${board.owner_info.email}>` : ''
+    assigneeLines.push(`• ${oName} (Owner)${oEmail}`)
+    if (board.owner_info.email) seenAssignees.add(board.owner_info.email.toLowerCase())
+    if (board.owner_info.name) seenAssignees.add(board.owner_info.name.toLowerCase())
+  }
+
+  // 2. Current User (if logged in and not already listed)
+  if (currentUser?.email) {
+    const uEmail = currentUser.email.toLowerCase()
+    const uName =
+      currentUser.fullName ||
+      currentUser.name ||
+      currentUser.email.split('@')[0]
+    const uNameLower = uName.toLowerCase()
+
+    if (!seenAssignees.has(uEmail) && !seenAssignees.has(uNameLower)) {
+      assigneeLines.push(`• ${uName} (You) <${currentUser.email}>`)
+      seenAssignees.add(uEmail)
+      seenAssignees.add(uNameLower)
+    }
+  }
+
+  // 3. Board Collaborators
+  if (members && members.length > 0) {
+    for (const m of members) {
+      const mName = m.user_name || m.full_name || m.user_email || `Member ${m.id}`
+      const mEmail = m.user_email || m.email
+      const keyEmail = mEmail ? mEmail.toLowerCase() : null
+      const keyName = mName.toLowerCase()
+
+      if (!seenAssignees.has(keyName) && (!keyEmail || !seenAssignees.has(keyEmail))) {
+        const emailStr = mEmail ? ` <${mEmail}>` : ''
+        assigneeLines.push(`• ${mName} (Member)${emailStr}`)
+        seenAssignees.add(keyName)
+        if (keyEmail) seenAssignees.add(keyEmail)
+      }
+    }
+  }
+
+  lines.push(
+    '',
+    'Available Board Assignees (Use exact name or email when setting task "assignee" to trigger email notification):'
+  )
+  if (assigneeLines.length > 0) {
+    lines.push(...assigneeLines)
+  } else {
+    lines.push('• Anyone can be assigned by providing a direct email address (e.g. "colleague@example.com")')
+  }
+
+  lines.push(
     '',
     'Existing Columns & Tasks (Use exact lane_id and item_id when updating or deleting):'
-  ]
+  )
 
   if (sortedLanes.length === 0) {
     lines.push('- No columns created yet.')
@@ -275,13 +336,22 @@ export function buildSystemPrompt(
   board: Board | null | undefined,
   lanes: Lane[],
   items: KanbanItem[],
-  permissionRole?: BoardPermissionRole
+  permissionRole?: BoardPermissionRole,
+  members?: BoardMember[],
+  currentUser?: { email?: string; fullName?: string; name?: string } | null
 ): string {
   // Determine effective permission
   const effectiveRole = permissionRole ?? board?.role ?? 'owner'
   const isReadOnly = effectiveRole === 'view'
 
-  const boardContext = formatBoardContext(board, lanes, items, effectiveRole)
+  const boardContext = formatBoardContext(
+    board,
+    lanes,
+    items,
+    effectiveRole,
+    members,
+    currentUser
+  )
 
   if (isReadOnly) {
     return `${KAIZEN_ASSISTANT_ROLE_VIEW}

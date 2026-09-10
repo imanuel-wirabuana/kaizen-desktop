@@ -43,15 +43,18 @@ export async function resolveAssigneeEmail(
 ): Promise<ResolvedAssignee | null> {
   if (!assignee || !assignee.trim()) return null
   const trimmed = assignee.trim()
-  const lower = trimmed.toLowerCase()
+  // Clean any leading '@' handles (e.g., "@alice" or "@user@company.com")
+  const cleaned = trimmed.replace(/^@+/, '').trim()
+  const lower = cleaned.toLowerCase()
+  const cleanLower = lower.replace(/\s*\((me,\s*owner|me|owner)\)$/i, '').trim()
 
   // 1. Direct email string match or embedded email in string (e.g., "Name <email@domain.com>" or "user@domain.com")
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
-  const emailMatch = trimmed.match(emailRegex)
+  const emailMatch = cleaned.match(emailRegex) || trimmed.match(emailRegex)
   if (emailMatch) {
     const extractedEmail = emailMatch[0]
     const extractedName =
-      trimmed.replace(extractedEmail, '').replace(/[<>()[\]]/g, '').trim() ||
+      cleaned.replace(extractedEmail, '').replace(/[<>()[\]]/g, '').trim() ||
       extractedEmail.split('@')[0]
     return {
       email: extractedEmail,
@@ -64,14 +67,17 @@ export async function resolveAssigneeEmail(
     try {
       const members = await membersService.getBoardMembers(boardId)
       for (const m of members) {
-        const mName = (m.user_name || m.full_name || '').toLowerCase()
-        const mEmail = (m.user_email || m.email || '').toLowerCase()
-        if ((mName && mName === lower) || (mEmail && mEmail === lower)) {
+        const mName = (m.user_name || m.full_name || '').toLowerCase().trim()
+        const mEmail = (m.user_email || m.email || '').toLowerCase().trim()
+        if (
+          (mName && (mName === lower || mName === cleanLower || (cleanLower.length >= 3 && (mName.startsWith(cleanLower) || cleanLower.startsWith(mName))))) ||
+          (mEmail && (mEmail === lower || mEmail === cleanLower))
+        ) {
           const email = m.user_email || m.email
           if (email && emailRegex.test(email)) {
             return {
               email,
-              name: m.user_name || m.full_name || trimmed
+              name: m.user_name || m.full_name || cleaned
             }
           }
         }
@@ -81,7 +87,7 @@ export async function resolveAssigneeEmail(
     }
   }
 
-  // 3. Check current authenticated user (if assigned to self)
+  // 3. Check current authenticated user (if assigned to self or "me")
   try {
     const { data: authData } = await supabase.auth.getUser()
     const currentUser = authData?.user
@@ -94,12 +100,16 @@ export async function resolveAssigneeEmail(
 
       if (
         currentFullName === lower ||
+        currentFullName === cleanLower ||
         currentUser.email.toLowerCase() === lower ||
-        `${currentFullName} (me)` === lower
+        currentUser.email.toLowerCase() === cleanLower ||
+        `${currentFullName} (me)` === lower ||
+        cleanLower === 'me' ||
+        cleanLower === 'myself'
       ) {
         return {
           email: currentUser.email,
-          name: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || trimmed
+          name: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || cleaned
         }
       }
     }
@@ -107,13 +117,27 @@ export async function resolveAssigneeEmail(
     console.warn('[resolveAssigneeEmail] Failed to check auth user:', err)
   }
 
-  // 4. Check board owner info
+  // 4. Check board owner info (from store cache or database fallback)
   if (boardId) {
-    const boards = useBoardsStore.getState().boards
-    const board = boards.find((b) => String(b.id) === String(boardId))
-    if (board) {
-      const cleanLower = lower.replace(/\s*\((me,\s*owner|me|owner)\)$/i, '').trim()
+    let board = useBoardsStore.getState().boards.find((b) => String(b.id) === String(boardId))
 
+    // Fallback query if board is not loaded in store yet
+    if (!board || !board.owner_info?.email) {
+      try {
+        const { data: bData } = await supabase
+          .from('boards')
+          .select('id, owner, owner_info')
+          .eq('id', Number(boardId))
+          .single()
+        if (bData) {
+          board = bData as any
+        }
+      } catch {
+        // Ignore fallback query failure
+      }
+    }
+
+    if (board) {
       if (board.owner_info?.email) {
         const ownerName = (board.owner_info.name || '').toLowerCase()
         const ownerEmail = board.owner_info.email.toLowerCase()
@@ -129,7 +153,7 @@ export async function resolveAssigneeEmail(
         ) {
           return {
             email: board.owner_info.email,
-            name: board.owner_info.name || trimmed
+            name: board.owner_info.name || cleaned
           }
         }
       }
@@ -163,7 +187,7 @@ export async function resolveAssigneeEmail(
             ) {
               return {
                 email: ownerProfile.email,
-                name: ownerProfile.full_name || ownerProfile.display_name || ownerProfile.name || trimmed
+                name: ownerProfile.full_name || ownerProfile.display_name || ownerProfile.name || cleaned
               }
             }
           }
@@ -179,13 +203,13 @@ export async function resolveAssigneeEmail(
     const { data: profiles } = await supabase
       .from('profiles')
       .select('email, full_name, display_name, name')
-      .or(`full_name.ilike.%${trimmed}%,display_name.ilike.%${trimmed}%,name.ilike.%${trimmed}%`)
+      .or(`full_name.ilike.%${cleaned}%,display_name.ilike.%${cleaned}%,name.ilike.%${cleaned}%`)
       .limit(1)
 
     if (profiles && profiles.length > 0 && profiles[0].email) {
       return {
         email: profiles[0].email,
-        name: profiles[0].full_name || profiles[0].display_name || profiles[0].name || trimmed
+        name: profiles[0].full_name || profiles[0].display_name || profiles[0].name || cleaned
       }
     }
   } catch (_e) {
