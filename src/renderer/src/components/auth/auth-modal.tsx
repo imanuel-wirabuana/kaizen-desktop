@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase'
 import { Loader2, LogIn, UserPlus, KeyRound } from 'lucide-react'
 import { useAuthModalStore } from '@/stores/auth-modal'
 import { useJoinModalStore } from '@/stores/join-modal'
+import { useAuth } from '@/providers/auth-provider'
 
 type AuthModalProps = {
   open?: boolean
@@ -24,6 +25,7 @@ export function AuthModal(props: AuthModalProps = {}) {
   const storeDefaultTab = useAuthModalStore((s) => s.defaultTab)
   const closeStoreModal = useAuthModalStore((s) => s.closeModal)
   const pendingInviteCode = useJoinModalStore((s) => s.pendingInviteCode)
+  const { isSignedIn } = useAuth()
 
   const isControlled = props.open !== undefined
   const open = isControlled ? props.open! : storeIsOpen
@@ -43,6 +45,12 @@ export function AuthModal(props: AuthModalProps = {}) {
       setTab(defaultTab)
     }
   }, [open, defaultTab])
+
+  useEffect(() => {
+    if (isSignedIn && open) {
+      handleOpenChange(false)
+    }
+  }, [isSignedIn, open])
 
   const resetForm = () => {
     setEmail('')

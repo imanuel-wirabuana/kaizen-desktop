@@ -57,6 +57,10 @@ export function App() {
     // Do not pop auth/join modal on /success route
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/success')) return
 
+    if (isSignedIn) {
+      useAuthModalStore.getState().closeModal()
+    }
+
     const pendingCode = useJoinModalStore.getState().pendingInviteCode
 
     if (pendingCode) {

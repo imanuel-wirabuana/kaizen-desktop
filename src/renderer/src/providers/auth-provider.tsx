@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User as SupabaseUser, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { useNavigationStore } from '@/stores/navigation'
+import { useAuthModalStore } from '@/stores/auth-modal'
 
 export type AppUser = {
   id: string
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!session) {
         useNavigationStore.getState().navigate({ name: 'landing' })
       } else {
+        useAuthModalStore.getState().closeModal()
         const currentView = useNavigationStore.getState().currentView
         if (currentView.name === 'landing') {
           useNavigationStore.getState().navigate({ name: 'boards' })
@@ -103,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!error && data.session) {
             setSession(data.session)
             setUser(formatAppUser(data.session.user))
+            useAuthModalStore.getState().closeModal()
             useNavigationStore.getState().navigate({ name: 'boards' })
           }
         } else if (code) {
@@ -113,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!error && data.session) {
               setSession(data.session)
               setUser(formatAppUser(data.session.user))
+              useAuthModalStore.getState().closeModal()
               useNavigationStore.getState().navigate({ name: 'boards' })
             }
           }

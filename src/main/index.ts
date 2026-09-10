@@ -8,8 +8,10 @@ let mainWindow: BrowserWindow | null = null
 app.setName('kaizen33')
 
 // Register custom protocol for deep linking
-if (process.defaultApp || is.dev) {
-  app.setAsDefaultProtocolClient('kaizen', process.execPath, [resolve(process.cwd())])
+const isDev = !app.isPackaged || is.dev || Boolean(process.defaultApp)
+if (isDev) {
+  const appPath = resolve(__dirname, '../../')
+  app.setAsDefaultProtocolClient('kaizen', process.execPath, [appPath])
 } else {
   app.setAsDefaultProtocolClient('kaizen')
 }
@@ -34,7 +36,7 @@ if (!gotTheLock) {
 }
 
 function createWindow(): void {
-  const iconPath = resolve(process.cwd(), 'resources/icon.ico')
+  const iconPath = resolve(__dirname, '../../resources/icon.ico')
 
   // Create the browser window.
   mainWindow = new BrowserWindow({
