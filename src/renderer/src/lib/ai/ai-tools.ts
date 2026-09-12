@@ -18,8 +18,11 @@ export type BoardMutationAction =
       title: string
       icon?: string | null
       description?: string | null
+      status?: boolean | null
       priority?: number | null
+      start_date?: string | null
       due_date?: string | null
+      assignee?: string | null
       background?: string | null
       order?: number | null
     }
@@ -41,10 +44,13 @@ export type BoardMutationAction =
       title?: string
       icon?: string | null
       description?: string | null
+      status?: boolean | null
       target_lane_id?: number | null
       target_lane_title?: string
       priority?: number | null
+      start_date?: string | null
       due_date?: string | null
+      assignee?: string | null
       background?: string | null
       order?: number | 'top' | 'bottom' | null
     }
@@ -232,6 +238,22 @@ function resolveOrderValue(act: any): number | 'top' | 'bottom' | null | undefin
 }
 
 /**
+ * Resolves boolean status values (true / false), handling strings like 'done' or 'completed'.
+ */
+function resolveStatusValue(act: any): boolean | null | undefined {
+  const rawVal = act.status ?? act.completed ?? act.is_done
+  if (rawVal === undefined) return undefined
+  if (rawVal === null || rawVal === 'null') return null
+  if (typeof rawVal === 'boolean') return rawVal
+  if (typeof rawVal === 'string') {
+    const lower = rawVal.toLowerCase().trim()
+    if (['true', 'done', 'completed', 'finished', 'yes', '1'].includes(lower)) return true
+    if (['false', 'pending', 'incomplete', 'todo', 'open', 'no', '0'].includes(lower)) return false
+  }
+  return Boolean(rawVal)
+}
+
+/**
  * Resolves lane ID from explicit IDs or by title matching existing lanes.
  */
 function resolveLaneReference(act: any): { id: number; title?: string } | null {
@@ -304,6 +326,9 @@ function normalizeToMutationProposal(parsed: any): BoardMutationProposal | null 
 
         const parsedOrder = resolveOrderValue(act)
         const numericOrder = typeof parsedOrder === 'number' ? parsedOrder : parsedOrder === null ? null : undefined
+        const parsedStatus = resolveStatusValue(act)
+        const parsedStartDate = act.start_date ? String(act.start_date).trim() : undefined
+        const parsedAssignee = act.assignee ? String(act.assignee).trim() : undefined
         const { targetLaneId, targetLaneTitle } = resolveTargetLane(act)
 
         validActions.push({
@@ -314,9 +339,12 @@ function normalizeToMutationProposal(parsed: any): BoardMutationProposal | null 
           title: String(act.title || act.item).trim(),
           icon: act.icon ? String(act.icon).trim() : undefined,
           description: act.description ? String(act.description).trim() : undefined,
+          status: parsedStatus,
           priority: parsedPriority,
           order: numericOrder,
+          start_date: parsedStartDate,
           due_date: act.due_date ? String(act.due_date).trim() : undefined,
+          assignee: parsedAssignee,
           background: act.background ? String(act.background).trim() : undefined
         })
       } else if (type === 'update_lane') {
@@ -359,6 +387,20 @@ function normalizeToMutationProposal(parsed: any): BoardMutationProposal | null 
           }
 
           const parsedOrder = resolveOrderValue(act)
+          const parsedStatus = resolveStatusValue(act)
+          const parsedStartDate =
+            act.start_date !== undefined
+              ? act.start_date
+                ? String(act.start_date).trim()
+                : null
+              : undefined
+          const parsedAssignee =
+            act.assignee !== undefined
+              ? act.assignee
+                ? String(act.assignee).trim()
+                : null
+              : undefined
+
           const { targetLaneId, targetLaneTitle } = resolveTargetLane(act)
 
           const isExplicitMove =
@@ -377,12 +419,15 @@ function normalizeToMutationProposal(parsed: any): BoardMutationProposal | null 
                   ? String(act.description).trim()
                   : null
                 : undefined,
+            status: parsedStatus,
             target_lane_id: targetLaneId,
             target_lane_title: targetLaneTitle,
             priority: parsedPriority,
             order: parsedOrder,
+            start_date: parsedStartDate,
             due_date:
               act.due_date !== undefined ? (act.due_date ? String(act.due_date).trim() : null) : undefined,
+            assignee: parsedAssignee,
             background:
               act.background !== undefined
                 ? act.background
@@ -440,7 +485,10 @@ function normalizeToMutationProposal(parsed: any): BoardMutationProposal | null 
         const itemDesc = typeof i === 'object' && i?.description ? String(i.description).trim() : undefined
         const itemPriority =
           typeof i === 'object' && i && typeof i.priority === 'number' ? i.priority : undefined
+        const itemStatus = typeof i === 'object' && i ? resolveStatusValue(i) : undefined
+        const itemStartDate = typeof i === 'object' && i?.start_date ? String(i.start_date).trim() : undefined
         const itemDueDate = typeof i === 'object' && i?.due_date ? String(i.due_date).trim() : undefined
+        const itemAssignee = typeof i === 'object' && i?.assignee ? String(i.assignee).trim() : undefined
         const itemBg = typeof i === 'object' && i?.background ? String(i.background).trim() : undefined
 
         actions.push({
@@ -450,8 +498,11 @@ function normalizeToMutationProposal(parsed: any): BoardMutationProposal | null 
           title: String(itemTitle).trim(),
           icon: itemIcon,
           description: itemDesc,
+          status: itemStatus,
           priority: itemPriority,
+          start_date: itemStartDate,
           due_date: itemDueDate,
+          assignee: itemAssignee,
           background: itemBg
         })
       })

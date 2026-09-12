@@ -22,7 +22,8 @@ import {
   ListChecks,
   Filter,
   ArrowRight,
-  ArrowUpDown
+  ArrowUpDown,
+  Check
 } from 'lucide-react'
 import { PRIORITY_CONFIG } from '@/components/items'
 import { executeBoardMutations } from '@/lib/ai/board-mutations'
@@ -164,9 +165,18 @@ export function AiMutationPreviewModal({
       title = `Add Task: "${action.icon ? `${action.icon} ` : ''}${action.title}"`
       const detailsList: string[] = []
       if (action.lane_title) detailsList.push(`in column [${action.lane_title}]`)
+      if (action.assignee) detailsList.push(`assignee: ${action.assignee}`)
       if (action.priority !== undefined && action.priority !== null && action.priority > 0) {
         const pLabel = PRIORITY_CONFIG[action.priority as keyof typeof PRIORITY_CONFIG]?.label
         if (pLabel) detailsList.push(`priority: ${pLabel}`)
+      }
+      if (action.start_date) {
+        detailsList.push(
+          `start: ${new Date(action.start_date).toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric'
+          })}`
+        )
       }
       if (action.due_date) {
         detailsList.push(
@@ -176,6 +186,7 @@ export function AiMutationPreviewModal({
           })}`
         )
       }
+      if (action.status) detailsList.push('status: Completed')
       if (action.background) detailsList.push(`background: ${action.background}`)
       if (action.description) detailsList.push(action.description)
       if (detailsList.length > 0) details = detailsList.join(' · ')
@@ -230,12 +241,27 @@ export function AiMutationPreviewModal({
         !action.description &&
         !action.background &&
         !action.priority &&
+        action.status === undefined &&
+        !action.assignee &&
+        !action.start_date &&
         !action.due_date
 
       if (isReorderOnly) {
         badgeClass = 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
         icon = <ArrowUpDown className="size-3.5 text-indigo-500" />
         title = `Reorder Task: "${currentTitle}" → order: ${action.order}`
+      } else if (action.status === true) {
+        badgeClass = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+        icon = <Check className="size-3.5 text-emerald-500" />
+        title = `Complete Task: "${currentTitle}"`
+      } else if (action.status === false) {
+        badgeClass = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+        icon = <Pencil className="size-3.5 text-amber-500" />
+        title = `Reopen Task: "${currentTitle}"`
+      } else if (action.assignee && !action.title && !action.description) {
+        badgeClass = 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
+        icon = <Pencil className="size-3.5 text-sky-500" />
+        title = `Assign Task: "${currentTitle}" → ${action.assignee}`
       } else {
         badgeClass = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
         icon = <Pencil className="size-3.5 text-amber-500" />
@@ -250,9 +276,25 @@ export function AiMutationPreviewModal({
       if (action.order !== undefined && action.order !== null && !isReorderOnly) {
         detailsList.push(`order: ${action.order}`)
       }
+      if (action.assignee !== undefined) {
+        detailsList.push(action.assignee ? `assignee: ${action.assignee}` : 'assignee cleared')
+      }
+      if (action.status !== undefined) {
+        detailsList.push(action.status ? 'status: Completed' : 'status: In Progress')
+      }
       if (action.priority !== undefined && action.priority !== null) {
         const pLabel = PRIORITY_CONFIG[action.priority as keyof typeof PRIORITY_CONFIG]?.label || 'None'
         detailsList.push(`priority: ${pLabel}`)
+      }
+      if (action.start_date !== undefined) {
+        detailsList.push(
+          action.start_date
+            ? `start: ${new Date(action.start_date).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric'
+              })}`
+            : 'start date cleared'
+        )
       }
       if (action.due_date !== undefined) {
         detailsList.push(

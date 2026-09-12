@@ -9,6 +9,7 @@ import {
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
 import { broadcastSyncEvent } from '@/lib/realtime'
+import { sendTicketAssignmentEmail } from '@/services/email'
 import type { BoardMutationAction } from './ai-tools'
 
 export interface MutationExecutionResult {
@@ -185,8 +186,11 @@ export async function executeBoardMutations(
           title: act.title,
           icon: act.icon ?? null,
           description: act.description ?? null,
+          status: act.status !== undefined && act.status !== null ? act.status : false,
           priority: act.priority ?? 0,
+          start_date: act.start_date ?? null,
           due_date: act.due_date ?? null,
+          assignee: act.assignee ?? null,
           background: act.background ?? null,
           order: calculatedOrder
         }
@@ -194,6 +198,17 @@ export async function executeBoardMutations(
 
       const createdItems = await createItemsBulk(itemPayloads)
       appliedCount += createdItems.length
+
+      // Trigger assignment notification emails for newly assigned tasks
+      createdItems.forEach((ci) => {
+        if (ci.assignee) {
+          sendTicketAssignmentEmail({
+            item: ci,
+            boardId: targetBoardId,
+            assigneeName: ci.assignee
+          }).catch((err) => console.warn('[AI Mutation] Failed to send assignment email:', err))
+        }
+      })
     } catch (err: any) {
       errors.push(`Error bulk creating tasks: ${err?.message || 'Unknown error'}`)
     }
@@ -211,8 +226,11 @@ export async function executeBoardMutations(
       if ('title' in act && act.title !== undefined) data.title = act.title
       if ('icon' in act && act.icon !== undefined) data.icon = act.icon
       if ('description' in act && act.description !== undefined) data.description = act.description
+      if ('status' in act && act.status !== undefined && act.status !== null) data.status = act.status
       if ('priority' in act && act.priority !== undefined) data.priority = act.priority
+      if ('start_date' in act && act.start_date !== undefined) data.start_date = act.start_date
       if ('due_date' in act && act.due_date !== undefined) data.due_date = act.due_date
+      if ('assignee' in act && act.assignee !== undefined) data.assignee = act.assignee
       if ('background' in act && act.background !== undefined) data.background = act.background
 
       // Resolve destination lane ID
@@ -271,6 +289,21 @@ export async function executeBoardMutations(
     if (updatedSuccessCount < updateItemActions.length) {
       errors.push(`Some task updates failed (${updateItemActions.length - updatedSuccessCount})`)
     }
+
+    // Trigger assignment notification emails for updated tasks with new assignee
+    updateItemActions.forEach((act) => {
+      if ('assignee' in act && act.assignee) {
+        const currentTask = allBoardItems.find((i) => i.id === act.item_id)
+        if (!currentTask || currentTask.assignee !== act.assignee) {
+          const updateObj = updatesList.find((u) => u.id === act.item_id)
+          sendTicketAssignmentEmail({
+            item: { ...(currentTask || {}), ...(updateObj?.data || {}), id: act.item_id },
+            boardId: targetBoardId,
+            assigneeName: act.assignee
+          }).catch((err) => console.warn('[AI Mutation] Failed to send assignment email:', err))
+        }
+      }
+    })
   }
 
   // -------------------------------------------------------------

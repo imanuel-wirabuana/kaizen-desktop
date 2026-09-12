@@ -92,6 +92,9 @@ export function AiProposalCard({ proposal, applied, onReview }: AiProposalCardPr
               !act.description &&
               !act.background &&
               !act.priority &&
+              !act.status &&
+              !act.assignee &&
+              !act.start_date &&
               !act.due_date
 
             if (act.type === 'add_lane') {
@@ -118,10 +121,21 @@ export function AiProposalCard({ proposal, applied, onReview }: AiProposalCardPr
               const taskTitle = act.title || act.old_title || existingItem?.title || 'Untitled Task'
               label = `↕ Reorder "${taskTitle}"`
             } else if (act.type === 'update_item') {
-              icon = <Pencil className="size-3 text-amber-500" />
               const existingItem = allItems.find((i) => i.id === act.item_id)
               const taskTitle = act.title || act.old_title || existingItem?.title || 'Untitled Task'
-              label = `~ Task "${taskTitle}"`
+              if (act.status === true) {
+                icon = <Check className="size-3 text-emerald-500" />
+                label = `✓ Complete "${taskTitle}"`
+              } else if (act.status === false) {
+                icon = <Pencil className="size-3 text-amber-500" />
+                label = `○ Reopen "${taskTitle}"`
+              } else if (act.assignee && !act.title && !act.description) {
+                icon = <Pencil className="size-3 text-sky-500" />
+                label = `👤 Assign "${taskTitle}" to ${act.assignee}`
+              } else {
+                icon = <Pencil className="size-3 text-amber-500" />
+                label = `~ Task "${taskTitle}"`
+              }
             } else if (act.type === 'delete_item') {
               icon = <Trash2 className="size-3 text-rose-500" />
               const existingItem = allItems.find((i) => i.id === act.item_id)

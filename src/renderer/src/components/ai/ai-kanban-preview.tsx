@@ -31,9 +31,12 @@ export interface PreviewCardItem {
   lane_id?: number | string | null
   title: string
   description?: string | null
+  status?: boolean | null
   priority?: number | null
   icon?: string | null
+  start_date?: string | null
   due_date?: string | null
+  assignee?: string | null
   background?: string | null
   order?: number | null
   diffStatus: PreviewDiffStatus
@@ -277,8 +280,11 @@ export function AiKanbanPreviewBoard({
       let title = item.title || 'Untitled Task'
       let icon = item.icon
       let description = item.description
+      let status: boolean | null | undefined = item.status
       let priority: number | null | undefined = item.priority ?? 0
+      let start_date = item.start_date
       let due_date = item.due_date
+      let assignee = item.assignee
       let background = item.background
       let order: number | null | undefined = item.order
       let laneId: number | string | null = item.lane_id ?? null
@@ -301,8 +307,11 @@ export function AiKanbanPreviewBoard({
           if ('icon' in updAct && updAct.icon !== undefined) icon = updAct.icon
           if ('description' in updAct && updAct.description !== undefined)
             description = updAct.description
+          if ('status' in updAct && updAct.status !== undefined) status = updAct.status
           if ('priority' in updAct && updAct.priority !== undefined) priority = updAct.priority
+          if ('start_date' in updAct && updAct.start_date !== undefined) start_date = updAct.start_date
           if ('due_date' in updAct && updAct.due_date !== undefined) due_date = updAct.due_date
+          if ('assignee' in updAct && updAct.assignee !== undefined) assignee = updAct.assignee
           if ('background' in updAct && updAct.background !== undefined)
             background = updAct.background
 
@@ -342,8 +351,11 @@ export function AiKanbanPreviewBoard({
         title,
         icon,
         description,
+        status,
         priority,
+        start_date,
         due_date,
+        assignee,
         background,
         order,
         diffStatus,
@@ -387,8 +399,11 @@ export function AiKanbanPreviewBoard({
         title: act.title,
         icon: act.icon ?? null,
         description: act.description ?? null,
+        status: act.status ?? false,
         priority: act.priority ?? 0,
+        start_date: act.start_date ?? null,
         due_date: act.due_date ?? null,
+        assignee: act.assignee ?? null,
         background: act.background ?? null,
         order: act.order !== undefined && act.order !== null ? act.order : 9999,
         diffStatus: 'added',
@@ -826,18 +841,26 @@ export function AiKanbanPreviewCard({
           )}
         </div>
 
-        {/* Priority Badge */}
-        {(item.priority ?? 0) > 0 && (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-semibold border shrink-0',
-              priorityInfo.badge
-            )}
-          >
-            <span className={cn('size-1.5 rounded-full', priorityInfo.dot)} />
-            {priorityInfo.label}
-          </span>
-        )}
+        {/* Priority & Status Badges */}
+        <div className="flex items-center gap-1 shrink-0">
+          {item.status && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <Check className="size-2.5" /> Done
+            </span>
+          )}
+
+          {(item.priority ?? 0) > 0 && (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-semibold border shrink-0',
+                priorityInfo.badge
+              )}
+            >
+              <span className={cn('size-1.5 rounded-full', priorityInfo.dot)} />
+              {priorityInfo.label}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Task Title & Icon */}
@@ -848,7 +871,9 @@ export function AiKanbanPreviewCard({
             'font-semibold text-xs leading-snug break-words flex-1',
             item.diffStatus === 'deleted' && item.isSelected
               ? 'line-through text-rose-600 dark:text-rose-400'
-              : 'text-foreground'
+              : item.status
+                ? 'line-through text-muted-foreground/70'
+                : 'text-foreground'
           )}
         >
           {item.title}
@@ -862,16 +887,39 @@ export function AiKanbanPreviewCard({
         </p>
       )}
 
-      {/* Due Date if present */}
-      {item.due_date && (
-        <div className="pt-0.5">
-          <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-medium border bg-muted/60 text-muted-foreground border-border">
-            <Calendar className="size-2.5" />
-            {new Date(item.due_date).toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric'
-            })}
-          </span>
+      {/* Metadata Badges: Assignee, Start Date, Due Date */}
+      {(item.assignee || item.start_date || item.due_date) && (
+        <div className="flex items-center gap-1 flex-wrap pt-0.5">
+          {item.assignee && (
+            <span className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.2 text-[9px] font-medium border bg-primary/10 text-primary border-primary/20 max-w-[120px] truncate">
+              👤 {item.assignee}
+            </span>
+          )}
+          {item.start_date && (
+            <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.2 text-[9px] font-medium border bg-muted/60 text-muted-foreground border-border">
+              <Calendar className="size-2.5" />
+              {new Date(item.start_date).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric'
+              })}
+            </span>
+          )}
+          {item.due_date && (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md px-1.5 py-0.2 text-[9px] font-medium border',
+                item.due_date < new Date().toISOString().split('T')[0] && !item.status
+                  ? 'bg-destructive/10 text-destructive border-destructive/20 font-semibold'
+                  : 'bg-muted/60 text-muted-foreground border-border'
+              )}
+            >
+              <Calendar className="size-2.5" />
+              {new Date(item.due_date).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric'
+              })}
+            </span>
+          )}
         </div>
       )}
       </div>

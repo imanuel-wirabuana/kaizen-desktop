@@ -28,6 +28,7 @@ import {
   QUICK_SUGGESTIONS_VIEW,
   type BoardPermissionRole
 } from '@/lib/ai/ai-prompts'
+import { useBoardMembersQuery } from '@/queries/members'
 import { useBoardAiStore, BoardAiMessage } from '@/stores/board-ai'
 import { AiProposalCard } from './ai-proposal-card'
 import { AiMarkdown } from './ai-markdown'
@@ -37,13 +38,23 @@ interface BoardAiSidebarProps {
   lanes: Lane[]
   items: KanbanItem[]
   permissionRole?: BoardPermissionRole
+  members?: BoardMember[]
 }
 
 const EMPTY_MESSAGES: BoardAiMessage[] = []
 
-export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiSidebarProps) {
+export function BoardAiSidebar({
+  board,
+  lanes,
+  items,
+  permissionRole,
+  members: propMembers
+}: BoardAiSidebarProps) {
   const isReadOnly = permissionRole === 'view'
   const activeSuggestions = isReadOnly ? QUICK_SUGGESTIONS_VIEW : QUICK_SUGGESTIONS_EDIT
+
+  const { data: queryMembers } = useBoardMembersQuery(board?.id ?? '')
+  const boardMembers = propMembers || queryMembers || []
 
   const isOpen = useBoardAiStore((s) => s.isOpen)
   const isFullScreen = useBoardAiStore((s) => s.isFullScreen)
@@ -177,7 +188,7 @@ export function BoardAiSidebar({ board, lanes, items, permissionRole }: BoardAiS
       }))
 
       const fullContent = await streamKaizenChat({
-        system: buildSystemPrompt(board, lanes, items, permissionRole),
+        system: buildSystemPrompt(board, lanes, items, permissionRole, boardMembers),
         messages: chatHistory,
         signal: controller.signal,
         onDelta: (_delta, accumulated) => {
