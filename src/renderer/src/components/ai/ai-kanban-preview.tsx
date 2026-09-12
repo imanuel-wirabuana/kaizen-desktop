@@ -30,13 +30,10 @@ export interface PreviewCardItem {
   board_id: number
   lane_id?: number | string | null
   title: string
-  icon?: string | null
   description?: string | null
   priority?: number | null
-  status?: boolean | null
-  start_date?: string | null
+  icon?: string | null
   due_date?: string | null
-  assignee?: string | null
   background?: string | null
   order?: number | null
   diffStatus: PreviewDiffStatus
@@ -150,7 +147,6 @@ export function AiKanbanPreviewBoard({
       let icon = l.icon ?? null
       let description = l.description ?? null
       let background = l.background ?? null
-      let order = l.order
       let oldTitle: string | undefined = undefined
       let actionId: string | undefined = undefined
       let isSelected = false
@@ -171,7 +167,6 @@ export function AiKanbanPreviewBoard({
           if (updateAct.icon !== undefined) icon = updateAct.icon
           if (updateAct.description !== undefined) description = updateAct.description
           if (updateAct.background !== undefined) background = updateAct.background
-          if (updateAct.order !== undefined && updateAct.order !== null) order = updateAct.order
         }
       }
 
@@ -181,7 +176,7 @@ export function AiKanbanPreviewBoard({
         title,
         icon,
         description,
-        order,
+        order: l.order,
         background,
         diffStatus,
         actionId,
@@ -201,16 +196,13 @@ export function AiKanbanPreviewBoard({
         icon: act.icon ?? null,
         description: act.description ?? null,
         background: act.background ?? null,
-        order: act.order !== undefined && act.order !== null ? act.order : 9999,
+        order: 9999,
         diffStatus: 'added',
         actionId: act.id,
         isSelected,
         items: []
       })
     }
-
-    // Sort simulated lanes by order
-    resultLanes.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
     // Lookup helpers for destination lanes
     const laneById = new Map<string, PreviewLaneItem>()
@@ -286,10 +278,7 @@ export function AiKanbanPreviewBoard({
       let icon = item.icon
       let description = item.description
       let priority: number | null | undefined = item.priority ?? 0
-      let status = item.status
-      let start_date = item.start_date
       let due_date = item.due_date
-      let assignee = item.assignee
       let background = item.background
       let order: number | null | undefined = item.order
       let laneId: number | string | null = item.lane_id ?? null
@@ -313,10 +302,7 @@ export function AiKanbanPreviewBoard({
           if ('description' in updAct && updAct.description !== undefined)
             description = updAct.description
           if ('priority' in updAct && updAct.priority !== undefined) priority = updAct.priority
-          if ('status' in updAct && updAct.status !== undefined) status = updAct.status
-          if ('start_date' in updAct && updAct.start_date !== undefined) start_date = updAct.start_date
           if ('due_date' in updAct && updAct.due_date !== undefined) due_date = updAct.due_date
-          if ('assignee' in updAct && updAct.assignee !== undefined) assignee = updAct.assignee
           if ('background' in updAct && updAct.background !== undefined)
             background = updAct.background
 
@@ -357,10 +343,7 @@ export function AiKanbanPreviewBoard({
         icon,
         description,
         priority,
-        status,
-        start_date,
         due_date,
-        assignee,
         background,
         order,
         diffStatus,
@@ -405,10 +388,7 @@ export function AiKanbanPreviewBoard({
         icon: act.icon ?? null,
         description: act.description ?? null,
         priority: act.priority ?? 0,
-        status: act.status ?? false,
-        start_date: act.start_date ?? null,
         due_date: act.due_date ?? null,
-        assignee: act.assignee ?? null,
         background: act.background ?? null,
         order: act.order !== undefined && act.order !== null ? act.order : 9999,
         diffStatus: 'added',
@@ -437,12 +417,7 @@ export function AiKanbanPreviewBoard({
     return resultLanes
   }, [boardId, currentLanes, currentItems, actions, selectedIds])
 
-  const boardUpdateAct = actions.find((a) => a.type === 'update_board')
-  const effectiveBoardBg =
-    boardUpdateAct && selectedIds.has(boardUpdateAct.id) && boardUpdateAct.background !== undefined
-      ? boardUpdateAct.background
-      : board?.background
-  const bgProps = getBoardBackgroundStyleAndClass(effectiveBoardBg)
+  const bgProps = getBoardBackgroundStyleAndClass(board?.background)
 
   // Total stats for header pills
   const stats = useMemo(() => {
@@ -887,37 +862,16 @@ export function AiKanbanPreviewCard({
         </p>
       )}
 
-      {/* Meta row: status, dates, assignee if present */}
-      {(item.status || item.start_date || item.due_date || item.assignee) && (
-        <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
-          {item.status && (
-            <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.2 text-[9px] font-semibold border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-              ✓ Completed
-            </span>
-          )}
-          {item.start_date && (
-            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-medium border bg-muted/60 text-muted-foreground border-border">
-              <Calendar className="size-2.5" />
-              start: {new Date(item.start_date).toLocaleDateString(undefined, {
-                month: 'short',
-                day: 'numeric'
-              })}
-            </span>
-          )}
-          {item.due_date && (
-            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-medium border bg-muted/60 text-muted-foreground border-border">
-              <Calendar className="size-2.5" />
-              due: {new Date(item.due_date).toLocaleDateString(undefined, {
-                month: 'short',
-                day: 'numeric'
-              })}
-            </span>
-          )}
-          {item.assignee && (
-            <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.2 text-[9px] font-medium border bg-secondary/80 text-secondary-foreground border-border/60">
-              @{item.assignee}
-            </span>
-          )}
+      {/* Due Date if present */}
+      {item.due_date && (
+        <div className="pt-0.5">
+          <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-medium border bg-muted/60 text-muted-foreground border-border">
+            <Calendar className="size-2.5" />
+            {new Date(item.due_date).toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric'
+            })}
+          </span>
         </div>
       )}
       </div>

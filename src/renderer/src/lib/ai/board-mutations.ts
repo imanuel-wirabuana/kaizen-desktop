@@ -6,11 +6,9 @@ import {
   deleteItemsByLaneIds,
   updateItemsBulk
 } from '@/services/bulk-items'
-import { useBoardsStore } from '@/stores/boards'
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
 import { broadcastSyncEvent } from '@/lib/realtime'
-import { sendTicketAssignmentEmail } from '@/services/email'
 import type { BoardMutationAction } from './ai-tools'
 
 export interface MutationExecutionResult {
@@ -33,28 +31,6 @@ export async function executeBoardMutations(
 
   if (actions.length === 0) {
     return { success: true, appliedCount: 0, errors: [] }
-  }
-
-  // -------------------------------------------------------------
-  // PHASE 0: Update Board Properties
-  // -------------------------------------------------------------
-  const updateBoardActions = actions.filter((a) => a.type === 'update_board')
-  if (updateBoardActions.length > 0) {
-    const boardUpdates: Partial<Board> = {}
-    for (const act of updateBoardActions) {
-      if (act.title !== undefined) boardUpdates.title = act.title
-      if (act.icon !== undefined) boardUpdates.icon = act.icon
-      if (act.description !== undefined) boardUpdates.description = act.description
-      if (act.background !== undefined) boardUpdates.background = act.background
-    }
-    if (Object.keys(boardUpdates).length > 0) {
-      try {
-        await useBoardsStore.getState().updateBoard(targetBoardId, boardUpdates)
-        appliedCount += updateBoardActions.length
-      } catch (err: any) {
-        errors.push(`Error updating board properties: ${err?.message || 'Unknown error'}`)
-      }
-    }
   }
 
   // Fetch current lanes once to resolve existing titles & orders
@@ -110,7 +86,7 @@ export async function executeBoardMutations(
         icon: act.icon ?? null,
         description: act.description ?? null,
         background: act.background ?? null,
-        order: act.order !== undefined && act.order !== null ? act.order : maxLaneOrder + idx * 100
+        order: maxLaneOrder + idx * 100
       }))
 
       const createdLanes = await createLanesBulk(lanePayloads)
@@ -138,7 +114,6 @@ export async function executeBoardMutations(
       if (act.icon !== undefined) updateData.icon = act.icon
       if (act.description !== undefined) updateData.description = act.description
       if (act.background !== undefined) updateData.background = act.background
-      if (act.order !== undefined && act.order !== null) updateData.order = act.order
 
       const res = await updateLane(act.lane_id, updateData)
       if (res) {
@@ -211,10 +186,7 @@ export async function executeBoardMutations(
           icon: act.icon ?? null,
           description: act.description ?? null,
           priority: act.priority ?? 0,
-          status: act.status ?? false,
-          start_date: act.start_date ?? null,
           due_date: act.due_date ?? null,
-          assignee: act.assignee ?? null,
           background: act.background ?? null,
           order: calculatedOrder
         }
@@ -222,19 +194,6 @@ export async function executeBoardMutations(
 
       const createdItems = await createItemsBulk(itemPayloads)
       appliedCount += createdItems.length
-
-      // Auto email notification for newly created tasks with an assignee
-      for (const createdItem of createdItems) {
-        if (createdItem.assignee && createdItem.assignee.trim()) {
-          sendTicketAssignmentEmail({
-            item: createdItem,
-            boardId: targetBoardId,
-            assigneeName: createdItem.assignee.trim()
-          }).catch((err) =>
-            console.error('[executeBoardMutations] Failed to send assignment email for created item:', err)
-          )
-        }
-      }
     } catch (err: any) {
       errors.push(`Error bulk creating tasks: ${err?.message || 'Unknown error'}`)
     }
@@ -253,10 +212,7 @@ export async function executeBoardMutations(
       if ('icon' in act && act.icon !== undefined) data.icon = act.icon
       if ('description' in act && act.description !== undefined) data.description = act.description
       if ('priority' in act && act.priority !== undefined) data.priority = act.priority
-      if ('status' in act && act.status !== undefined) data.status = act.status
-      if ('start_date' in act && act.start_date !== undefined) data.start_date = act.start_date
       if ('due_date' in act && act.due_date !== undefined) data.due_date = act.due_date
-      if ('assignee' in act && act.assignee !== undefined) data.assignee = act.assignee
       if ('background' in act && act.background !== undefined) data.background = act.background
 
       // Resolve destination lane ID
@@ -310,46 +266,10 @@ export async function executeBoardMutations(
       }
     })
 
-    // Track items that are receiving a new or modified assignee
-    const assignedUpdatesToNotify: { item: Partial<KanbanItem>; assigneeName: string }[] = []
-    for (const act of updateItemActions) {
-      if ('assignee' in act && act.assignee !== undefined && act.assignee !== null) {
-        const newAssignee = act.assignee.trim()
-        const currentTask = allBoardItems.find((i) => i.id === act.item_id)
-        const prevAssignee = currentTask?.assignee?.trim() || ''
-
-        // Only notify if newAssignee is non-empty and changed from previous assignee
-        if (newAssignee && newAssignee.toLowerCase() !== prevAssignee.toLowerCase()) {
-          const updateEntry = updatesList.find((u) => u.id === act.item_id)
-          const mergedItem: Partial<KanbanItem> = {
-            ...(currentTask || {}),
-            ...(updateEntry?.data || {}),
-            id: act.item_id,
-            board_id: targetBoardId,
-            assignee: newAssignee
-          }
-          assignedUpdatesToNotify.push({ item: mergedItem, assigneeName: newAssignee })
-        }
-      }
-    }
-
     const updatedSuccessCount = await updateItemsBulk(updatesList)
     appliedCount += updatedSuccessCount
     if (updatedSuccessCount < updateItemActions.length) {
       errors.push(`Some task updates failed (${updateItemActions.length - updatedSuccessCount})`)
-    }
-
-    // Auto email notification for successfully updated tasks with new or modified assignee
-    if (updatedSuccessCount > 0 && assignedUpdatesToNotify.length > 0) {
-      for (const notify of assignedUpdatesToNotify) {
-        sendTicketAssignmentEmail({
-          item: notify.item,
-          boardId: targetBoardId,
-          assigneeName: notify.assigneeName
-        }).catch((err) =>
-          console.error('[executeBoardMutations] Failed to send assignment email for updated item:', err)
-        )
-      }
     }
   }
 
@@ -392,9 +312,6 @@ export async function executeBoardMutations(
     useLanesStore.getState().refreshLanes(boardIdStr),
     useItemsStore.getState().refreshItems(boardIdStr)
   ])
-  if (updateBoardActions.length > 0) {
-    broadcastSyncEvent('boards')
-  }
   broadcastSyncEvent('lanes')
   broadcastSyncEvent('items')
 
