@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly VITE_AI_MODEL_NAME?: string
   readonly VITE_APP_URL?: string
   readonly VITE_CLERK_PUBLISHABLE_KEY?: string
+  readonly VITE_RESEND_API_KEY?: string
+  readonly VITE_RESEND_FROM_EMAIL?: string
 }
 
 interface ImportMeta {

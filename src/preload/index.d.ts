@@ -1,12 +1,13 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
 export type SendEmailPayload = {
-  to: string
+  to: string | string[]
   subject: string
   html: string
   text?: string
   from?: string
   replyTo?: string
+  apiKey?: string
 }
 
 export type SendEmailResult = {

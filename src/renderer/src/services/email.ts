@@ -17,16 +17,16 @@ export interface TicketAssignmentEmailParams {
 }
 
 const resendApiKey =
-  (import.meta as any).env?.VITE_RESEND_API_KEY ||
-  (typeof process !== 'undefined' ? process.env?.RESEND_API_KEY : '') ||
+  import.meta.env.VITE_RESEND_API_KEY ||
+  (typeof process !== 'undefined' ? process.env?.RESEND_API_KEY || process.env?.VITE_RESEND_API_KEY : '') ||
   ''
 
 export const defaultSenderEmail =
-  (import.meta as any).env?.VITE_RESEND_FROM_EMAIL ||
-  (typeof process !== 'undefined' ? process.env?.RESEND_FROM_EMAIL : '') ||
+  import.meta.env.VITE_RESEND_FROM_EMAIL ||
+  (typeof process !== 'undefined' ? process.env?.RESEND_FROM_EMAIL || process.env?.VITE_RESEND_FROM_EMAIL : '') ||
   'kaizen@kaizen33.space'
 
-export const resend = new Resend(resendApiKey)
+export const resend: Resend | null = resendApiKey ? new Resend(resendApiKey) : null
 
 /**
  * Resolves the email address and display name for an assignee string.
@@ -557,7 +557,8 @@ Replies are directed to wirabuana.imanuel@gmail.com
         to: resolved.email,
         subject,
         html,
-        text
+        text,
+        apiKey: resendApiKey || undefined
       })
 
       if (ipcRes.success) {
@@ -573,8 +574,14 @@ Replies are directed to wirabuana.imanuel@gmail.com
   }
 
   // 2. Direct Resend SDK call (for web or if IPC not available)
+  const client = resend || (resendApiKey ? new Resend(resendApiKey) : null)
+  if (!client) {
+    console.warn('[Kaizen Email] No Resend API key available for client-side sending.')
+    return false
+  }
+
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await client.emails.send({
       from: defaultSenderEmail,
       replyTo: 'wirabuana.imanuel@gmail.com',
       to: [resolved.email],

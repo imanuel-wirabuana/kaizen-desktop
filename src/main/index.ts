@@ -3,12 +3,31 @@ import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { Resend } from 'resend'
 
-const getResendClient = () => {
+// Safely load local .env if available (Node 20+)
+try {
+  if (typeof (process as any).loadEnvFile === 'function') {
+    ;(process as any).loadEnvFile()
+  }
+} catch {
+  // .env may not exist in production build or already loaded
+}
+
+const getResendClient = (fallbackKey?: string) => {
   const apiKey =
+    fallbackKey ||
     process.env.RESEND_API_KEY ||
     process.env.VITE_RESEND_API_KEY ||
+    (import.meta as any).env?.VITE_RESEND_API_KEY ||
+    (import.meta as any).env?.MAIN_VITE_RESEND_API_KEY ||
     ''
-  return new Resend(apiKey)
+
+  if (!apiKey || !apiKey.trim()) {
+    throw new Error(
+      'Resend API key is missing. Please set RESEND_API_KEY or VITE_RESEND_API_KEY in your environment or .env file.'
+    )
+  }
+
+  return new Resend(apiKey.trim())
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -106,18 +125,21 @@ ipcMain.handle(
   async (
     _event,
     payload: {
-      to: string
+      to: string | string[]
       subject: string
       html: string
       text?: string
       from?: string
       replyTo?: string
+      apiKey?: string
     }
   ) => {
     try {
       const fromEmail =
         payload.from ||
         process.env.RESEND_FROM_EMAIL ||
+        process.env.VITE_RESEND_FROM_EMAIL ||
+        (import.meta as any).env?.VITE_RESEND_FROM_EMAIL ||
         'kaizen@kaizen33.space'
 
       console.log('[Resend Main] Dispatching email:', {
@@ -126,7 +148,7 @@ ipcMain.handle(
         subject: payload.subject
       })
 
-      const resend = getResendClient()
+      const resend = getResendClient(payload.apiKey)
       const { data, error } = await resend.emails.send({
         from: fromEmail,
         replyTo: payload.replyTo || 'wirabuana.imanuel@gmail.com',

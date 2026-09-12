@@ -15,12 +15,13 @@ const api = {
     electronAPI.ipcRenderer.send('open-external-url', url)
   },
   sendEmail: (payload: {
-    to: string
+    to: string | string[]
     subject: string
     html: string
     text?: string
     from?: string
     replyTo?: string
+    apiKey?: string
   }) => {
     return electronAPI.ipcRenderer.invoke('send-email', payload)
   }
