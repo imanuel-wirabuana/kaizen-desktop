@@ -41,6 +41,11 @@ type ItemsState = {
   bulkSetStatus: (itemIds: (number | string)[], status: boolean) => Promise<void>
   bulkSetAssignee: (itemIds: (number | string)[], assignee: string | null) => Promise<void>
   bulkSetBackground: (itemIds: (number | string)[], background: string | null) => Promise<void>
+  bulkSetDueDate: (itemIds: (number | string)[], dueDate: string | null) => Promise<void>
+  bulkSetDateRange: (
+    itemIds: (number | string)[],
+    range: { startDate: string | null; dueDate: string | null }
+  ) => Promise<void>
   bulkRemoveItems: (itemIds: (number | string)[]) => Promise<boolean>
 }
 
@@ -620,6 +625,72 @@ export const useItemsStore = create<ItemsState>()(
           boardId: currentBoardId,
           entityId: id,
           payload: { background: background || null }
+        })
+      }
+
+      useBoardsStore.getState().touchBoardActivity(currentBoardId)
+    },
+
+    // ── Bulk Set Due Date ───────────────────────────────────
+    bulkSetDueDate: async (itemIds, dueDate) => {
+      const currentBoardId = get().boardId
+      if (!currentBoardId) return
+      const idSet = new Set(itemIds.map(String))
+
+      const updatedItems = get().items.map((i) =>
+        idSet.has(String(i.id))
+          ? { ...i, due_date: dueDate || null, updated_at: new Date().toISOString() }
+          : i
+      )
+
+      await repo.putLocalItems(updatedItems.filter((i) => idSet.has(String(i.id))))
+      set({ items: updatedItems })
+      broadcastSyncEvent('items')
+
+      for (const id of itemIds) {
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'update',
+          boardId: currentBoardId,
+          entityId: id,
+          payload: { due_date: dueDate || null }
+        })
+      }
+
+      useBoardsStore.getState().touchBoardActivity(currentBoardId)
+    },
+
+    // ── Bulk Set Date Range (Start Date - Due Date) ─────────
+    bulkSetDateRange: async (itemIds, { startDate, dueDate }) => {
+      const currentBoardId = get().boardId
+      if (!currentBoardId) return
+      const idSet = new Set(itemIds.map(String))
+
+      const updatedItems = get().items.map((i) =>
+        idSet.has(String(i.id))
+          ? {
+              ...i,
+              start_date: startDate || null,
+              due_date: dueDate || null,
+              updated_at: new Date().toISOString()
+            }
+          : i
+      )
+
+      await repo.putLocalItems(updatedItems.filter((i) => idSet.has(String(i.id))))
+      set({ items: updatedItems })
+      broadcastSyncEvent('items')
+
+      for (const id of itemIds) {
+        await enqueueMutation({
+          entityType: 'items',
+          action: 'update',
+          boardId: currentBoardId,
+          entityId: id,
+          payload: {
+            start_date: startDate || null,
+            due_date: dueDate || null
+          }
         })
       }
 

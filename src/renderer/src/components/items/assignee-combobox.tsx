@@ -24,6 +24,8 @@ export type AssigneeComboboxProps = {
   placeholder?: string
   className?: string
   disabled?: boolean
+  side?: 'top' | 'bottom' | 'left' | 'right'
+  align?: 'start' | 'center' | 'end'
 }
 
 export type MemberListItem = {
@@ -41,7 +43,9 @@ export function AssigneeCombobox({
   boardId,
   placeholder = 'Assignee (optional)...',
   className,
-  disabled = false
+  disabled = false,
+  side = 'bottom',
+  align = 'start'
 }: AssigneeComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
@@ -212,9 +216,9 @@ export function AssigneeCombobox({
         }
       />
       <PopoverContent
-        align="start"
-        side="bottom"
-        className="w-[230px] p-0 shadow-2xl rounded-xl border border-border/80 overflow-hidden text-xs"
+        align={align}
+        side={side}
+        className="w-[230px] p-0 shadow-2xl rounded-xl border border-border/80 overflow-hidden text-xs mb-1"
       >
         <Command>
           <CommandInput

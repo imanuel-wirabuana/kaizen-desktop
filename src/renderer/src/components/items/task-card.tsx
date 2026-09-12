@@ -170,8 +170,11 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const selectedIds = useItemSelectionStore((s) => s.selectedIds)
   const isSelected = isSelectionMode && selectedIds.includes(String(item.id))
   const isDraggingSelection = useItemSelectionStore((s) => s.isDraggingSelection)
+  const lastSelectedId = useItemSelectionStore((s) => s.lastSelectedId)
   const enterSelectionMode = useItemSelectionStore((s) => s.enterSelectionMode)
   const toggleItem = useItemSelectionStore((s) => s.toggleItem)
+  const selectRange = useItemSelectionStore((s) => s.selectRange)
+  const setLastSelectedId = useItemSelectionStore((s) => s.setLastSelectedId)
 
   const { ref, handleRef, isDragSource } = useSortable({
     id: item.id,
@@ -198,14 +201,57 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
     prevBeingDraggedRef.current = isBeingDragged
   }, [isBeingDragged])
 
+  const handleRangeOrToggleSelect = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!isSelectionMode) {
+      enterSelectionMode(item.board_id, item.id)
+      return
+    }
+
+    if (e.shiftKey && lastSelectedId && lastSelectedId !== String(item.id)) {
+      const allCurrentItems = useItemsStore.getState().items
+      const boardItems = allCurrentItems.filter((i) => String(i.board_id) === String(item.board_id))
+
+      // 1. Prioritize range selection within the same column / lane
+      const sameLaneItems = boardItems
+        .filter((i) => (item.lane_id === null ? i.lane_id === null : i.lane_id === item.lane_id))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+      const idxA = sameLaneItems.findIndex((i) => String(i.id) === lastSelectedId)
+      const idxB = sameLaneItems.findIndex((i) => String(i.id) === String(item.id))
+
+      if (idxA !== -1 && idxB !== -1) {
+        const start = Math.min(idxA, idxB)
+        const end = Math.max(idxA, idxB)
+        const rangeSlice = sameLaneItems.slice(start, end + 1).map((i) => i.id)
+        selectRange(rangeSlice)
+        setLastSelectedId(String(item.id))
+        return
+      }
+
+      // 2. Fallback: Range selection across board items
+      const globalIdxA = boardItems.findIndex((i) => String(i.id) === lastSelectedId)
+      const globalIdxB = boardItems.findIndex((i) => String(i.id) === String(item.id))
+      if (globalIdxA !== -1 && globalIdxB !== -1) {
+        const start = Math.min(globalIdxA, globalIdxB)
+        const end = Math.max(globalIdxA, globalIdxB)
+        const rangeSlice = boardItems.slice(start, end + 1).map((i) => i.id)
+        selectRange(rangeSlice)
+        setLastSelectedId(String(item.id))
+        return
+      }
+    }
+
+    toggleItem(item.id)
+  }
+
   const handleCardClick = (e: React.MouseEvent) => {
     if (readOnly || isEditing || hasJustDraggedRef.current || isDraggingSelection) return
     if (isSelectionMode) {
-      e.stopPropagation()
-      toggleItem(item.id)
+      handleRangeOrToggleSelect(e)
       return
     }
-    if (e.ctrlKey || e.metaKey) {
+    if (e.ctrlKey || e.metaKey || e.shiftKey) {
       e.stopPropagation()
       enterSelectionMode(item.board_id, item.id)
       return
@@ -391,12 +437,9 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                     {isSelectionMode ? (
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleItem(item.id)
-                        }}
+                        onClick={handleRangeOrToggleSelect}
                         className="size-4 flex items-center justify-center cursor-pointer transition-transform active:scale-90"
-                        title={isSelected ? 'Deselect task' : 'Select task'}
+                        title={isSelected ? 'Deselect task' : 'Select task (Shift+click for range)'}
                       >
                         {isSelected ? (
                           <span className="size-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-2xs">

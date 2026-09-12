@@ -15,7 +15,8 @@ import {
   Palette,
   FolderInput,
   Copy,
-  CopyPlus
+  CopyPlus,
+  CheckSquare
 } from 'lucide-react'
 import { useLanesStore } from '@/stores/lanes'
 import { useBoardsStore } from '@/stores/boards'
@@ -31,6 +32,7 @@ export type LaneMenuContentProps = {
   onDelete: () => void
   onRequestMoveToBoard: (board: Board) => void
   onBackgroundChange: (bg: string) => void
+  onSelectAllTasks?: () => void
 }
 
 export function LaneMenuContent({
@@ -42,7 +44,8 @@ export function LaneMenuContent({
   onEditTitle,
   onDelete,
   onRequestMoveToBoard,
-  onBackgroundChange
+  onBackgroundChange,
+  onSelectAllTasks
 }: LaneMenuContentProps) {
   const moveLane = useLanesStore((s) => s.moveLane)
   const duplicateLane = useLanesStore((s) => s.duplicateLane)
@@ -55,6 +58,13 @@ export function LaneMenuContent({
         <Pencil className="mr-2 size-3.5 text-muted-foreground" />
         <span>Edit Title & Description</span>
       </MenuItem>
+
+      {columnItemsCount > 0 && onSelectAllTasks && (
+        <MenuItem onClick={onSelectAllTasks}>
+          <CheckSquare className="mr-2 size-3.5 text-muted-foreground" />
+          <span>Select All Tasks in Lane</span>
+        </MenuItem>
+      )}
 
       {/* Duplicate Submenu */}
       <MenuSub>

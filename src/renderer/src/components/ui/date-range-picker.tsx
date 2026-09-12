@@ -11,6 +11,8 @@ export type DateRangePickerProps = {
   placeholder?: string
   className?: string
   disabled?: boolean
+  side?: 'top' | 'bottom' | 'left' | 'right'
+  align?: 'start' | 'center' | 'end'
 }
 
 function parseDate(dateStr?: string | null): Date | null {
@@ -74,7 +76,9 @@ export function DateRangePicker({
   onChange,
   placeholder = 'Start & due date...',
   className,
-  disabled = false
+  disabled = false,
+  side = 'bottom',
+  align = 'start'
 }: DateRangePickerProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -289,9 +293,9 @@ export function DateRangePicker({
         }
       />
       <PopoverContent
-        align="start"
-        side="bottom"
-        className="w-[240px] p-2 shadow-2xl rounded-xl border border-border/80 text-xs select-none"
+        align={align}
+        side={side}
+        className="w-[240px] p-2 shadow-2xl rounded-xl border border-border/80 text-xs select-none mb-1"
       >
         {/* Quick Presets */}
         <div className="flex items-center gap-1 pb-1.5 mb-1 border-b border-border/50">

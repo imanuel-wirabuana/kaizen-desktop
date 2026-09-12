@@ -1,7 +1,8 @@
 import { useDroppable } from '@dnd-kit/react'
 import { Button } from '@/components/ui/button'
-import { Inbox, X, Sparkles } from 'lucide-react'
+import { Inbox, X, Sparkles, CheckSquare } from 'lucide-react'
 import { useItemsStore } from '@/stores/items'
+import { useItemSelectionStore } from '@/stores/item-selection'
 import { useDraftSidebarStore } from '@/stores/draft-sidebar'
 import { useNavigationStore } from '@/stores/navigation'
 import { useBoardsStore } from '@/stores/boards'
@@ -36,6 +37,12 @@ export function DraftSidebar({ readOnly = false }: { readOnly?: boolean }) {
     .filter((i) => i.lane_id === null)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
+  const handleSelectAllDrafts = () => {
+    if (draftItems.length === 0 || !boardId) return
+    useItemSelectionStore.getState().enterSelectionMode(boardId)
+    useItemSelectionStore.getState().selectAll(draftItems.map((i) => i.id))
+  }
+
   return (
     <aside
       className={cn(
@@ -68,6 +75,19 @@ export function DraftSidebar({ readOnly = false }: { readOnly?: boolean }) {
             <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-background border text-[10px] font-bold text-muted-foreground shadow-2xs">
               {draftItems.length}
             </span>
+
+            {/* Select All Drafts Button */}
+            {!readOnly && draftItems.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSelectAllDrafts}
+                className="size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                title="Select all draft tasks"
+              >
+                <CheckSquare className="size-3.5 text-primary" />
+              </Button>
+            )}
 
             {/* Close Sidebar Button */}
             <Button

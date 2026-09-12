@@ -40,6 +40,7 @@ import {
 import { useLanesStore } from '@/stores/lanes'
 import { useItemsStore } from '@/stores/items'
 import { useBoardsStore } from '@/stores/boards'
+import { useItemSelectionStore } from '@/stores/item-selection'
 import { LaneMenuContent } from '@/components/menus/lane-menu-content'
 import { InlineEditLane } from './inline-edit-lane'
 import { BackgroundPickerContent } from '@/components/ui/background-picker'
@@ -106,6 +107,15 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
   const handleBackgroundChange = (newBg: string) => {
     if (isVirtual || lane.id === null || readOnly) return
     updateLane(lane.id, { background: newBg || null })
+  }
+
+  const handleSelectColumnTasks = () => {
+    if (columnItems.length === 0) return
+    const targetBoardId = lane.board_id ?? useItemsStore.getState().boardId
+    if (targetBoardId) {
+      useItemSelectionStore.getState().enterSelectionMode(targetBoardId)
+      useItemSelectionStore.getState().selectAll(columnItems.map((i) => i.id))
+    }
   }
 
   return (
@@ -217,6 +227,7 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
                                 onDelete={() => setIsDeleteOpen(true)}
                                 onRequestMoveToBoard={handleRequestMoveToBoard}
                                 onBackgroundChange={handleBackgroundChange}
+                                onSelectAllTasks={handleSelectColumnTasks}
                               />
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -271,6 +282,7 @@ export function LaneColumn({ lane, index, totalLanes, readOnly = false }: LaneCo
               onDelete={() => setIsDeleteOpen(true)}
               onRequestMoveToBoard={handleRequestMoveToBoard}
               onBackgroundChange={handleBackgroundChange}
+              onSelectAllTasks={handleSelectColumnTasks}
             />
           </ContextMenuContent>
         )}
