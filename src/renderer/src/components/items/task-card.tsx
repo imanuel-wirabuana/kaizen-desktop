@@ -43,7 +43,8 @@ import {
   FolderInput,
   CopyPlus,
   Smile,
-  User
+  User,
+  FileText
 } from 'lucide-react'
 import { ItemMenuContent } from '@/components/menus/item-menu-content'
 import { useItemsStore } from '@/stores/items'
@@ -54,6 +55,7 @@ import { supabase } from '@/lib/supabase'
 import { getBoardBackgroundStyleAndClass } from '@/lib/board-utils'
 import { cn } from '@/lib/utils'
 import { useItemSelectionStore } from '@/stores/item-selection'
+import { useItemDetailStore } from '@/stores/item-detail'
 import { OwnerAvatar } from '@/components/ui/owner-avatar'
 
 export const PRIORITY_CONFIG = {
@@ -176,6 +178,9 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   const selectRange = useItemSelectionStore((s) => s.selectRange)
   const setLastSelectedId = useItemSelectionStore((s) => s.setLastSelectedId)
 
+  const activeDetailItemId = useItemDetailStore((s) => s.activeItemId)
+  const isDetailActive = String(activeDetailItemId) === String(item.id)
+
   const { ref, handleRef, isDragSource } = useSortable({
     id: item.id,
     index,
@@ -256,6 +261,9 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
       enterSelectionMode(item.board_id, item.id)
       return
     }
+
+    // 1. Click on item -> open Notion-style detail editor
+    useItemDetailStore.getState().openItemDetail(item.id)
   }
 
   const handleStartEdit = () => {
@@ -321,6 +329,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
               'group/card relative flex flex-col rounded-xl border transition-all duration-200 select-none overflow-hidden',
               isSelectionMode && (isSelected ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'),
               isSelected && !isBeingDragged && 'ring-2 ring-primary border-primary bg-primary/5 dark:bg-primary/10 shadow-sm',
+              isDetailActive && !isSelected && !isBeingDragged && 'ring-2 ring-primary/80 border-primary bg-primary/5 dark:bg-primary/10 shadow-sm',
               isEditing
                 ? 'border-primary/50 ring-1 ring-primary/30 shadow-md p-2.5 bg-card/95 backdrop-blur-md'
                 : cn(
@@ -547,6 +556,17 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                       >
                         <User className="size-2.5 shrink-0" />
                         <span className="truncate">{item.assignee}</span>
+                      </span>
+                    )}
+
+                    {/* Markdown Content Indicator Badge */}
+                    {Boolean(item.content && item.content.trim()) && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-medium border bg-muted/60 text-muted-foreground border-border"
+                        title="Contains document notes"
+                      >
+                        <FileText className="size-2.5 text-primary" />
+                        <span>Doc</span>
                       </span>
                     )}
 

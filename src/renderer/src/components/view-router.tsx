@@ -5,6 +5,7 @@ import { LandingPage } from '@/pages/landing-page'
 import { BoardsPage } from '@/pages/boards-page'
 import { BoardDetailPage } from '@/pages/board-detail-page'
 import { ProjectDetailPage } from '@/pages/project-detail-page'
+import { ItemDetailPage } from '@/pages/item-detail-page'
 import { AuthSuccessPage } from '@/pages/auth-success-page'
 import { BoardsLayout } from '@/layouts/boards-layout'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -68,6 +69,16 @@ export function ViewRouter() {
       return (
         <BoardsLayout>
           <ProjectDetailPage key={currentView.projectId} projectId={currentView.projectId} />
+        </BoardsLayout>
+      )
+    case 'item-detail':
+      return (
+        <BoardsLayout>
+          <ItemDetailPage
+            key={String(currentView.itemId)}
+            itemId={currentView.itemId}
+            boardId={currentView.boardId}
+          />
         </BoardsLayout>
       )
     default:

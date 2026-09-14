@@ -70,6 +70,7 @@ type KanbanItem = {
   title?: string | null
   icon?: string | null
   description?: string | null
+  content?: string | null
   order?: number | null
   priority?: number | null
   start_date?: string | null

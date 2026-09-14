@@ -4,9 +4,12 @@ import { useBoardFoldersStore } from '@/stores/board-folders'
 import { useDraftSidebarStore } from '@/stores/draft-sidebar'
 import { useBoardAiStore } from '@/stores/board-ai'
 import { useActiveBoardWithPreview } from '@/stores/board-preview'
-import { DraftSidebar, BulkActionsToolbar } from '@/components/items'
+import { DraftSidebar, BulkActionsToolbar, ItemDetailPanel } from '@/components/items'
 import { BoardAiSidebar } from '@/components/ai'
 import { useItemSelectionStore } from '@/stores/item-selection'
+import { useItemDetailStore } from '@/stores/item-detail'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
+import { cn } from '@/lib/utils'
 import {
   BoardDetailHeader,
   BoardDetailCanvas,
@@ -26,6 +29,11 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   const isAiOpen = useBoardAiStore((s) => s.isOpen)
   const toggleAiSidebar = useBoardAiStore((s) => s.toggleSidebar)
   const closeAiSidebar = useBoardAiStore((s) => s.closeSidebar)
+
+  // Item detail panel store
+  const activeItemId = useItemDetailStore((s) => s.activeItemId)
+  const closeItemDetail = useItemDetailStore((s) => s.closeItemDetail)
+  const orientation = useItemDetailStore((s) => s.orientation)
 
   // Board folders store
   const boardFolderMap = useBoardFoldersStore((s) => s.boardFolderMap)
@@ -70,13 +78,14 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
 
   useBreadcrumbs(breadcrumbItems)
 
-  // Cleanup sidebars on unmount
+  // Cleanup sidebars and item detail on unmount
   useEffect(() => {
     return () => {
       closeDraftSidebar()
       closeAiSidebar()
+      closeItemDetail()
     }
-  }, [closeDraftSidebar, closeAiSidebar])
+  }, [closeDraftSidebar, closeAiSidebar, closeItemDetail])
 
   // Reset item selection when changing boards or unmounting (constraint: only to its board)
   useEffect(() => {
@@ -97,7 +106,7 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden relative">
       {/* Board Header Bar */}
       <BoardDetailHeader
         board={activeBoard || board}
@@ -116,28 +125,63 @@ export function BoardDetailPage({ boardId }: { boardId: number | string }) {
         onOpenLeave={dialogs.openLeave}
       />
 
-      {/* Canvas & Right Sidebars Area */}
-      <div className="flex flex-1 min-h-0 w-full gap-3 overflow-hidden">
-        <BoardDetailCanvas
-          boardId={boardId}
-          board={activeBoard || board}
-          canvasLanes={canvasLanes}
-          lanesLoading={lanesLoading}
-          isReadOnly={permissions.isReadOnly}
-          canEdit={permissions.canEdit}
-        />
+      {/* Canvas & Right Sidebars Area with Resizable Split for Item Detail */}
+      <ResizablePanelGroup
+        key={activeItemId ? `with-item-detail-${orientation}` : 'full-canvas'}
+        direction={orientation}
+        className="flex-1 min-h-0 w-full overflow-hidden"
+      >
+        <ResizablePanel
+          defaultSize={activeItemId ? (orientation === 'vertical' ? 55 : 62) : 100}
+          minSize={orientation === 'vertical' ? 25 : 30}
+          className="flex min-h-0 min-w-0"
+        >
+          <div className="flex flex-1 min-h-0 w-full gap-3 overflow-hidden pr-1">
+            <BoardDetailCanvas
+              boardId={boardId}
+              board={activeBoard || board}
+              canvasLanes={canvasLanes}
+              lanesLoading={lanesLoading}
+              isReadOnly={permissions.isReadOnly}
+              canEdit={permissions.canEdit}
+            />
 
-        {/* Draft Items Sidebar */}
-        <DraftSidebar readOnly={permissions.isReadOnly} />
+            {/* Draft Items Sidebar */}
+            <DraftSidebar readOnly={permissions.isReadOnly} />
 
-        {/* AI Assistant Sidebar */}
-        <BoardAiSidebar
-          board={activeBoard || board}
-          lanes={lanes}
-          items={items}
-          permissionRole={permissions.permissionRole}
-        />
-      </div>
+            {/* AI Assistant Sidebar */}
+            <BoardAiSidebar
+              board={activeBoard || board}
+              lanes={lanes}
+              items={items}
+              permissionRole={permissions.permissionRole}
+            />
+          </div>
+        </ResizablePanel>
+
+        {/* Resizable Item Detail Editor Panel */}
+        {activeItemId && (
+          <>
+            <ResizableHandle withHandle className="hover:bg-primary/20 transition-colors" />
+            <ResizablePanel
+              defaultSize={orientation === 'vertical' ? 45 : 38}
+              minSize={orientation === 'vertical' ? 20 : 25}
+              maxSize={orientation === 'vertical' ? 80 : 65}
+              className={cn(
+                'flex min-h-0 rounded-2xl overflow-hidden shadow-md',
+                orientation === 'vertical' ? 'min-h-[220px]' : 'min-w-[320px]'
+              )}
+            >
+              <ItemDetailPanel
+                itemId={activeItemId}
+                boardId={boardId}
+                readOnly={permissions.isReadOnly}
+                onClose={closeItemDetail}
+              />
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
 
       {/* Floating Bulk Actions Toolbar (Active Board Only) */}
       {!permissions.isReadOnly && (

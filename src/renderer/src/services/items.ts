@@ -60,6 +60,7 @@ export async function createItem(
     title: item.title ?? 'New Task',
     icon: item.icon ?? null,
     description: item.description ?? null,
+    content: item.content ?? null,
     order: item.order ?? 100,
     priority: item.priority ?? 0,
     start_date: item.start_date ?? null,

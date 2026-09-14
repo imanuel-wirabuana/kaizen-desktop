@@ -3,6 +3,7 @@ import { useLayoutEffect } from 'react'
 import type { View } from './navigation'
 import { useBoardFoldersStore } from './board-folders'
 import { useBoardsStore } from './boards'
+import { useItemsStore } from './items'
 import { queryClient } from '@/lib/query-client'
 import { queryKeys } from '@/queries/query-keys'
 
@@ -80,6 +81,40 @@ export function breadcrumbFromView(view: View): BreadcrumbItem[] {
     if (board) {
       items.push({ label: `${board.icon || '📋'} ${board.title || 'Untitled Board'}` })
     }
+    return items
+  }
+  if (view.name === 'item-detail') {
+    const itemId = String(view.itemId)
+    const item = useItemsStore.getState().items.find((i) => String(i.id) === itemId)
+    const effectiveBoardId = view.boardId ? String(view.boardId) : item?.board_id ? String(item.board_id) : null
+
+    const items: BreadcrumbItem[] = [{ label: 'Boards', view: { name: 'boards' } }]
+
+    if (effectiveBoardId) {
+      const folderId = useBoardFoldersStore.getState().boardFolderMap[effectiveBoardId]
+      const project = folderId
+        ? useBoardFoldersStore.getState().folders.find((f) => String(f.id) === String(folderId))
+        : null
+      const board =
+        useBoardsStore.getState().boards.find((b) => String(b.id) === effectiveBoardId) ||
+        queryClient.getQueryData<Board>(queryKeys.boards.detail(effectiveBoardId))
+
+      if (project) {
+        items.push({
+          label: `${project.icon || '📁'} ${project.name}`,
+          view: { name: 'project-detail', projectId: project.id }
+        })
+      }
+      if (board && board.id !== undefined) {
+        items.push({
+          label: `${board.icon || '📋'} ${board.title || 'Untitled Board'}`,
+          view: { name: 'board-detail', boardId: board.id }
+        })
+      }
+    }
+
+    const itemLabel = item?.title ? `${item.icon ? `${item.icon} ` : ''}${item.title}` : 'Task Detail'
+    items.push({ label: itemLabel })
     return items
   }
   return []

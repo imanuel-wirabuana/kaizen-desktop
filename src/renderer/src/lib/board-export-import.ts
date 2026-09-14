@@ -8,6 +8,7 @@ export type ParsedImportItem = {
   title?: string | null
   icon?: string | null
   description?: string | null
+  content?: string | null
   priority?: number | null
   start_date?: string | null
   due_date?: string | null
@@ -73,6 +74,7 @@ export function exportBoardToJson(_board: Board | null | undefined, lanes: Lane[
         title: item.title || 'Untitled Task',
         icon: item.icon || null,
         description: item.description || null,
+        content: item.content || null,
         priority: item.priority ?? null,
         start_date: item.start_date || null,
         due_date: item.due_date || null,
@@ -475,6 +477,7 @@ export async function importContentIntoBoard(
           title: itemTitle.trim(),
           icon: itemData.icon ?? undefined,
           description: itemData.description ?? undefined,
+          content: itemData.content ?? undefined,
           priority: itemData.priority ?? undefined,
           start_date: itemData.start_date ?? undefined,
           due_date: itemData.due_date ?? undefined,

@@ -18,9 +18,13 @@ import {
   Inbox,
   CopyPlus,
   CheckCircle2,
-  Circle
+  Circle,
+  FileText,
+  ExternalLink
 } from 'lucide-react'
 import { useItemsStore } from '@/stores/items'
+import { useItemDetailStore } from '@/stores/item-detail'
+import { useNavigationStore } from '@/stores/navigation'
 import { useLanesStore } from '@/stores/lanes'
 import { useBoardsStore } from '@/stores/boards'
 import * as itemsService from '@/services/items'
@@ -186,9 +190,25 @@ export function ItemMenuContent({ item, variant, onEdit }: ItemMenuContentProps)
 
   return (
     <MenuProvider variant={variant}>
+      <MenuItem onClick={() => useItemDetailStore.getState().openItemDetail(item.id)}>
+        <FileText className="mr-2 size-3.5 text-primary" />
+        <span>Open Side Panel</span>
+      </MenuItem>
+
+      <MenuItem
+        onClick={() =>
+          useNavigationStore
+            .getState()
+            .navigate({ name: 'item-detail', itemId: item.id, boardId: item.board_id })
+        }
+      >
+        <ExternalLink className="mr-2 size-3.5 text-primary" />
+        <span>Open as Full Page</span>
+      </MenuItem>
+
       <MenuItem onClick={onEdit}>
         <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-        <span>Edit Task</span>
+        <span>Quick Edit</span>
       </MenuItem>
 
       <MenuItem onClick={() => updateItem(item.id, { status: !item.status })}>
