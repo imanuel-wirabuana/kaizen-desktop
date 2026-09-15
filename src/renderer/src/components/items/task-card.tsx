@@ -251,12 +251,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   }
 
   const handleCardClick = (e: React.MouseEvent) => {
-    if (isEditing || hasJustDraggedRef.current || isDraggingSelection) return
-    if (readOnly) {
-      // In read-only mode (view-only member), clicking the card opens the Notion-like editor
-      useItemDetailStore.getState().openItemDetail(item.id)
-      return
-    }
+    if (readOnly || isEditing || hasJustDraggedRef.current || isDraggingSelection) return
     if (isSelectionMode) {
       handleRangeOrToggleSelect(e)
       return
@@ -266,9 +261,6 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
       enterSelectionMode(item.board_id, item.id)
       return
     }
-
-    // 1. Click on item -> open Notion-style detail editor
-    useItemDetailStore.getState().openItemDetail(item.id)
   }
 
   const handleStartEdit = () => {
@@ -338,7 +330,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
               isEditing
                 ? 'border-primary/50 ring-1 ring-primary/30 shadow-md p-2.5 bg-card/95 backdrop-blur-md'
                 : cn(
-                    'border-border/80 bg-background/90 p-2.5 shadow-2xs hover:border-primary/40 hover:shadow-xs cursor-pointer',
+                    'border-border/80 bg-background/90 p-2.5 shadow-2xs hover:border-primary/40 hover:shadow-xs',
                     hasCustomBackground ? bgProps.className : '',
                     item.status && 'opacity-40 hover:opacity-80'
                   ),
