@@ -251,7 +251,12 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
   }
 
   const handleCardClick = (e: React.MouseEvent) => {
-    if (readOnly || isEditing || hasJustDraggedRef.current || isDraggingSelection) return
+    if (isEditing || hasJustDraggedRef.current || isDraggingSelection) return
+    if (readOnly) {
+      // In read-only mode (view-only member), clicking the card opens the Notion-like editor
+      useItemDetailStore.getState().openItemDetail(item.id)
+      return
+    }
     if (isSelectionMode) {
       handleRangeOrToggleSelect(e)
       return
@@ -333,7 +338,7 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
               isEditing
                 ? 'border-primary/50 ring-1 ring-primary/30 shadow-md p-2.5 bg-card/95 backdrop-blur-md'
                 : cn(
-                    'border-border/80 bg-background/90 p-2.5 shadow-2xs hover:border-primary/40 hover:shadow-xs',
+                    'border-border/80 bg-background/90 p-2.5 shadow-2xs hover:border-primary/40 hover:shadow-xs cursor-pointer',
                     hasCustomBackground ? bgProps.className : '',
                     item.status && 'opacity-40 hover:opacity-80'
                   ),
@@ -486,32 +491,31 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
                     )}
 
                     {/* Options Dropdown (always rendered to preserve exact 40px cluster width & prevent card thinning) */}
-                    {!readOnly && (
-                      <div className="opacity-0 group-hover/card:opacity-100 transition-opacity">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                onClick={(e) => e.stopPropagation()}
-                                className="size-5 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted/60 shrink-0"
-                                title="Task options"
-                              >
-                                <MoreHorizontal className="size-3" />
-                              </Button>
-                            }
+                    <div className="opacity-0 group-hover/card:opacity-100 transition-opacity">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={(e) => e.stopPropagation()}
+                              className="size-5 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted/60 shrink-0"
+                              title="Task options"
+                            >
+                              <MoreHorizontal className="size-3" />
+                            </Button>
+                          }
+                        />
+                        <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
+                          <ItemMenuContent
+                            item={item}
+                            variant="dropdown"
+                            onEdit={handleStartEdit}
+                            readOnly={readOnly}
                           />
-                          <DropdownMenuContent align="end" className="w-48 text-xs shadow-xl">
-                            <ItemMenuContent
-                              item={item}
-                              variant="dropdown"
-                              onEdit={handleStartEdit}
-                            />
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </div>
 
@@ -587,13 +591,14 @@ export function TaskCard({ item, index, readOnly = false }: TaskCardProps) {
         }
       />
 
-      {/* Right-click Context Menu (only when editable and not in selection mode) */}
-      {!readOnly && !isSelectionMode && (
+      {/* Right-click Context Menu */}
+      {!isSelectionMode && (
         <ContextMenuContent className="w-48 text-xs shadow-xl">
           <ItemMenuContent
             item={item}
             variant="context"
             onEdit={handleStartEdit}
+            readOnly={readOnly}
           />
         </ContextMenuContent>
       )}

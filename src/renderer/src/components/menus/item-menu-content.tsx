@@ -142,9 +142,10 @@ export type ItemMenuContentProps = {
   item: KanbanItem
   variant: MenuVariant
   onEdit: () => void
+  readOnly?: boolean
 }
 
-export function ItemMenuContent({ item, variant, onEdit }: ItemMenuContentProps) {
+export function ItemMenuContent({ item, variant, onEdit, readOnly = false }: ItemMenuContentProps) {
   const updateItem = useItemsStore((s) => s.updateItem)
   const moveItem = useItemsStore((s) => s.moveItem)
   const removeItem = useItemsStore((s) => s.removeItem)
@@ -186,6 +187,28 @@ export function ItemMenuContent({ item, variant, onEdit }: ItemMenuContentProps)
         items: s.items.filter((i) => String(i.id) !== String(item.id))
       }))
     }
+  }
+
+  if (readOnly) {
+    return (
+      <MenuProvider variant={variant}>
+        <MenuItem onClick={() => useItemDetailStore.getState().openItemDetail(item.id)}>
+          <FileText className="mr-2 size-3.5 text-primary" />
+          <span>Open Side Panel</span>
+        </MenuItem>
+
+        <MenuItem
+          onClick={() =>
+            useNavigationStore
+              .getState()
+              .navigate({ name: 'item-detail', itemId: item.id, boardId: item.board_id })
+          }
+        >
+          <ExternalLink className="mr-2 size-3.5 text-primary" />
+          <span>Open as Full Page</span>
+        </MenuItem>
+      </MenuProvider>
+    )
   }
 
   return (

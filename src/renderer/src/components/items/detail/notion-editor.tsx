@@ -170,7 +170,10 @@ export function NotionEditor({
         }
       }),
       Placeholder.configure({
-        placeholder: "Type '/' for commands, or write in markdown...",
+        placeholder: ({ editor: ed }) => {
+          if (!ed.isEditable) return ''
+          return "Type '/' for commands, or write in markdown..."
+        },
         emptyEditorClass: 'is-editor-empty'
       }),
       Link.configure({
@@ -258,6 +261,13 @@ export function NotionEditor({
     }
   }, [content, editor])
 
+  // Sync TipTap editable state if readOnly prop changes dynamically
+  useEffect(() => {
+    if (editor && editor.isEditable !== !readOnly) {
+      editor.setEditable(!readOnly)
+    }
+  }, [editor, readOnly])
+
   // Filter commands by slash query
   const filteredCommands = COMMAND_ITEMS.filter((item) =>
     item.title.toLowerCase().includes(slashMenuQuery) ||
@@ -312,6 +322,19 @@ export function NotionEditor({
     window.addEventListener('keydown', handleKeyDown, true)
     return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [slashMenuOpen, selectedIndex, filteredCommands, executeCommand])
+
+  const handleContentClick = (e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest('a')
+    if (target && target.href) {
+      e.preventDefault()
+      e.stopPropagation()
+      if ((window as any).api?.openExternalUrl) {
+        ;(window as any).api.openExternalUrl(target.href)
+      } else {
+        window.open(target.href, '_blank')
+      }
+    }
+  }
 
   return (
     <div
@@ -454,11 +477,23 @@ export function NotionEditor({
       )}
 
       {/* Editor Content Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 text-foreground font-sans">
-        <EditorContent
-          editor={editor}
-          className="notion-prosemirror-container min-h-full pb-20 focus:outline-none"
-        />
+      <div
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-2 text-foreground font-sans"
+        onClick={handleContentClick}
+      >
+        {readOnly && (!content || !content.trim()) ? (
+          <div className="py-6 text-sm text-muted-foreground/60 italic select-none">
+            No additional notes or description provided.
+          </div>
+        ) : (
+          <EditorContent
+            editor={editor}
+            className={cn(
+              'notion-prosemirror-container min-h-full pb-20 focus:outline-none',
+              readOnly && 'read-only-editor select-text'
+            )}
+          />
+        )}
       </div>
     </div>
   )
